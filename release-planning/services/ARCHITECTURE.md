@@ -39,9 +39,14 @@ acceptance. The `tts-python-core` release extra no longer installs pyttsx3:
 only the retained legacy playback manager uses it. Legacy `llm` and
 `tts-python` extras preserve that separate dependency and compatibility path.
 
-The active release lock is ready for candidate builds; portable staging
-verified all 243 inputs. Target validation remains open. The old desktop lock
-is historical evidence. The selected V5
+The active V6 release lock contains 244 reviewed inputs, including pure
+Psycopg 3.3.7 for the full Linux profile. A fresh offline installation,
+dependency check, all 80 direct requirement checks, and notice verification
+(244 distributions, 1,735 files) passed. See
+[the V6 input record](input-reviews/linux-release-v6-input-validation.md).
+PostgreSQL connections, native library resolution and final frozen acceptance
+remain unverified. CORE remains SQLite-only. The old desktop lock is
+historical evidence. The preceding V5
 diagnostic graph installed all 243 exact reviewed wheels in a separate project
 environment with kernel network denial, hash enforcement and no builds;
 `uv pip check` passed. All 77 direct service requirements match the installed
@@ -150,8 +155,8 @@ These are targets; actual source and final-artifact results remain separate.
 |---|---|---|
 | 0: Reconcile scope | Retire obsolete plans; align contributor/service docs (#2201), preserve companion boundaries (#2144); integrate mainline; make optional static app hosting explicitly configured | Tracker reconciliation; service contract and accurate commands; no machine-specific implicit UI mount; focused merge checks |
 | 1: API correctness | HTTP admission and setup terminal status (#2408); Ollama show/pull (#2415); real embedding responses; bounded TTS HTTP requests and voice listing (#2254); accurate STT loaded state; terminal LLM failures and bounded completion observation (SRV-23, #2416) | Authenticated contract tests with fake runtime boundaries, bounded request/concurrency tests, no false success or synthetic model output |
-| 2: Data integrity | Safe downgrade policy (#2358), existing NULL preservation (#2363), schema drift checks (#2364), list boundaries (#2365), bootstrap/backup/document batching (#2409) | Temporary SQLite upgrade/recovery tests, preserved user values, bounded public reads and streaming ingestion |
-| 3: Runtime and companion | Reconcile confirmed LLM/art/voice findings (#2405/#2406/#2407); characterize retained compatibility (#2147/#2149); retire duplicate cognitive policy in stages; diagnose CPU/CUDA scenario (#2242/#2416) | Focused security/lifecycle regressions; preserved data and compatibility; explicit caller inventory before deletion; no real-model parity claim from doubles |
+| 2: Data integrity | Safe downgrade policy (#2358), existing NULL preservation (#2363), schema drift checks (#2364), list boundaries (#2365), bootstrap/backup/document batching (#2409); restore the full-profile PostgreSQL driver and verify migrations/schema isolation (#2446, SRV-27) | Temporary SQLite upgrade/recovery tests, PostgreSQL connection/migration/schema tests, preserved user values, bounded public reads and streaming ingestion |
+| 3: Runtime and companion | Reconcile confirmed LLM/art/voice findings (#2405/#2406/#2407); characterize retained compatibility (#2147/#2149); retire duplicate cognitive policy in stages; consolidate native LLM execution and authenticate supervised native children (#2242/#2416) | Shared backend identity and ownership tests, child authentication, native-failure containment, preserved route semantics/data/compatibility; explicit caller inventory before deletion; no real-model parity claim from doubles |
 | 4: Distribution | Resolve unavailable TTS distribution (#2413); service dependency/version orchestration (#2200); apt release artifact (#2251); dependency refresh evidence (#2274); Triton external toolchain and compile opt-in (SRV-24); optional-ML gate (#2399); ops cleanup (#2410); isolated crash regression (#2276) | Supported profiles resolve; pinned reviewed inputs; artifact-level daemon checks; CI uses the same source/check list; excluded tests recorded |
 | 5: Code quality | Repair analyzer path and unavailable-tool handling; analyze all service/native modules; review dead imports and ranked complexity by subsystem | JSON reports with exact scope/exclusions; confirmed defects fixed; reviewed dispositions for residual advisory findings; focused tests/import checks |
 | 6: Service acceptance | Installation/restart/recovery (#2139), art API (#2122), voice API (#2148), embeddings/RAG (#2136), offline/auth (#2128), GPU handoffs (#2146), optional-policy contracts (SRV-22) | Automated candidate/model/runtime checks with hashes and exact results on isolated targets; disabled-default and opt-in policy tests; pending/skipped is never pass |
