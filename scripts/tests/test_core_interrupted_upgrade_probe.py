@@ -15,9 +15,95 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 PROBE = ROOT / "scripts/probe_core_interrupted_upgrade.py"
+sys.path.insert(0, str(ROOT / "scripts"))
+from probe_core_installed_interrupted_upgrade import (
+    _bounded_log_snapshot,
+    run_probe,
+)
 
 
 class InterruptedUpgradeProbeTests(unittest.TestCase):
+    def test_failure_log_snapshot_is_bounded_and_redacts_credentials(self):
+        with tempfile.TemporaryDirectory(prefix="core-log-snapshot-test-") as raw:
+            log = Path(raw) / "interrupted.log"
+            log.write_text(
+                "\n".join(
+                    [f"line-{index}" for index in range(100)]
+                    + ["AIRUNNER_API_KEY=known-secret"]
+                    + ["x" * 1500]
+                ),
+                encoding="utf-8",
+            )
+
+            snapshot = _bounded_log_snapshot(log, ("known-secret",))
+
+        self.assertTrue(snapshot["available"])
+        self.assertEqual(snapshot["name"], "interrupted.log")
+        self.assertEqual(len(snapshot["lines"]), 80)
+        self.assertLessEqual(max(map(len, snapshot["lines"])), 1000)
+        self.assertTrue(any("[REDACTED]" in line for line in snapshot["lines"]))
+        self.assertNotIn("known-secret", "\n".join(snapshot["lines"]))
+
+    def test_early_frozen_exit_writes_failure_receipt_without_passing_probe(self):
+        with tempfile.TemporaryDirectory(prefix="core-early-exit-test-") as raw:
+            work = Path(raw)
+            database = work / "fixture.db"
+            with sqlite3.connect(database) as connection:
+                connection.execute("CREATE TABLE marker (value TEXT)")
+                connection.execute("INSERT INTO marker VALUES ('fixture')")
+            digest = __import__("hashlib").sha256(database.read_bytes()).hexdigest()
+            source_sha = "a" * 40
+            fixture = {
+                "fixture_kind": "published_prior_debian_schema",
+                "database_sha256": digest,
+                "source_sha": source_sha,
+                "migration_source_inventory": {
+                    "heads_before_candidate_upgrade": ["old-head"]
+                },
+            }
+            fixture_record = work / "fixture.json"
+            fixture_record.write_text(json.dumps(fixture), encoding="utf-8")
+            expected_record = work / "expected.json"
+            expected_record.write_text(
+                json.dumps(
+                    {
+                        "source_sha": source_sha,
+                        "expected_alembic_heads_after_upgrade": ["new-head"],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            binary = work / "airunner-core"
+            binary.write_text(
+                "#!/bin/sh\nprintf 'frozen-startup diagnostic sentinel\\n' >&2\nexit 7\n",
+                encoding="utf-8",
+            )
+            binary.chmod(0o700)
+            output = work / "failure-receipt.json"
+
+            with self.assertRaisesRegex(
+                RuntimeError, "exited before producing its pre-upgrade backup"
+            ):
+                run_probe(
+                    binary,
+                    database,
+                    fixture_record,
+                    expected_record,
+                    output,
+                    timeout_seconds=2,
+                )
+
+            diagnostic = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(diagnostic["status"], "failed")
+            self.assertEqual(
+                diagnostic["phase"], "waiting for production pre-upgrade backup"
+            )
+            self.assertEqual(diagnostic["interrupted_exit_code"], 7)
+            self.assertIn(
+                "frozen-startup diagnostic sentinel",
+                "\n".join(diagnostic["interrupted_log"]["lines"]),
+            )
+
     def test_real_setup_database_child_reaches_post_ddl_barrier(self):
         with tempfile.TemporaryDirectory(prefix="core-ddl-barrier-test-") as raw:
             work = Path(raw)

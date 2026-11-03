@@ -87,6 +87,16 @@ acceptance remain open until the corrected checks pass. A 300-second cold-load
 request timed out on model storage; the completed inference used the validated
 finite 900-second setting. These source/runtime observations do not establish
 frozen-artifact acceptance.
+The `61c5d12a5` hosted run passed runtime contracts and CORE clean installation,
+but failed the LLM dependency installation on disk exhaustion and the CORE
+published-package upgrade probe on early frozen startup. The failed upgrade
+artifact did not retain the child log, so its underlying exit remains
+unexplained. Failure diagnostics now retain bounded, redacted child-log tails
+while preserving the failed result. All four optional runtime-smoke marker
+selections are absent in the inspected source; CI reports that explicitly as
+no coverage before dependency setup. Runtime contracts, final full-profile
+packaging checks and physical-model acceptance remain separate requirements.
+
 Input readiness no longer blocks candidate CI. Required checks and target
 acceptance must still pass; a skipped or unavailable check is not a pass.
 
@@ -167,6 +177,38 @@ and quality/distribution. The coordinator reviews diffs, integrates changes,
 runs combined checks and owns publication. Shared workflow/metadata edits
 are serialized. Workers do not install new third-party dependencies or
 start real models without the applicable provenance and capacity checks.
+
+## Knowledge-base tool boundaries
+
+SRV-28 / [#2447](https://github.com/Capsize-Games/airunner/issues/2447)
+extends phases 1 and 2 to catalog search and managed knowledge saves. Catalog
+search must honor the same per-request document scope as retrieval, including
+an explicitly empty scope. Model tool calls use registered documents; ingestion
+is explicit rather than an implicit repository scan. Saves must stay within
+managed storage, preserve existing content, and distinguish durable persistence
+from registration and indexing. Keep public tool names compatible and pass the
+request scope through hidden ToolNode configuration. Concurrent scope and
+storage-boundary regressions, followed by packaged-service evidence, are required.
+
+## Shared native LLM request lifecycle
+
+Source commits `61c5d12a5`, `b7ccee850`, and `32554f6ee` share the supervised
+GGUF process between graph orchestration and stateless routes while preserving
+their route semantics. Matching model-file identity and effective settings are
+required for reuse; cached graph bindings reconcile after a supervised reload.
+Cancellation can interrupt the owning HTTP connection before response headers
+arrive without stopping a sibling request or the shared backend. Provider
+completion and SSE parsing use one validation module. The modern stateless chat
+contract forwards bounded function definitions, assistant calls, tool results
+and returned usage. It returns calls to the consuming application; it does not
+execute application tools. Unsupported runtime modes fail before invocation,
+and HTTP streaming requests point callers to the supported WebSocket route.
+
+The final integrated source selection passed 102 tests in a disposable HOME
+and private loopback namespace, including authenticated HTTP and WebSocket
+tool-call round trips. That result includes existing migration deprecation
+warnings. It does not establish native model quality, physical cancellation,
+GPU performance, or final frozen-artifact acceptance.
 
 ## LLM completion observation
 
@@ -316,6 +358,24 @@ the E5 directory verifier changed from C/14 to C/17. A bounded read-through
 found no discrete correctness defect attributable to these scores. The scores
 remain review prompts, not acceptance gates or confirmed defects.
 Xenon is still unavailable in `.venv-ci`; its result is unavailable, not a pass.
+
+A committed-source refresh at `32554f6ee` used the existing `.venv-ci`
+interpreter and repository AST analyzer against an isolated source archive.
+It inspected 810 service files / 140,962 lines and emitted 1,312 advisory notes:
+378 missing-docstring, 173 long-function, 392 missing-hint, 355 inline-import,
+and 14 long-class notes. Its permanent migration, database-model, data, vendor,
+CLI and GUI exclusions remain in force. The native selection inspected three
+files / 407 lines and emitted six notes. These are inventories, not confirmed
+bug counts. The Radon selection includes code excluded by that AST scan and
+returns blocks for 879 files; the counts are not interchangeable.
+
+The extracted HTTP transport has maximum complexity B/9; provider parsing C/20;
+function-tool validation C/15; chat route B/6; WebSocket envelope handling B/9;
+and the shared proxy B/7. The manager's model-load coordinator remains D/29,
+with reviewed state transitions and dedicated stale-binding regressions. The
+RAG catalog search ranks F/83 and its boundary review led to SRV-28, rather than
+a cosmetic split that would preserve the underlying behavior. Remaining
+hotspots and unavailable tools retain their earlier explicit dispositions.
 
 Review quality findings in API, persistence, workers/runtimes, LLM and
 companion, art/voice, utilities and build tooling as separate work units.

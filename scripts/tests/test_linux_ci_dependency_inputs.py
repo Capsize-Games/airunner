@@ -243,6 +243,33 @@ def test_runtime_ci_jobs_install_only_staged_hash_locked_inputs() -> None:
             assert "GITHUB_TOKEN" in install.get("env", {})
 
 
+def test_optional_runtime_smoke_reports_absent_coverage_before_install() -> None:
+    """Empty optional smoke markers must not stage the full release stack."""
+    job = _workflow(".github/workflows/eval-tests.yml")["jobs"]["runtime-smoke"]
+    steps = job["steps"]
+    selection = _step(job, "Check for selected smoke tests")
+    assert selection["id"] == "smoke-selection"
+    assert "_has_pytest_marker" in selection["run"]
+    assert "No coverage:" in selection["run"]
+    assert "GITHUB_STEP_SUMMARY" in selection["run"]
+    assert "SMOKE_MARKER" in selection["env"]
+    for name in (
+        "Require reviewed sibling release inputs",
+        "Checkout airunner-common source",
+        "Set up Python",
+        "Install system dependencies",
+        "Reclaim unused hosted-runner SDK space",
+        "Install Python dependencies",
+    ):
+        assert _step(job, name)["if"] == (
+            "steps.smoke-selection.outputs.present == 'true'"
+        )
+    assert steps.index(selection) < steps.index(_step(job, "Install Python dependencies"))
+    install = _step(job, "Install Python dependencies")["run"]
+    assert RUNTIME_LOCK in install
+    assert "'./services[linux-release]'" in install
+
+
 def test_cpu_tensor_contract_uses_reviewed_cuda_wheel_with_devices_hidden() -> None:
     """CPU execution evidence does not imply CPU-wheel or GPU support."""
     workflow = _workflow(".github/workflows/eval-tests.yml")

@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import secrets
 import shutil
 import signal
@@ -29,12 +30,43 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 
+_LOG_TAIL_LINES = 80
+_LOG_LINE_MAX_CHARS = 1000
+_LOG_MAX_BYTES = 128 * 1024
+
+
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def _bounded_log_snapshot(path: Path, secrets_to_redact: tuple[str, ...]) -> dict[str, Any]:
+    """Return a bounded, redacted tail from one owned child log."""
+    try:
+        with path.open("rb") as handle:
+            handle.seek(0, os.SEEK_END)
+            size = handle.tell()
+            handle.seek(max(0, size - _LOG_MAX_BYTES), os.SEEK_SET)
+            content = handle.read(_LOG_MAX_BYTES).decode("utf-8", errors="replace")
+    except OSError:
+        return {"name": path.name, "available": False, "lines": []}
+
+    lines = content.splitlines()[-_LOG_TAIL_LINES:]
+    safe_lines = []
+    for line in lines:
+        for secret in secrets_to_redact:
+            if secret:
+                line = line.replace(secret, "[REDACTED]")
+        line = re.sub(
+            r"(?i)(authorization|api[_-]?key|token)([=: ]+)[^\s,;]+",
+            r"\1\2[REDACTED]",
+            line,
+        )
+        safe_lines.append(line[:_LOG_LINE_MAX_CHARS])
+    return {"name": path.name, "available": True, "lines": safe_lines}
 
 
 def _db_state(path: Path, fixture: dict[str, Any]) -> dict[str, Any]:
@@ -321,12 +353,14 @@ def run_probe(
     daemon_identity: dict[str, int] | None = None
     success = False
     started = time.monotonic()
+    phase = "preparing isolated fixture"
     try:
         # BEGIN IMMEDIATE reserves the sole SQLite writer slot before the
         # frozen production startup begins. VACUUM INTO can still snapshot
         # this committed fixture; Alembic's first write must wait or fail.
         controller = sqlite3.connect(database, timeout=1, isolation_level=None)
         controller.execute("BEGIN IMMEDIATE")
+        phase = "waiting for production pre-upgrade backup"
         interrupted = _launch(binary, env, config, work / "interrupted.log")
         deadline = time.monotonic() + timeout_seconds
         manifests: list[Path] = []
@@ -370,6 +404,7 @@ def run_probe(
                 "interrupted frozen entry point left an observed child process"
             )
 
+        phase = "verifying backup and resuming interrupted upgrade"
         backup_path = Path(manifest["path"])
         if backup_path.resolve().parent != backup_dir.resolve():
             raise RuntimeError("backup manifest points outside the isolated directory")
@@ -404,6 +439,7 @@ def run_probe(
                 f"{backup_after_kill}"
             )
 
+        phase = "waiting for resumed runtime health"
         resumed = _launch(binary, env, config, work / "resumed.log")
         base_url = f"http://127.0.0.1:{port}"
         unauthenticated_health: int | None = None
@@ -508,6 +544,7 @@ def run_probe(
                 "owned daemon still served health after clean entry-point exit"
             )
 
+        phase = "verifying completed migration and cleanup"
         final = _db_state(database, fixture)
         if final["integrity"] != "ok" or final["heads"] != expected_heads:
             raise RuntimeError(
@@ -581,6 +618,36 @@ def run_probe(
         output.chmod(0o600)
         success = True
         return receipt
+    except Exception as error:
+        diagnostic = {
+            "schema_version": 1,
+            "probe": "installed_frozen_core_interrupted_after_backup_before_write",
+            "status": "failed",
+            "phase": phase,
+            "error_type": type(error).__name__,
+            "error": str(error)[:2000],
+            "interrupted_exit_code": (
+                interrupted.poll() if interrupted is not None else None
+            ),
+            "resumed_exit_code": resumed.poll() if resumed is not None else None,
+            "interrupted_log": _bounded_log_snapshot(
+                work / "interrupted.log", (api_key,)
+            ),
+            "resumed_log": _bounded_log_snapshot(work / "resumed.log", (api_key,)),
+        }
+        try:
+            output.write_text(
+                json.dumps(diagnostic, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            output.chmod(0o600)
+        except OSError as record_error:
+            print(
+                f"could not write bounded failure diagnostics: {record_error}",
+                file=sys.stderr,
+                flush=True,
+            )
+        raise
     finally:
         if controller is not None:
             try:
