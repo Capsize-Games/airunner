@@ -17,6 +17,7 @@ WORKFLOW = ROOT / ".github/workflows/core-debian-candidate.yml"
 SMOKE = ROOT / "scripts/core_debian_candidate_smoke.sh"
 UPGRADE_SMOKE = ROOT / "scripts/core_debian_upgrade_smoke.sh"
 FIXTURE = ROOT / "scripts/create_core_upgrade_fixture.py"
+PUBLISHED_FIXTURE = ROOT / "scripts/create_core_published_upgrade_fixture.py"
 
 
 class CoreDebianCandidateWorkflowTests(unittest.TestCase):
@@ -28,6 +29,7 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
         cls.smoke = SMOKE.read_text(encoding="utf-8")
         cls.upgrade_smoke = UPGRADE_SMOKE.read_text(encoding="utf-8")
         cls.fixture = FIXTURE.read_text(encoding="utf-8")
+        cls.published_fixture = PUBLISHED_FIXTURE.read_text(encoding="utf-8")
 
     def test_has_only_candidate_triggers_and_read_only_permissions(self):
         self.assertEqual(set(self.workflow["on"]), {"workflow_dispatch", "pull_request"})
@@ -37,7 +39,9 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
             "scripts/core_debian_candidate_smoke.sh",
             "scripts/core_debian_upgrade_smoke.sh",
             "scripts/create_core_upgrade_fixture.py",
+            "scripts/create_core_published_upgrade_fixture.py",
             "scripts/tests/test_core_debian_candidate_workflow.py",
+            "scripts/tests/test_core_published_upgrade_fixture.py",
         ):
             self.assertIn(f'"{path}"', self.workflow_text)
 
@@ -121,6 +125,23 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
         self.assertIn("core_upgrade_fixture", self.upgrade_smoke)
         self.assertIn(".upgrade-ownership-marker", self.upgrade_smoke)
         self.assertIn('"published_prior_release_upgrade": {', self.upgrade_smoke)
+        self.assertIn(
+            'published_migrated_snapshot="$migration_home/published-migrated.db"',
+            self.upgrade_smoke,
+        )
+        self.assertIn(
+            'install -m 0600 -o airunner -g airunner "$published_migrated_snapshot" "$database_file"',
+            self.upgrade_smoke,
+        )
+        purge_at = self.upgrade_smoke.index("apt-get purge -y airunner")
+        preserved_fixture_check_at = self.upgrade_smoke.rindex(
+            'FIXTURE_RECORD="$fixture_record" DATABASE_FILE="$database_file" python3 - <<\'PY\'',
+        )
+        self.assertGreater(preserved_fixture_check_at, purge_at)
+        self.assertIn(
+            '[[ "$(sha256sum "$database_file" | cut -d\' \' -f1)" == "$database_sha_after" ]]',
+            self.upgrade_smoke[purge_at:],
+        )
         self.assertIn('"source_revision": candidate["upgrade_baseline"]["source_revision"]', self.upgrade_smoke)
         self.assertIn('[[ -f "$policy" && ! -L "$policy" ]] ||', self.upgrade_smoke)
         self.assertIn('elif (( policy_changed )); then\n    rm -f "$policy"', self.upgrade_smoke)
@@ -134,6 +155,28 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
         )
         self.assertIn("_REVISION = \"69fb44e0d99f\"", self.fixture)
         self.assertIn("synthetic_intermediate_alembic_revision", self.fixture)
+        self.assertIn("published_prior_debian_schema", self.published_fixture)
+        self.assertIn(
+            '_EXPECTED_BASELINE_HEADS = ("a7c93f2e1b4d", "d951d2fd378d")',
+            self.published_fixture,
+        )
+        self.assertIn("--migrate-only", self.published_fixture)
+        self.assertIn("--expected-deb-sha256", self.upgrade_smoke)
+        self.assertIn("unshare --net env -i", self.upgrade_smoke)
+        self.assertIn("synthetic_conversation", self.upgrade_smoke)
+        self.assertIn(
+            "http://127.0.0.1:8080/api/v1/llm/conversations/session",
+            self.upgrade_smoke,
+        )
+        self.assertIn('Authorization: Bearer $api_key', self.upgrade_smoke)
+        self.assertIn('assert conversation["title"] == expected["title"]', self.upgrade_smoke)
+        self.assertIn('message.get("content") == "published-upgrade-marker-v1"', self.upgrade_smoke)
+        self.assertIn('"secondary_intermediate_upgrade": {', self.upgrade_smoke)
+        self.assertIn(
+            'null_keyring = source_root / "test-null-keyring"',
+            self.published_fixture,
+        )
+        self.assertIn('null_keyring / "keyring.py"', self.published_fixture)
         self.assertNotIn("contents: write", self.workflow_text)
 
     def test_refusing_existing_package_does_not_touch_service_or_temp_paths(self):

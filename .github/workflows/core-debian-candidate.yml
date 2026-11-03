@@ -15,7 +15,9 @@ on:
       - "scripts/core_debian_candidate_smoke.sh"
       - "scripts/core_debian_upgrade_smoke.sh"
       - "scripts/create_core_upgrade_fixture.py"
+      - "scripts/create_core_published_upgrade_fixture.py"
       - "scripts/tests/test_core_debian_candidate_workflow.py"
+      - "scripts/tests/test_core_published_upgrade_fixture.py"
       - "services/**"
 
 permissions:
@@ -70,6 +72,9 @@ jobs:
       - name: Check candidate workflow contract
         run: >-
           "$AIRUNNER_CORE_PYTHON" scripts/tests/test_core_debian_candidate_workflow.py
+      - name: Check published-baseline fixture contract
+        run: >-
+          "$AIRUNNER_CORE_PYTHON" scripts/tests/test_core_published_upgrade_fixture.py
 
       - name: Build the CORE Debian package
         run: dpkg-buildpackage --build=binary --no-sign

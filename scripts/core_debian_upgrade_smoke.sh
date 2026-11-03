@@ -4,13 +4,16 @@ set -Eeuo pipefail
 : "${CORE_SOURCE_SHA:?CORE_SOURCE_SHA must identify the tested candidate}"
 artifact_dir=$(realpath -e -- "${1:?usage: core_debian_upgrade_smoke.sh ARTIFACT_DIR}")
 candidate_record="$artifact_dir/candidate.json"
-fixture_dir="$artifact_dir/synthetic-upgrade-fixture"
+secondary_fixture_dir="$artifact_dir/synthetic-upgrade-fixture"
+secondary_fixture_record="$secondary_fixture_dir/fixture.json"
+secondary_fixture_db="$secondary_fixture_dir/airunner.db"
+fixture_dir="$artifact_dir/published-baseline-upgrade-fixture"
 fixture_record="$fixture_dir/fixture.json"
 fixture_db="$fixture_dir/airunner.db"
 validation="$artifact_dir/candidate-upgrade-validation.json"
 baseline_deb="$artifact_dir/airunner_6.1.3-3_all.deb"
 deb_file=$(find "$artifact_dir" -maxdepth 1 -type f -name 'airunner_*_amd64.deb' -print -quit)
-test -n "$deb_file" && test -f "$candidate_record" && test -f "$fixture_record" && test -f "$fixture_db" && test -f "$baseline_deb"
+test -n "$deb_file" && test -f "$candidate_record" && test -f "$secondary_fixture_record" && test -f "$secondary_fixture_db" && test -f "$baseline_deb"
 test "$(id -u)" -eq 0 || { echo 'upgrade smoke must run as root' >&2; exit 1; }
 
 # Refuse an already-installed package before allocating temp files or touching
@@ -28,13 +31,13 @@ baseline_expected_hash=$(python3 -c 'import json,sys;print(json.load(open(sys.ar
 baseline_expected_version=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["upgrade_baseline"]["version"])' "$candidate_record")
 baseline_expected_arch=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["upgrade_baseline"]["architecture"])' "$candidate_record")
 candidate_source=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["source_sha"])' "$candidate_record")
-fixture_source=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["source_sha"])' "$fixture_record")
+secondary_fixture_source=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["source_sha"])' "$secondary_fixture_record")
 candidate_hash=$(sha256sum "$deb_file" | cut -d' ' -f1)
 record_hash=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["debian_sha256"])' "$candidate_record")
-fixture_hash=$(sha256sum "$fixture_db" | cut -d' ' -f1)
-fixture_record_hash=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["database_sha256"])' "$fixture_record")
-[[ "$candidate_source" == "$CORE_SOURCE_SHA" && "$fixture_source" == "$CORE_SOURCE_SHA" ]]
-[[ "$candidate_hash" == "$record_hash" && "$fixture_hash" == "$fixture_record_hash" ]]
+secondary_fixture_hash=$(sha256sum "$secondary_fixture_db" | cut -d' ' -f1)
+secondary_fixture_record_hash=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["database_sha256"])' "$secondary_fixture_record")
+[[ "$candidate_source" == "$CORE_SOURCE_SHA" && "$secondary_fixture_source" == "$CORE_SOURCE_SHA" ]]
+[[ "$candidate_hash" == "$record_hash" && "$secondary_fixture_hash" == "$secondary_fixture_record_hash" ]]
 [[ "$baseline_hash" == "$baseline_expected_hash" && "$baseline_version" == "$baseline_expected_version" ]]
 [[ "$baseline_architecture" == "$baseline_expected_arch" && "$baseline_version" == "6.1.3-3" ]]
 dpkg --compare-versions "$baseline_version" lt "$candidate_version"
@@ -61,6 +64,8 @@ status=failed
 config_sha_before=
 database_sha_before=
 database_sha_after=
+secondary_database_sha_before=
+secondary_database_sha_after=
 ownership_marker_sha_before=
 ownership_marker_owner_before=
 ownership_marker_sha_after=
@@ -68,13 +73,20 @@ ownership_marker_owner_after=
 baseline_install_status=pending
 candidate_upgrade_status=pending
 database_migration_status=pending
+secondary_migration_status=pending
 remove_status=pending
 purge_status=pending
+migration_home=
+published_migrated_snapshot=
 
 write_record() {
   STATUS="$status" SOURCE_SHA="$CORE_SOURCE_SHA" DEB="$deb_file" BASELINE_DEB="$baseline_deb" \
     CANDIDATE_VERSION="$candidate_version" BASELINE_VERSION="$baseline_version" \
     CONFIG_SHA="$config_sha_before" DB_BEFORE="$database_sha_before" DB_AFTER="$database_sha_after" \
+    SECONDARY_FIXTURE_RECORD="$secondary_fixture_record" \
+    SECONDARY_STATUS="$secondary_migration_status" \
+    SECONDARY_DB_BEFORE="$secondary_database_sha_before" \
+    SECONDARY_DB_AFTER="$secondary_database_sha_after" \
     BASELINE_INSTALL="$baseline_install_status" CANDIDATE_UPGRADE="$candidate_upgrade_status" \
     DB_MIGRATION="$database_migration_status" REMOVE_STATUS="$remove_status" PURGE_STATUS="$purge_status" \
     OWNER_HASH_BEFORE="$ownership_marker_sha_before" OWNER_UIDGID_BEFORE="$ownership_marker_owner_before" \
@@ -92,6 +104,8 @@ def sha(path):
 target, candidate_path, fixture_path = map(Path, sys.argv[1:])
 candidate = json.loads(candidate_path.read_text(encoding="utf-8"))
 fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+secondary_fixture_path = Path(os.environ["SECONDARY_FIXTURE_RECORD"])
+secondary_fixture = json.loads(secondary_fixture_path.read_text(encoding="utf-8"))
 payload = {
     "schema_version": 1,
     "profile": "linux-services-core",
@@ -110,11 +124,20 @@ payload = {
     "fixture_kind": fixture["fixture_kind"],
     "fixture_source_sha": fixture["source_sha"],
     "fixture_database_sha256": fixture["database_sha256"],
-    "alembic_revision_before": fixture["alembic_revision_before_upgrade"],
-    "expected_alembic_heads_after": fixture["expected_alembic_heads_after_upgrade"],
+    "alembic_revision_before": fixture["migration_source_inventory"]["heads_before_candidate_upgrade"],
+    "expected_alembic_heads_after": secondary_fixture["expected_alembic_heads_after_upgrade"],
     "config_sha256_before_upgrade": os.environ["CONFIG_SHA"],
     "database_sha256_before_migration": os.environ["DB_BEFORE"],
     "database_sha256_after_migration": os.environ["DB_AFTER"],
+    "secondary_intermediate_upgrade": {
+        "status": os.environ["SECONDARY_STATUS"],
+        "fixture_kind": secondary_fixture["fixture_kind"],
+        "fixture_database_sha256": secondary_fixture["database_sha256"],
+        "database_sha256_before_migration": os.environ["SECONDARY_DB_BEFORE"],
+        "database_sha256_after_migration": os.environ["SECONDARY_DB_AFTER"],
+        "alembic_revision_before": secondary_fixture["alembic_revision_before_upgrade"],
+        "expected_alembic_heads_after": secondary_fixture["expected_alembic_heads_after_upgrade"],
+    },
     "published_prior_release_upgrade": {
         "status": "passed" if os.environ["BASELINE_INSTALL"] == "passed" and os.environ["CANDIDATE_UPGRADE"] == "passed" else "incomplete",
         "source": "apt.airunner.art stable",
@@ -123,6 +146,10 @@ payload = {
         "sha256": sha(os.environ["BASELINE_DEB"]),
         "source_revision": candidate["upgrade_baseline"]["source_revision"],
         "source_identity_note": candidate["upgrade_baseline"]["source_identity_note"],
+        "database_fixture_kind": fixture["fixture_kind"],
+        "baseline_alembic_heads": fixture["migration_source_inventory"]["heads_before_candidate_upgrade"],
+        "migration_source_inventory": fixture["migration_source_inventory"],
+        "synthetic_conversation": fixture["synthetic_conversation"],
     },
     "data_ownership_marker": {
         "sha256_before_upgrade": os.environ["OWNER_HASH_BEFORE"],
@@ -132,7 +159,9 @@ payload = {
     },
     "limitations": [
         "Uses a published prior services-only Debian package; no source commit is bound in its package metadata.",
-        "Database fixture is synthetic and uses this candidate source's migrations at an intermediate revision, not a database or schema from the prior release.",
+        "Published-baseline database and conversation contents are synthetic; migration schema was created from the exact hash-pinned Debian package sources.",
+        "A separate current-source intermediate-revision fixture is also upgraded to retain the pre-existing scenario.",
+        "The published baseline package is not bound to its upstream source commit in package metadata.",
         "No production database, model, or model download was used.",
     ],
 }
@@ -155,6 +184,9 @@ cleanup() {
   fi
   if [[ -n "$policy_backup" ]]; then rm -f "$policy_backup"; fi
   if (( unit_config_changed )); then systemctl daemon-reload 2>/dev/null || true; fi
+  if [[ -n "$migration_home" && -d "$migration_home" && ! -L "$migration_home" ]]; then
+    rm -rf -- "$migration_home"
+  fi
   if (( rc != 0 )); then status=failed; fi
   write_record || true
   exit "$rc"
@@ -182,6 +214,32 @@ chmod 0755 "$policy"
 apt-get update
 apt-get install -y "$baseline_deb"
 [[ "$(dpkg-query -W -f='${Version}' airunner)" == "$baseline_version" ]]
+test ! -e "$fixture_dir" && test ! -L "$fixture_dir"
+migration_home=$(mktemp -d /tmp/airunner-baseline-migration.XXXXXX)
+chmod 0700 "$migration_home"
+mkdir -m 0700 \
+  "$migration_home/config" \
+  "$migration_home/data" \
+  "$migration_home/cache" \
+  "$migration_home/state" \
+  "$migration_home/runtime"
+unshare --net env -i \
+  PATH=/usr/bin:/bin \
+  HOME="$migration_home" TMPDIR="$migration_home" LANG=C.UTF-8 LC_ALL=C.UTF-8 \
+  XDG_CONFIG_HOME="$migration_home/config" XDG_DATA_HOME="$migration_home/data" \
+  XDG_CACHE_HOME="$migration_home/cache" XDG_STATE_HOME="$migration_home/state" \
+  XDG_RUNTIME_DIR="$migration_home/runtime" \
+  HF_HUB_OFFLINE=1 HF_DATASETS_OFFLINE=1 TRANSFORMERS_OFFLINE=1 CUDA_VISIBLE_DEVICES= \
+  /usr/bin/python3 scripts/create_core_published_upgrade_fixture.py \
+    --baseline-deb "$baseline_deb" \
+    --expected-deb-sha256 "$baseline_expected_hash" \
+    --source-sha "$CORE_SOURCE_SHA" \
+    --base-path "$migration_home/application-data" \
+    --output-dir "$fixture_dir"
+fixture_source=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["source_sha"])' "$fixture_record")
+fixture_hash=$(sha256sum "$fixture_db" | cut -d' ' -f1)
+fixture_record_hash=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["database_sha256"])' "$fixture_record")
+[[ "$fixture_source" == "$CORE_SOURCE_SHA" && "$fixture_hash" == "$fixture_record_hash" ]]
 baseline_install_status=passed
 
 config_file=/etc/airunner/daemon.yaml
@@ -242,10 +300,91 @@ done
 curl --silent --show-error --fail --connect-timeout 2 --max-time 3 \
   -H "Authorization: Bearer $api_key" \
   http://127.0.0.1:8080/api/v1/health/daemon >/dev/null
+published_conversation_id=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["synthetic_conversation"]["id"])' "$fixture_record")
+conversation_response="$migration_home/published-conversation-response.json"
+curl --silent --show-error --fail --connect-timeout 2 --max-time 5 \
+  -H "Authorization: Bearer $api_key" \
+  --get \
+  --data-urlencode "conversation_id=$published_conversation_id" \
+  --data-urlencode "max_messages=10" \
+  --output "$conversation_response" \
+  http://127.0.0.1:8080/api/v1/llm/conversations/session
+FIXTURE_RECORD="$fixture_record" API_RESPONSE="$conversation_response" python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+fixture = json.loads(Path(os.environ["FIXTURE_RECORD"]).read_text(encoding="utf-8"))
+response = json.loads(Path(os.environ["API_RESPONSE"]).read_text(encoding="utf-8"))
+expected = fixture["synthetic_conversation"]
+conversation = response.get("conversation")
+assert conversation is not None, response
+assert conversation["id"] == expected["id"], conversation
+assert conversation["title"] == expected["title"], conversation
+assert conversation["summary"] == expected["summary"], conversation
+messages = response.get("messages")
+assert isinstance(messages, list) and len(messages) == 2, messages
+assert any(
+    message.get("content") == "published-upgrade-marker-v1"
+    for message in messages
+), messages
+PY
 systemctl stop airunner-headless.service
 service_start_attempted=0
 
-DATABASE_FILE="$database_file" FIXTURE_RECORD="$fixture_record" python3 - <<'PY'
+DATABASE_FILE="$database_file" FIXTURE_RECORD="$fixture_record" EXPECTED_HEADS_RECORD="$secondary_fixture_record" python3 - <<'PY'
+import json
+import os
+import sqlite3
+from pathlib import Path
+fixture = json.loads(Path(os.environ["FIXTURE_RECORD"]).read_text(encoding="utf-8"))
+expected_fixture = json.loads(
+    Path(os.environ["EXPECTED_HEADS_RECORD"]).read_text(encoding="utf-8")
+)
+with sqlite3.connect(os.environ["DATABASE_FILE"]) as connection:
+    heads = sorted(row[0] for row in connection.execute("SELECT version_num FROM alembic_version"))
+    marker = connection.execute(
+        "SELECT payload FROM core_upgrade_fixture WHERE marker = ?",
+        ("synthetic-marker",),
+    ).fetchone()
+expected = sorted(expected_fixture["expected_alembic_heads_after_upgrade"])
+assert heads == expected, (heads, expected)
+assert marker == (fixture["fixture_payload"],), marker
+conversation = connection.execute(
+    "SELECT id, title, value FROM conversations WHERE id = ?",
+    (fixture["synthetic_conversation"]["id"],),
+).fetchone()
+assert conversation == (
+    fixture["synthetic_conversation"]["id"],
+    fixture["synthetic_conversation"]["title"],
+    fixture["synthetic_conversation"]["payload"],
+), conversation
+PY
+database_sha_after=$(sha256sum "$database_file" | cut -d' ' -f1)
+database_migration_status=passed
+
+test ! -e "$database_file-wal" && test ! -e "$database_file-shm"
+published_migrated_snapshot="$migration_home/published-migrated.db"
+cp -- "$database_file" "$published_migrated_snapshot"
+install -m 0600 -o airunner -g airunner "$secondary_fixture_db" "$database_file"
+secondary_database_sha_before=$(sha256sum "$database_file" | cut -d' ' -f1)
+service_start_attempted=1
+systemctl start airunner-headless.service
+for attempt in $(seq 1 60); do
+  if curl --silent --show-error --fail --connect-timeout 2 --max-time 3 \
+    http://127.0.0.1:8080/health >/dev/null; then break; fi
+  if [[ "$attempt" == 60 ]]; then
+    journalctl -u airunner-headless.service --no-pager -n 120 >&2 || true
+    exit 1
+  fi
+  sleep 2
+done
+curl --silent --show-error --fail --connect-timeout 2 --max-time 3 \
+  -H "Authorization: Bearer $api_key" \
+  http://127.0.0.1:8080/api/v1/health/daemon >/dev/null
+systemctl stop airunner-headless.service
+service_start_attempted=0
+DATABASE_FILE="$database_file" FIXTURE_RECORD="$secondary_fixture_record" python3 - <<'PYTHON'
 import json
 import os
 import sqlite3
@@ -260,9 +399,13 @@ with sqlite3.connect(os.environ["DATABASE_FILE"]) as connection:
 expected = sorted(fixture["expected_alembic_heads_after_upgrade"])
 assert heads == expected, (heads, expected)
 assert marker == (fixture["fixture_payload"],), marker
-PY
+PYTHON
+secondary_database_sha_after=$(sha256sum "$database_file" | cut -d' ' -f1)
+secondary_migration_status=passed
+
+test ! -e "$database_file-wal" && test ! -e "$database_file-shm"
+install -m 0600 -o airunner -g airunner "$published_migrated_snapshot" "$database_file"
 database_sha_after=$(sha256sum "$database_file" | cut -d' ' -f1)
-database_migration_status=passed
 
 apt-get remove -y airunner
 test -f "$config_file" -a -f "$database_file" -a -f "$ownership_marker"
@@ -272,16 +415,29 @@ test -f "$config_file" -a -f "$database_file" -a -f "$ownership_marker"
 [[ "$(sha256sum "$config_file" | cut -d' ' -f1)" == "$config_sha_before" ]]
 [[ "$(sha256sum "$ownership_marker" | cut -d' ' -f1)" == "$ownership_marker_sha_before" ]]
 [[ "$(stat -c '%u:%g:%a' "$ownership_marker")" == "$ownership_marker_owner_before" ]]
-DATABASE_FILE="$database_file" FIXTURE_PAYLOAD='synthetic-core-upgrade-data-preservation-fixture-v1' python3 - <<'PY'
+FIXTURE_RECORD="$fixture_record" DATABASE_FILE="$database_file" python3 - <<'PY'
+import json
 import os
 import sqlite3
+from pathlib import Path
+fixture = json.loads(Path(os.environ["FIXTURE_RECORD"]).read_text(encoding="utf-8"))
 with sqlite3.connect(os.environ["DATABASE_FILE"]) as connection:
     row = connection.execute(
         "SELECT payload FROM core_upgrade_fixture WHERE marker = ?",
         ("synthetic-marker",),
     ).fetchone()
-assert row == (os.environ["FIXTURE_PAYLOAD"],), row
+assert row == (fixture["fixture_payload"],), row
+conversation = connection.execute(
+    "SELECT id, title, value FROM conversations WHERE id = ?",
+    (fixture["synthetic_conversation"]["id"],),
+).fetchone()
+assert conversation == (
+    fixture["synthetic_conversation"]["id"],
+    fixture["synthetic_conversation"]["title"],
+    fixture["synthetic_conversation"]["payload"],
+), conversation
 PY
+[[ "$(sha256sum "$database_file" | cut -d' ' -f1)" == "$database_sha_after" ]]
 purge_status=passed
 
 status=passed
