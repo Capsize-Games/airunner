@@ -8,7 +8,7 @@ marker, not a 503 it cannot distinguish from a dead daemon.
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
@@ -79,6 +79,7 @@ class LocalRuntimeHealth(BaseModel):
     status: str
     details: str = ""
     descriptor: Optional[RuntimeDescriptorInfo] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class RoutingInfo(BaseModel):

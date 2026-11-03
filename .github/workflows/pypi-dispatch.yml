@@ -251,6 +251,7 @@ jobs:
             services/tests/test_sidecar_stt_auth.py \
             services/tests/test_sidecar_llm_stream.py \
             services/tests/test_sidecar_llm_payload.py \
+            services/tests/test_native_backend_profiles.py \
             services/tests/test_sidecar_openai_protocol.py \
             services/tests/test_llm_generation_tools.py \
             services/tests/test_events_stream.py \

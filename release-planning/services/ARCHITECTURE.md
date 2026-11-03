@@ -254,6 +254,19 @@ observations remain unknown. Frozen, installer and Docker staging must carry
 the same verified native profiles. A versioned sidecar manifest must describe
 standalone runtime facts without fictional application Python paths.
 
+The source selector now separates native CPU/CUDA selection from GGUF tuning,
+defers optional GPU verification during registry construction, and returns
+`native_backend_unavailable` at use when the requested profile is absent or
+invalid. It verifies the profile inventory and confines CUDA execution to the
+archive-local wrapper, uses PCI-ordered device selection, and disables automatic
+model fitting. `CUDA_VISIBLE_DEVICES` remapping is explicitly unsupported by
+this initial profile. Public capability metadata includes deferred/unavailable
+selection state while actual device/offload observations remain unknown.
+The integrated local transport/authentication/model-binding selection passed
+143 tests with four dependency deprecation warnings. The new verifier has no
+Radon D/E/F blocks; whole-file size/maintainability remains a review hotspot.
+These source checks do not establish packaged GPU acceptance.
+
 Coordinate the producer's annotated release/tag, complete immutable asset set,
 consumer pins and safe profile-tree staging. Preserve existing immutable tags.
 Native producer PR [#4](https://github.com/Capsize-Games/airunner-native/pull/4)

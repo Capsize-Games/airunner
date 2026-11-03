@@ -38,6 +38,32 @@ docker compose -f docker-compose.release.yml run --rm --service-ports airunner
 
 Both definitions bind port `127.0.0.1:8080` and mount the configured data and Hugging Face cache directories. The release compose file references `ghcr.io/capsize-games/airunner/airunner:linux-headless`; image publication and startup are not verified here. The repository's dependency publication gaps may also affect builds that request the `tts-python` extra.
 
+## Native LLM backend selection
+
+`AIRUNNER_LLAMA_BACKEND` accepts `auto` (the default), `cpu`, or `cuda-sm120a`.
+Backend selection is separate from the GGUF model's context and sampling
+profile. `auto` uses CPU for a zero GPU-layer request; a request for GPU layers
+requires a verified CUDA profile. Selecting `cpu` explicitly sets GPU layers to
+zero. An unavailable or malformed requested GPU profile returns
+`native_backend_unavailable`; it does not start the CPU executable instead.
+
+The CUDA profile belongs under
+`$AIRUNNER_BUNDLE_ROOT/share/airunner/native-runtimes/cuda-sm120a/` with its
+`profile-manifest.json`, wrapper, server, libraries and notices. The selector
+checks its file inventory, hashes, modes and declared source/producer identities
+before launch. Registry construction defers optional GPU verification, so a
+missing profile does not prevent CORE startup or health queries. Health metadata
+reports whether selection is deferred or unavailable. Selected artifact
+capabilities do not prove physical device use; observed device and offloaded
+layer fields remain unknown until measured.
+
+This profile targets Linux x86_64 and compute capability 12.0. The selector
+maps NVIDIA devices in PCI order and sets the child to that order; it currently
+rejects `CUDA_VISIBLE_DEVICES` overrides. The CUDA launch pins its device and
+disables automatic model fitting, preserving the requested model and context.
+The candidate artifact has not yet passed packaged GPU acceptance or been
+published as a verified profile.
+
 ## TTS HTTP API
 
 `POST /api/v1/tts/synthesize` accepts `text`, `model_type`, `voice`, and `speed`. To use the headless eSpeak CLI renderer, select it explicitly:

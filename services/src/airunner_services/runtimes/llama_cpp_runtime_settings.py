@@ -12,6 +12,9 @@ from airunner_common.settings import AIRUNNER_BASE_PATH
 from airunner_services.runtimes.bundled_runtime_paths import (
     resolve_runtime_executable,
 )
+from airunner_services.runtimes.native_backend_profiles import (
+    select_native_backend,
+)
 from airunner_services.runtimes.runtime_bind_host import (
     resolve_runtime_bind_host,
 )
@@ -238,6 +241,13 @@ class LlamaCppRuntimeSettings:
     cache_type_k: Optional[str] = None
     cache_type_v: Optional[str] = None
     repeat_last_n: Optional[int] = None
+    backend_profile: str = "cpu"
+    backend_artifact_id: str = "legacy-cpu-binary"
+    backend_manifest_sha256: Optional[str] = None
+    backend_profile_verified: bool = False
+    requested_device: Optional[str] = None
+    fit: Optional[str] = None
+    backend_selection_deferred: bool = False
 
     @property
     def endpoint(self) -> str:
@@ -254,6 +264,8 @@ def resolve_llama_cpp_runtime_settings(
     selected_model_path: Optional[str] = None,
     selected_n_ctx: Optional[int] = None,
     selected_n_gpu_layers: Optional[int] = None,
+    backend_override: Optional[str] = None,
+    defer_backend_selection: bool = False,
 ) -> LlamaCppRuntimeSettings:
     """Resolve sidecar settings from environment and optional persisted state."""
     resolved_llm_settings = (
@@ -282,11 +294,68 @@ def resolve_llama_cpp_runtime_settings(
     if not isinstance(sidecar_profile, dict):
         sidecar_profile = {}
 
+    configured_gpu_layers = (
+        int(selected_n_gpu_layers)
+        if selected_n_gpu_layers is not None
+        else _gpu_layers(
+            resolved_llm_settings,
+            model_id or "",
+            selected_profile,
+        )
+    )
+    requested_backend = backend_override or os.environ.get(
+        "AIRUNNER_LLAMA_BACKEND", "auto"
+    )
+    cpu_executable = None
+    if requested_backend.strip().lower() == "cpu" or (
+        requested_backend.strip().lower() == "auto"
+        and configured_gpu_layers == 0
+    ):
+        cpu_executable = resolve_runtime_executable(
+            "AIRUNNER_LLAMA_SERVER_BIN", "llama-server"
+        )
+    backend_deferred = defer_backend_selection and (
+        requested_backend.strip().lower() != "cpu"
+        and (
+            requested_backend.strip().lower() != "auto"
+            or configured_gpu_layers != 0
+        )
+    )
+    if backend_deferred:
+        pending_profile = (
+            "cuda-sm120a"
+            if requested_backend.strip().lower() == "auto"
+            else requested_backend.strip().lower()
+        )
+        from airunner_services.runtimes.native_backend_profiles import (
+            NativeBackendSelection,
+        )
+
+        backend = NativeBackendSelection(
+            profile=pending_profile,
+            executable="",
+            artifact_id="not-selected",
+            manifest_sha256=None,
+            verified=False,
+            device="CUDA0" if pending_profile == "cuda-sm120a" else None,
+            fit="off" if pending_profile == "cuda-sm120a" else None,
+        )
+    else:
+        backend = select_native_backend(
+            n_gpu_layers=configured_gpu_layers,
+            bundle_root=os.environ.get("AIRUNNER_BUNDLE_ROOT"),
+            requested=requested_backend,
+            cpu_executable=cpu_executable,
+        )
+    if backend_deferred:
+        selected_layers = configured_gpu_layers
+    elif backend.profile == "cpu":
+        selected_layers = 0
+    else:
+        selected_layers = configured_gpu_layers
+
     return LlamaCppRuntimeSettings(
-        executable=resolve_runtime_executable(
-            "AIRUNNER_LLAMA_SERVER_BIN",
-            "llama-server",
-        ),
+        executable=backend.executable,
         host=resolve_runtime_bind_host(
             "AIRUNNER_LLAMA_HOST",
             "AIRUNNER_RUNTIME_BIND_HOST",
@@ -305,15 +374,7 @@ def resolve_llama_cpp_runtime_settings(
             if selected_n_ctx is not None
             else _env_int("AIRUNNER_LLAMA_N_CTX", default_ctx)
         ),
-        n_gpu_layers=(
-            int(selected_n_gpu_layers)
-            if selected_n_gpu_layers is not None
-            else _gpu_layers(
-                resolved_llm_settings,
-                model_id or "",
-                selected_profile,
-            )
-        ),
+        n_gpu_layers=selected_layers,
         startup_timeout_seconds=_env_float(
             "AIRUNNER_LLAMA_STARTUP_TIMEOUT",
             DEFAULT_STARTUP_TIMEOUT_SECONDS,
@@ -323,6 +384,13 @@ def resolve_llama_cpp_runtime_settings(
         cache_type_k=_profile_text(sidecar_profile, "cache_type_k"),
         cache_type_v=_profile_text(sidecar_profile, "cache_type_v"),
         repeat_last_n=_profile_int(sidecar_profile, "repeat_last_n"),
+        backend_profile=backend.profile,
+        backend_artifact_id=backend.artifact_id,
+        backend_manifest_sha256=backend.manifest_sha256,
+        backend_profile_verified=backend.verified,
+        requested_device=backend.device,
+        fit=backend.fit,
+        backend_selection_deferred=backend_deferred,
     )
 
 

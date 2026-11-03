@@ -70,6 +70,29 @@ def _descriptor_entry(health: RuntimeHealth) -> Dict[str, Any]:
     }
 
 
+def _capability_runtime_metadata(metadata: Mapping[str, Any]) -> Dict[str, Any]:
+    """Expose backend selection fields without leaking local filesystem paths."""
+    keys = (
+        "backend_profile",
+        "backend_artifact_id",
+        "backend_manifest_sha256",
+        "backend_profile_verified",
+        "requested_device",
+        "actual_device",
+        "offloaded_layers",
+        "fit",
+        "backend_unavailable",
+        "backend_selection_deferred",
+    )
+    selected = {key: metadata[key] for key in keys if key in metadata}
+    executable = metadata.get("backend_executable")
+    if isinstance(executable, str) and executable.strip():
+        name = PureWindowsPath(PurePosixPath(executable).name).name
+        if name:
+            selected["backend_binary"] = name
+    return selected
+
+
 def runtime_entry(
     health: Optional[RuntimeHealth], *, failed: bool
 ) -> Dict[str, Any]:
@@ -79,13 +102,20 @@ def runtime_entry(
             "status": "failed",
             "details": "healthcheck failed",
             "descriptor": None,
+            "metadata": {},
         }
     if health is None:
-        return {"status": "unavailable", "details": "", "descriptor": None}
+        return {
+            "status": "unavailable",
+            "details": "",
+            "descriptor": None,
+            "metadata": {},
+        }
     return {
         "status": health.status.value,
         "details": health.details,
         "descriptor": _descriptor_entry(health),
+        "metadata": _capability_runtime_metadata(health.metadata),
     }
 
 

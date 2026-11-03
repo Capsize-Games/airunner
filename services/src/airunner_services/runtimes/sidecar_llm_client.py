@@ -20,6 +20,7 @@ from airunner_services.runtimes.contracts import RuntimeDescriptor
 from airunner_services.runtimes.contracts import RuntimeHealth
 from airunner_services.runtimes.contracts import RuntimeKind
 from airunner_services.runtimes.contracts import RuntimeMode
+from airunner_services.runtimes.contracts import RuntimeHealthStatus
 from airunner_services.runtimes.contracts import TransportKind
 from airunner_services.runtimes.base import RuntimeClient
 from airunner_services.runtimes.llama_cpp_runtime_settings import (
@@ -27,6 +28,9 @@ from airunner_services.runtimes.llama_cpp_runtime_settings import (
 	resolve_llama_cpp_runtime_settings,
 )
 from airunner_services.runtimes.message_envelopes import load_message_types
+from airunner_services.runtimes.native_backend_profiles import (
+	NativeBackendUnavailable,
+)
 from airunner_services.runtimes.registry import RuntimeRegistry
 from airunner_services.runtimes.registry import RuntimeRoute
 from airunner_services.runtimes.sidecar_launcher import SidecarLauncher
@@ -139,7 +143,17 @@ class SidecarLLMClient(RuntimeClient):
 		self._settings_resolver = (
 			settings_resolver or resolve_llama_cpp_runtime_settings
 		)
-		resolved_settings = settings or self._resolve_settings(None)
+		self._backend_unavailable: Optional[NativeBackendUnavailable] = None
+		if settings is not None:
+			resolved_settings = settings
+		elif self._uses_default_settings_resolver:
+			# Registry construction must not verify or activate optional CUDA
+			# assets. Selection is re-resolved before first load or invocation.
+			resolved_settings = resolve_llama_cpp_runtime_settings(
+				defer_backend_selection=True
+			)
+		else:
+			resolved_settings = self._resolve_settings(None)
 		self._settings = resolved_settings
 		self._launcher = launcher or SidecarLauncher(resolved_settings)
 		self._managed_launcher = launcher is None
@@ -224,6 +238,11 @@ class SidecarLLMClient(RuntimeClient):
 						yield self._failure_delta(
 							request.request_id,
 							self._client_error_message(exc),
+							code=(
+								exc.code
+								if isinstance(exc, NativeBackendUnavailable)
+								else getattr(exc, "code", "llm_invoke_failed")
+							),
 						)
 		except Exception as exc:
 			if record.cancelled.is_set():
@@ -239,6 +258,13 @@ class SidecarLLMClient(RuntimeClient):
 
 	def healthcheck(self) -> RuntimeHealth:
 		"""Return the health of the managed llama.cpp runtime."""
+		if self._backend_unavailable is not None:
+			return RuntimeHealth(
+				descriptor=self.descriptor,
+				status=RuntimeHealthStatus.FAILED,
+				details=str(self._backend_unavailable)[:160],
+				metadata=self._metadata(),
+			)
 		status, details = self._launcher.health_status()
 		return RuntimeHealth(
 			descriptor=self.descriptor,
@@ -478,7 +504,11 @@ class SidecarLLMClient(RuntimeClient):
 		except RuntimeError as exc:
 			return self._failure_response(
 				request_id,
-				"llm_load_failed",
+				(
+					exc.code
+					if isinstance(exc, NativeBackendUnavailable)
+					else "llm_load_failed"
+				),
 				self._client_error_message(exc),
 			)
 		finally:
@@ -550,7 +580,11 @@ class SidecarLLMClient(RuntimeClient):
 			self._complete_request(request.request_id, record)
 			return self._failure_response(
 				request.request_id,
-				"llm_invoke_failed",
+				(
+					exc.code
+					if isinstance(exc, NativeBackendUnavailable)
+					else "llm_invoke_failed"
+				),
 				self._client_error_message(exc),
 				retryable=True,
 			)
@@ -596,7 +630,14 @@ class SidecarLLMClient(RuntimeClient):
 			self._complete_request(request_id, record)
 			if isinstance(exc, _SidecarRequestError):
 				raise
-			raise _SidecarRequestError(self._client_error_message(exc)) from exc
+			raise _SidecarRequestError(
+				self._client_error_message(exc),
+				code=(
+					exc.code
+					if isinstance(exc, NativeBackendUnavailable)
+					else "llm_invoke_failed"
+				),
+			) from exc
 		finally:
 			self._release_request(request_id, record)
 
@@ -657,7 +698,14 @@ class SidecarLLMClient(RuntimeClient):
 			self._complete_request(request_id, record)
 			if isinstance(exc, _SidecarRequestError):
 				raise
-			raise _SidecarRequestError(self._client_error_message(exc)) from exc
+			raise _SidecarRequestError(
+				self._client_error_message(exc),
+				code=(
+					exc.code
+					if isinstance(exc, NativeBackendUnavailable)
+					else "llm_invoke_failed"
+				),
+			) from exc
 		finally:
 			self._release_request(request_id, record)
 
@@ -809,7 +857,24 @@ class SidecarLLMClient(RuntimeClient):
 		*,
 		selected_model: Optional[dict[str, Any]] = None,
 	) -> LlamaCppRuntimeSettings:
-		"""Resolve a profile's settings for one optional selected model."""
+		"""Resolve a profile and retain typed backend-unavailable state."""
+		try:
+			settings = self._resolve_settings_unchecked(
+				runtime_profile, selected_model=selected_model
+			)
+		except NativeBackendUnavailable as error:
+			self._backend_unavailable = error
+			raise
+		self._backend_unavailable = None
+		return settings
+
+	def _resolve_settings_unchecked(
+		self,
+		runtime_profile: Optional[str],
+		*,
+		selected_model: Optional[dict[str, Any]] = None,
+	) -> LlamaCppRuntimeSettings:
+		"""Resolve settings without changing availability state."""
 		selection = selected_model or {}
 		if self._uses_default_settings_resolver:
 			return resolve_llama_cpp_runtime_settings(
@@ -928,6 +993,13 @@ class SidecarLLMClient(RuntimeClient):
 		if (
 			selection.get("n_gpu_layers") is not None
 			and settings.n_gpu_layers != selection["n_gpu_layers"]
+			and not (
+				settings.backend_profile == "cpu"
+				and os.environ.get("AIRUNNER_LLAMA_BACKEND", "auto")
+				.strip()
+				.lower()
+				== "cpu"
+			)
 		):
 			raise RuntimeError(
 				"The configured sidecar offload does not match the selected GGUF"
@@ -1314,6 +1386,29 @@ class SidecarLLMClient(RuntimeClient):
 		if self._settings.model_id:
 			metadata["model_id"] = self._settings.model_id
 		metadata["runtime_profile"] = self._settings.runtime_profile
+		metadata.update(
+			{
+				"backend_profile": self._settings.backend_profile,
+				"backend_executable": self._settings.executable,
+				"backend_artifact_id": self._settings.backend_artifact_id,
+				"backend_manifest_sha256": self._settings.backend_manifest_sha256,
+				"backend_profile_verified": self._settings.backend_profile_verified,
+				"requested_device": self._settings.requested_device,
+				"fit": self._settings.fit,
+				"backend_selection_deferred": self._settings.backend_selection_deferred,
+				"actual_device": None,
+				"offloaded_layers": None,
+			}
+		)
+		if (
+			self._backend_unavailable is not None
+			or self._settings.backend_selection_deferred
+		):
+			metadata.pop("backend_executable", None)
+		if self._settings.backend_selection_deferred:
+			metadata["backend_selection_deferred"] = True
+		if self._backend_unavailable is not None:
+			metadata["backend_unavailable"] = True
 		if self._settings.model_path:
 			metadata["model_path"] = self._settings.model_path
 		return metadata
@@ -1323,6 +1418,8 @@ class SidecarLLMClient(RuntimeClient):
 		"""Map transport/native errors to bounded messages without raw details."""
 		if isinstance(error, _SidecarRequestError):
 			return error.public_message[:160]
+		if isinstance(error, NativeBackendUnavailable):
+			return str(error)[:160]
 		if isinstance(error, HTTPError):
 			return f"Local LLM sidecar returned HTTP {error.code}"
 		if isinstance(error, URLError):
@@ -1367,14 +1464,19 @@ class SidecarLLMClient(RuntimeClient):
 		)
 
 	@staticmethod
-	def _failure_delta(request_id: str, message: str) -> Any:
+	def _failure_delta(
+		request_id: str,
+		message: str,
+		*,
+		code: str = "llm_invoke_failed",
+	) -> Any:
 		"""Return a terminal stream delta for streaming failures."""
 		messages = load_message_types()
 		return messages.StreamDelta(
 			request_id=request_id,
 			final=True,
 			status=messages.EnvelopeStatus.FAILED,
-			metadata={"error": message},
+			metadata={"error": message, "error_code": code},
 		)
 
 

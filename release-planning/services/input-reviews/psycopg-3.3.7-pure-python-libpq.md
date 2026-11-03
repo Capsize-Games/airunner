@@ -84,5 +84,9 @@ The production Docker recipe verifies staged archives before package installs,
 constructs local apt metadata from the verified control records, disables
 network/downloads/removals for the locked install, and checks the exact package
 versions after subsequent system installs. Full Docker execution is still
-required. The frozen candidate currently depends on target-host libpq; carrying
-and validating that external prerequisite remains separate work under #2446.
+required. Full Linux bundle assembly now carries the exact offline OS package
+prerequisites, installer and metadata checker; CORE declares PostgreSQL
+disabled. An isolated Ubuntu 24.04 install from the assembled prerequisite
+subtree passed, including idempotence and negative-input cases. The service's
+actual DBAPI load, connection, migrations and full frozen bundle remain open
+under #2446.

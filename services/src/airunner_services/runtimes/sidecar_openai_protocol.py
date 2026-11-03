@@ -11,9 +11,15 @@ from airunner_services.runtimes.message_envelopes import load_message_types
 class SidecarRequestError(RuntimeError):
     """A sidecar protocol failure with a client-safe message."""
 
-    def __init__(self, public_message: str) -> None:
+    def __init__(
+        self,
+        public_message: str,
+        *,
+        code: str = "llm_invoke_failed",
+    ) -> None:
         super().__init__(public_message)
         self.public_message = public_message
+        self.code = code
 
 
 def decode_completion_json(response: Any) -> dict[str, Any]:

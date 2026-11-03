@@ -14,6 +14,9 @@ from urllib.request import urlopen
 from airunner_services.runtimes.contracts import RuntimeHealthStatus
 from airunner_services.runtimes.file_policy import PathPolicyError
 from airunner_services.runtimes.file_policy import resolve_existing_file
+from airunner_services.runtimes.native_backend_profiles import (
+	NativeBackendUnavailable,
+)
 from airunner_services.runtimes.llama_cpp_runtime_settings import (
 	LlamaCppRuntimeSettings,
 )
@@ -82,6 +85,8 @@ class SidecarLauncher:
 			str(loopback_token_path()),
 		]
 		optional_flags = (
+			("--device", self.settings.requested_device),
+			("--fit", self.settings.fit),
 			("--batch-size", self.settings.n_batch),
 			(
 				"--flash-attn",
@@ -239,6 +244,13 @@ class SidecarLauncher:
 		layout.ensure_exists()
 		environment = os.environ.copy()
 		environment.update(layout.as_environment())
+		if self.settings.backend_profile == "cuda-sm120a":
+			if "CUDA_VISIBLE_DEVICES" in environment:
+				raise NativeBackendUnavailable(
+					"CUDA SM120a runtime does not support CUDA_VISIBLE_DEVICES "
+					"remapping; unset it and retry"
+				)
+			environment["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 		return environment
 
 	def _open_log_handle(self):
