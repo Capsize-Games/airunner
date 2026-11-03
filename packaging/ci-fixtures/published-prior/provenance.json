@@ -1,0 +1,15 @@
+{
+  "kind": "published-prior-upgrade-test-input",
+  "package": "airunner",
+  "version": "6.1.3-3",
+  "architecture": "all",
+  "filename": "airunner_6.1.3-3_all.deb",
+  "size_bytes": 1464816,
+  "sha256": "60c07b5c2e8701b9f07309ee10be0327b5ef5ae908464fc370619bcfe4e4b87c",
+  "original_url": "https://apt.airunner.art/pool/main/a/airunner/airunner_6.1.3-3_all.deb",
+  "source_revision": null,
+  "source_binding": "The published package has no Source, Vcs or Built-Using field. No source-tag equivalence is claimed.",
+  "scope": "Isolated CI published-prior upgrade fixture only; excluded from service runtime packaging.",
+  "license_notice": "Preserved inside usr/share/doc/airunner/copyright in the unmodified package.",
+  "inspection": "Cached public package and control/data archives; no ELF/PE payloads or credential-pattern matches found in the recorded static scan. No baseline code or maintainer script was executed during mirroring."
+}

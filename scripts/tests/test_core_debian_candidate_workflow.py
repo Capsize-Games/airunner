@@ -124,6 +124,7 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
         self.assertIn('assert candidate["lock_sha256"] == digest("package/constraints-linux-core.txt")', self.workflow_text)
         self.assertIn('assert candidate["requirements_sha256"] == digest("package/requirements-linux-core.in")', self.workflow_text)
         self.assertIn("https://apt.airunner.art/pool/main/a/airunner/airunner_6.1.3-3_all.deb", self.workflow_text)
+        self.assertIn("packaging/ci-fixtures/published-prior/airunner_6.1.3-3_all.deb", self.workflow_text)
         self.assertIn("60c07b5c2e8701b9f07309ee10be0327b5ef5ae908464fc370619bcfe4e4b87c", self.workflow_text)
         self.assertIn('baseline_version == "6.1.3-3"', self.workflow_text)
         self.assertIn("apt-get install -y \"$baseline_deb\"", self.upgrade_smoke)
@@ -168,6 +169,7 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
             self.published_fixture,
         )
         self.assertIn("--migrate-only", self.published_fixture)
+
         self.assertIn("--expected-deb-sha256", self.upgrade_smoke)
         self.assertIn(
             "unshare --net /bin/bash -c 'ip link set lo up; exec \"$@\"' _ env -i",
@@ -188,6 +190,19 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
         )
         self.assertIn('null_keyring / "keyring.py"', self.published_fixture)
         self.assertNotIn("contents: write", self.workflow_text)
+
+    def test_checked_in_baseline_preserves_the_published_package_identity(self):
+        fixture = ROOT / "packaging/ci-fixtures/published-prior"
+        record = json.loads((fixture / "provenance.json").read_text())
+        package = fixture / record["filename"]
+        self.assertEqual(package.stat().st_size, 1464816)
+        self.assertEqual(
+            hashlib.sha256(package.read_bytes()).hexdigest(),
+            "60c07b5c2e8701b9f07309ee10be0327b5ef5ae908464fc370619bcfe4e4b87c",
+        )
+        self.assertEqual(record["version"], "6.1.3-3")
+        self.assertEqual(record["architecture"], "all")
+        self.assertIsNone(record["source_revision"])
 
     def test_upgrade_interruption_uses_installed_frozen_runtime(self):
         self.assertIn(
