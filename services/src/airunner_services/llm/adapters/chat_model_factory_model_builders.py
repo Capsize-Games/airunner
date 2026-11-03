@@ -12,6 +12,9 @@ from airunner_services.llm.adapters.chat_gguf import (
     ChatGGUF,
     find_gguf_file,
 )
+from airunner_services.llm.adapters.chat_model_factory_helpers import (
+    validate_ollama_base_url,
+)
 
 
 _DEFAULT_GGUF_MODEL_KWARGS: dict[str, object] = {
@@ -111,6 +114,7 @@ def create_ollama_model(
     temperature: float = 0.7,
 ) -> BaseChatModel:
     """Create one Ollama chat model."""
+    base_url = validate_ollama_base_url(base_url)
     try:
         from langchain_ollama import ChatOllama
 

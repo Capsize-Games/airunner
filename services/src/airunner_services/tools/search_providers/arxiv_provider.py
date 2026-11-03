@@ -9,6 +9,7 @@ import aiohttp
 from airunner_services.tools.search_providers.base_provider import (
     BaseSearchProvider,
 )
+from airunner_services.url_safety import validate_url_for_fetch
 from airunner_services.utils.application.log_hygiene import summarize_text
 
 
@@ -41,9 +42,16 @@ class ArxivProvider(BaseSearchProvider):
         formatted_query = urllib.parse.quote_plus(query)
         url = f"{self.API_BASE_URL}?search_query=all:{formatted_query}&start=0&max_results={num_results}"
 
-        async_client = client or await self.get_async_client()
+        async_client: Optional[aiohttp.ClientSession] = client
         try:
-            async with async_client.get(url) as response:
+            # This provider is exported as a callable API even though the
+            # application has no current construction site. Keep direct use
+            # behind the same offline/SSRF policy as other URL fetches, and
+            # do not let aiohttp follow an unchecked redirect.
+            validate_url_for_fetch(url)
+            if async_client is None:
+                async_client = await self.get_async_client()
+            async with async_client.get(url, allow_redirects=False) as response:
                 response.raise_for_status()
                 content = await response.text()
                 root = ET.fromstring(content)
@@ -92,7 +100,7 @@ class ArxivProvider(BaseSearchProvider):
         except Exception as e:
             self.logger.error(f"arXiv search error: {e}")
         finally:
-            if not client:
+            if not client and async_client is not None:
                 await async_client.close()
 
         return results
