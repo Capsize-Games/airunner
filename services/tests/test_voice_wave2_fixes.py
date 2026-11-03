@@ -576,6 +576,9 @@ class _FakeSTTLauncher:
 
         return RuntimeHealthStatus.READY, "ready"
 
+    def internal_auth_headers(self):
+        return {"Authorization": "Bearer fixture-token"}
+
 
 def _stt_request(payload, request_id="req-1"):
     from airunner_services.runtimes.contracts import (

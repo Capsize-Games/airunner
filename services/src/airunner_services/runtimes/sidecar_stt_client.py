@@ -277,6 +277,7 @@ class SidecarSTTClient(RuntimeClient):
 			headers={
 				"Content-Type": f"multipart/form-data; boundary={boundary}",
 				"Accept": "application/json",
+				**self._launcher.internal_auth_headers(),
 			},
 		)
 		try:

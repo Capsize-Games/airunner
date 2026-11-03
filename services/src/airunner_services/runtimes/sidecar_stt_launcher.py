@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import secrets
+import stat
 import subprocess
 import threading
 import time
@@ -18,6 +20,11 @@ from airunner_services.config.runtime_layout import (
 )
 from airunner_services.runtimes.whisper_cpp_runtime_settings import (
 	WhisperCppRuntimeSettings,
+)
+from airunner_services.api.loopback_token import (
+	get_or_create_loopback_token,
+	load_loopback_token,
+	loopback_token_path,
 )
 
 
@@ -48,6 +55,7 @@ class SidecarSTTLauncher:
 		# Re-entrant: start() reaches stop() through the wait path.
 		self._lock = threading.RLock()
 		self._recent_stderr = ""
+		self._api_key: Optional[str] = None
 
 	@property
 	def endpoint(self) -> str:
@@ -86,6 +94,8 @@ class SidecarSTTLauncher:
 			self.settings.language,
 			"--inference-path",
 			self.settings.normalized_inference_path,
+			"--api-key-file",
+			str(loopback_token_path()),
 		]
 		if self.settings.request_prefix:
 			command.extend(["--request-path", self.settings.request_prefix])
@@ -104,6 +114,7 @@ class SidecarSTTLauncher:
 	def start(self) -> None:
 		"""Start the sidecar and wait until its health endpoint responds."""
 		with self._lock:
+			self._api_key = self._ensure_api_key_file()
 			if self.is_ready():
 				return
 			self._last_error = ""
@@ -156,6 +167,36 @@ class SidecarSTTLauncher:
 		if self._last_error:
 			return RuntimeHealthStatus.FAILED, self._last_error
 		return RuntimeHealthStatus.STOPPED, "not loaded"
+
+	@staticmethod
+	def _ensure_api_key_file() -> str:
+		"""Provision and validate the private local runtime credential."""
+		token = get_or_create_loopback_token()
+		persisted = load_loopback_token()
+		path = loopback_token_path()
+		try:
+			info = path.lstat()
+			private_regular_file = (
+				stat.S_ISREG(info.st_mode)
+				and stat.S_IMODE(info.st_mode) == 0o600
+			)
+		except OSError:
+			private_regular_file = False
+		if (
+			persisted is None
+			or not private_regular_file
+			or not secrets.compare_digest(token, persisted)
+		):
+			raise RuntimeError(
+				"Unable to validate the private local runtime credential file"
+			)
+		return token
+
+	def internal_auth_headers(self) -> dict[str, str]:
+		"""Return auth headers for requests made to this managed child only."""
+		if not self._api_key:
+			return {}
+		return {"Authorization": f"Bearer {self._api_key}"}
 
 	def _required_model_path(self) -> str:
 		"""Return the configured ggml model path or raise a helpful error."""
