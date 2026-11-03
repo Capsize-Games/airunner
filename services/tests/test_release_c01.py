@@ -37,6 +37,11 @@ def test_candidate_assembles_verifies_and_uploads() -> None:
     jobs = c01._load_yaml(c01._DISPATCH)["jobs"]
     job = jobs["linux-candidate"]
     assert set(job["needs"]) == {"fetch-sidecars"}
+    assert "needs.fetch-sidecars.result == 'success'" in job["if"]
+    install = next(step for step in job["steps"] if step.get("name") == "Install dependencies")
+    assert "--no-index --no-deps --no-build-isolation -e ./native" in install["run"]
+    verify = next(step for step in job["steps"] if step.get("name") == "Verify candidate manifest")
+    assert "--require-sidecars" in verify["run"]
     text = c01._steps_text(job)
     for marker in (
         "scripts/assemble_linux_bundle.py",

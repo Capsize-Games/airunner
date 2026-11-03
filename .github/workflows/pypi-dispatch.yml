@@ -46,14 +46,12 @@ jobs:
     # candidate only: it must never publish to PyPI/itch itself --
     # promotion goes through candidate-gate below.
     #
-    # Runs unless sidecar fetching hard-failed. Ordinary dispatches may
-    # omit sidecars; release promotion requires them.
+    # Every dispatch builds the complete candidate with verified sidecars.
     needs: [fetch-sidecars]
     if: >-
       always() &&
       github.event_name == 'workflow_dispatch' &&
-      needs.fetch-sidecars.result != 'failure' &&
-      needs.fetch-sidecars.result != 'cancelled'
+      needs.fetch-sidecars.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -145,6 +143,7 @@ jobs:
           python -m pip install --no-index --find-links "$builder" \
             --no-deps --require-hashes -r "$builder/requirements.txt"
           python -m pip install --no-deps --no-build-isolation -e './services[linux-release]'
+          python -m pip install --no-index --no-deps --no-build-isolation -e ./native
           python -m pip check
           if [ "$PROMOTE_RELEASE" = "true" ]; then
             version="$(python services/setup.py --version)"
@@ -267,9 +266,9 @@ jobs:
       # Native sidecars land in bin/ after the freeze (PyInstaller
       # wipes its output dir, so nothing can be pre-seeded) and the
       # manifest is extended over them. Names cite spec
-      # [runtimes]; runs on release only.
+      # [runtimes]; candidates and releases use the same pinned sidecars.
       - name: Stage sidecars and extend manifest
-        if: github.event_name == 'workflow_dispatch' && inputs.promote_release == true && needs.fetch-sidecars.result == 'success'
+        if: needs.fetch-sidecars.result == 'success'
         run: |
           bash packaging/linux/stage-sidecars.sh \
             --tarball \
@@ -284,12 +283,8 @@ jobs:
       # hashes, required resources, and the exclusion scan.
       - name: Verify candidate manifest
         run: |
-          extra=""
-          if [ "${{ inputs.promote_release || false }}" = "true" ]; then
-            extra="--require-sidecars"
-          fi
           python scripts/inspect_linux_bundle.py \
-            build/bundle-dist/airunner-daemon $extra
+            build/bundle-dist/airunner-daemon --require-sidecars
 
       - name: Package verified Linux candidate
         run: |
@@ -588,7 +583,7 @@ jobs:
     # release cadence). This downloads the pinned release's prebuilt
     # bundles rather than rebuilding them here; see
     # .github/native-sidecar-version for which tag.
-    if: github.event_name == 'workflow_dispatch' && inputs.promote_release == true
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
 
     steps:

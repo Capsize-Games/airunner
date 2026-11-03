@@ -61,6 +61,13 @@ RUN set -e; \
     apt-get update; \
     apt-get install -y python3.13 python3.13-dev && rm -rf /var/lib/apt/lists/*
 
+# Keep application wheels separate from Debian's Python packages. This image's
+# supported offline bootstrap uses the standard-library environment creator and
+# the reviewed, hash-pinned pip wheel rather than a network bootstrap installer.
+RUN python3.13 -m venv --without-pip /opt/airunner-venv
+ENV VIRTUAL_ENV=/opt/airunner-venv
+ENV PATH="/opt/airunner-venv/bin:${PATH}"
+
 # Set working directory
 WORKDIR /app
 
@@ -101,9 +108,6 @@ RUN --mount=type=bind,from=reviewed-inputs,source=runtime,target=/tmp/release-in
     test -d "$pip_licenses"; \
     mkdir -p /usr/share/doc/airunner/legal/bootstrap-pip; \
     cp -a "$pip_licenses/." /usr/share/doc/airunner/legal/bootstrap-pip/; \
-    if dpkg -l python3-cryptography >/dev/null 2>&1; then \
-        apt-get purge -y python3-cryptography; \
-    fi; \
     mkdir -p /usr/share/doc/airunner/release-inputs/runtime \
         /usr/share/doc/airunner/release-inputs/builder; \
     cp /tmp/release-inputs/runtime/artifact-sources.json \
