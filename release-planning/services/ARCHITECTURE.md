@@ -141,6 +141,11 @@ metadata, not published releases.
 
 ## Phases and acceptance
 
+The owner delegated quality and latency targets on 2026-11-03.
+[EVALUATION_TARGETS.md](EVALUATION_TARGETS.md) defines the reproducible scenarios,
+correctness/quality criteria, performance targets and comparison procedure.
+These are targets; actual source and final-artifact results remain separate.
+
 | Phase | Work and existing issues | Exit evidence |
 |---|---|---|
 | 0: Reconcile scope | Retire obsolete plans; align contributor/service docs (#2201), preserve companion boundaries (#2144); integrate mainline; make optional static app hosting explicitly configured | Tracker reconciliation; service contract and accurate commands; no machine-specific implicit UI mount; focused merge checks |
@@ -470,3 +475,45 @@ stager with a cached, hash-verified archive containing three of the wheels.
 It did not fetch a live Actions ZIP or re-download the full runtime graph.
 Published asset downloads and hashes remain a required release check. Root's
 focused transport/promotion regressions passed 47 tests locally.
+
+## Remaining document and resource boundaries
+
+Phase 2 and phase 6 / [#2136](https://github.com/Capsize-Games/airunner/issues/2136)
+include three confirmed document gaps. Keep one supported-format inventory for
+the loader, indexing worker and tools; reject Office containers when no parser
+exists. Carry immutable document IDs from the selected chatbot and explicit
+request documents through generation and tool execution into retrieval. An
+explicit empty selection must return no passages; a per-request filter must
+never widen an existing retriever restriction. Preserve standalone compatibility
+when no request scope exists.
+
+Document deletion must share indexing admission and the runtime activity lock.
+Stage only deterministic generated index directories, update registry and database
+with rollback on pre-commit failure, invalidate caches, and retain a cleanup
+manifest for post-commit removal retries. Original document files remain intact.
+Both singular and bulk resource deletion must use this boundary. These changes
+and actual E5 document lifecycle acceptance are in progress; earlier synthetic
+retrieval proof does not establish this full scope.
+
+Phase 3 / [#2406](https://github.com/Capsize-Games/airunner/issues/2406) also
+includes ART memory admission. Inspection found that path-valued ART identities
+were accepted as unregistered by the resource coordinator. The pretrained loader
+used total VRAM, a 4 GiB floor and a fixed 32 GiB CPU allowance, which can exceed
+live capacity. Register the declared ART resource demand and quantization intent,
+use fresh available resources, and account for transformer, text encoder, VAE and
+activation headroom under a shared budget. Reject an unsupported load before
+starting it; estimated budgets remain distinct from measured peaks.
+
+The pinned Z-Image intake contains all 19 selected files. Seven safetensors
+payloads total 32,832,339,790 bytes; source/LFS identities and tensor header/layout
+checks passed. This is data intake evidence, not model loading or generation.
+
+Phase 6 / [#2139](https://github.com/Capsize-Games/airunner/issues/2139) now
+has an automated interruption probe. It kills only its own setup subprocess after
+one observed schema DDL. The published-baseline local run interrupted
+post-migration schema repair, retained the verified pre-upgrade backup and
+synthetic conversation, correctly rejected restoring an already-migrated database,
+and resumed to the authoritative candidate graph heads. Fifteen independent
+regressions passed locally. Hosted installed-package verification of this new
+probe remains pending; it does not establish arbitrary power-loss or interrupted
+dpkg-unpack recovery.

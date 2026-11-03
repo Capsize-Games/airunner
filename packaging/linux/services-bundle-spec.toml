@@ -32,16 +32,15 @@ entry_module = "airunner_services.daemon"
 entry_function = "main"
 # Manifest identity of the entry point ("module:function").
 entry = "airunner_services.daemon:main"
-# Active P02 lock path for the Linux release profile. The prior desktop
-# lock is historical; release-lock generation remains pending after the
-# OpenVoice/Melo deferral, and release preflight blocks before installation.
+# Active reviewed hash lock for the Linux release profile. The prior desktop
+# lock is historical; input readiness and candidate acceptance are separate.
 constraints = "package/constraints-linux-nvidia-cu129-linux-release.txt"
 
 [profile]
 # The services-side Linux v1 NVIDIA release profile (P02). It excludes
 # the paused OpenVoice/Melo vendor and optional FacehuggerShield compatibility
 # extra; package metadata retains those opt-in extras. The active hash lock
-# is pending regeneration.
+# contains the selected reviewed runtime inputs.
 services_extra = "linux-release"
 excludes = ["airunner-tts-vendor", "facehuggershield"]
 aggregates = [
