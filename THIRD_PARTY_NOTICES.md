@@ -27,6 +27,15 @@ This policy is enforced in CI by
 via the pytest wrapper
 [`services/tests/test_third_party_notices.py`](services/tests/test_third_party_notices.py).
 
+## PyInstaller 6.12.0 bootloader
+
+- **Upstream project:** `pyinstaller/pyinstaller`
+- **Upstream URL:** https://github.com/pyinstaller/pyinstaller/tree/v6.12.0
+- **License:** GNU GPL version 2 or later with the PyInstaller Bootloader Exception.
+- **Distributed component:** the Linux onedir application bundle includes the PyInstaller bootloader. The exact license and exception text is shipped at `legal/third-party/pyinstaller-6.12.0-COPYING.txt`.
+- **Source pin:** tag `v6.12.0`, commit `31dbe9ff477716e4790aa317bc9da68766d20659`.
+- **Wheel source:** `pyinstaller-6.12.0-py3-none-manylinux2014_x86_64.whl`, SHA-256 `a2abf5fde31a8b38b6df7939bcef8ac1d0c51e97e25317ce3555cd675259750f`.
+
 ---
 
 ## melo — MeloTTS

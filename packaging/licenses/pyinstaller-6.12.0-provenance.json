@@ -1,0 +1,31 @@
+{
+  "bundle_scope": {
+    "builder_tools_and_hook_packages_are_not_declared_as_bundle_runtime": true,
+    "reason": "The Linux onedir bundle contains PyInstaller bootloader files. The exact COPYING text is placed in legal/third-party."
+  },
+  "distribution": {
+    "name": "pyinstaller",
+    "version": "6.12.0"
+  },
+  "license_file": {
+    "bundle_source": "packaging/licenses/pyinstaller-6.12.0-COPYING.txt",
+    "contains_bootloader_exception": true,
+    "contains_gpl_text": true,
+    "sha256": "dcf75fdb959db1e3b41c0f8505069d2ece781b5ec6b3d0a4d30975cfc6580245",
+    "size_bytes": 32138,
+    "wheel_member": "pyinstaller-6.12.0.dist-info/COPYING.txt"
+  },
+  "schema_version": 1,
+  "selected_wheel": {
+    "filename": "pyinstaller-6.12.0-py3-none-manylinux2014_x86_64.whl",
+    "sha256": "a2abf5fde31a8b38b6df7939bcef8ac1d0c51e97e25317ce3555cd675259750f",
+    "size_bytes": 716959,
+    "url": "https://files.pythonhosted.org/packages/80/2b/14404f2dc95d1ec94d08879c62a76d5f26a176fab99fb023c2c70d2ff500/pyinstaller-6.12.0-py3-none-manylinux2014_x86_64.whl"
+  },
+  "upstream_source": {
+    "commit": "31dbe9ff477716e4790aa317bc9da68766d20659",
+    "repository": "https://github.com/pyinstaller/pyinstaller",
+    "source_archive_sha256": "1834797be48ce1b26015af68bdeb3c61a6c7500136f04e0fc65e468115dec777",
+    "tag": "v6.12.0"
+  }
+}

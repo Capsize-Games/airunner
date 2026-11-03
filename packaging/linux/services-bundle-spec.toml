@@ -439,6 +439,18 @@ stage = "root"
 required = true
 
 [[data]]
+source = "packaging/licenses/pyinstaller-6.12.0-COPYING.txt"
+dest = "legal/third-party"
+stage = "root"
+required = true
+
+[[data]]
+source = "packaging/licenses/pyinstaller-6.12.0-provenance.json"
+dest = "legal/third-party"
+stage = "root"
+required = true
+
+[[data]]
 source = "packaging/licenses/libuv-LICENSE"
 dest = "legal"
 stage = "root"
