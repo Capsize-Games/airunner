@@ -57,6 +57,7 @@ from linux_bundle_gates import (
 )
 from dependency_notices import verify_dependency_notice_manifest
 from stage_espeak_native_payload import verify_staged_espeak
+from postgresql_runtime_payload import verify_runtime_payload
 
 DEFAULT_SPEC = (
     Path(__file__).resolve().parent.parent
@@ -170,6 +171,7 @@ def _append_manifest(
     result.problems.extend(
         verify_dependency_notice_manifest(bundle_dir, spec, repo_root)
     )
+    result.problems.extend(verify_runtime_payload(bundle_dir, spec, repo_root))
     result.problems.extend(scan_exclusions(bundle_dir, spec))
     result.problems.extend(check_extension_modules(bundle_dir, spec))
     result.problems.extend(check_collected_binaries(bundle_dir, spec))

@@ -116,6 +116,7 @@ jobs:
             scripts/tests/test_cuda_wheel_handoff.py \
             scripts/tests/test_linux_release_artifact_stager.py \
             scripts/tests/test_postgresql_runtime_stager.py \
+            scripts/tests/test_postgresql_runtime_bundle.py \
             scripts/tests/test_linux_release_wheel_assets.py \
             scripts/tests/test_linux_ci_dependency_inputs.py \
             scripts/tests/test_apt_release_publisher.py \
@@ -176,6 +177,7 @@ jobs:
             scripts/tests/test_linux_warning_dispositions.py \
             services/tests/test_espeak_runtime_paths.py \
             services/tests/test_postgresql_runtime.py \
+            services/tests/test_postgresql_prerequisites.py \
             services/tests/test_sidecar_llm_auth.py \
             services/tests/test_sidecar_stt_auth.py \
             services/tests/test_sidecar_llm_stream.py \
@@ -186,6 +188,8 @@ jobs:
             services/tests/test_sidecar_llama_server_proxy.py \
             services/tests/test_llm_request_ownership.py \
             services/tests/test_release_p05_binaries.py \
+            services/tests/test_release_p05_inspect.py \
+            services/tests/test_release_p05_assemble.py \
             services/tests/test_release_p05_gates.py \
             services/tests/test_local_fallback_loaded_metadata.py \
             services/tests/test_ollama_embedding_contract.py \

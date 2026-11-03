@@ -229,6 +229,15 @@ def configure_postgresql_runtime(
     if not is_postgresql_url(db_url):
         return None
 
+    # Frozen-bundle package metadata is part of the hashed release payload.
+    # Check the target OS and exact libpq closure before SQLAlchemy imports a
+    # native DBAPI. Source installations retain their existing package flow.
+    from airunner_services.runtimes.postgresql_prerequisites import (
+        require_frozen_postgresql_runtime,
+    )
+
+    require_frozen_postgresql_runtime()
+
     if os.getuid() != os.geteuid() or os.getgid() != os.getegid():
         raise PostgreSQLRuntimeError(
             "PostgreSQL requires equal real/effective UID and GID for SASL_PATH"

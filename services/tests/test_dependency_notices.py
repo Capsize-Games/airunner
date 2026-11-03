@@ -143,6 +143,7 @@ def _setup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         "qt": {"qt_markers": []},
         "warn_allowlist": {"modules": []},
         "r01_coverage": {},
+        "postgresql_runtime": {"mode": "disabled"},
     }
     spec["bundle"]["constraints"] = lock.name
     _write_distribution(site, "alpha", "1.0", {"licenses/LICENSE": b"Alpha MIT notice\n"})
@@ -151,6 +152,7 @@ def _setup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     _write_distribution(site, "unlocked", "9.9", {"LICENSE": b"ignore me\n"})
     bundle = tmp_path / "bundle"
     bundle.mkdir()
+    assemble_linux_bundle.stage_runtime_payload(None, bundle, spec, tmp_path)
     return site, lock, spec, bundle
 
 

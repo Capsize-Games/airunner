@@ -121,6 +121,10 @@ jobs:
           python scripts/stage_postgresql_runtime.py \
             --output-dir "$audit/postgresql-runtime" \
             --cache-dir /var/cache/apt/archives
+          python scripts/stage_postgresql_runtime.py \
+            --kind build-supplement \
+            --output-dir "$audit/postgresql-build-supplement" \
+            --cache-dir /var/cache/apt/archives
           python scripts/stage_linux_release_artifacts.py \
             --manifest package/linux-release-v4-artifact-sources.json \
             --selected-lockfile package/constraints-linux-nvidia-cu129-linux-release.txt \
@@ -178,6 +182,7 @@ jobs:
             scripts/tests/test_cuda_wheel_handoff.py \
             scripts/tests/test_linux_release_artifact_stager.py \
             scripts/tests/test_postgresql_runtime_stager.py \
+            scripts/tests/test_postgresql_runtime_bundle.py \
             scripts/tests/test_linux_release_wheel_assets.py \
             scripts/tests/test_linux_ci_dependency_inputs.py \
             scripts/tests/test_apt_release_publisher.py \
@@ -239,6 +244,9 @@ jobs:
             scripts/tests/test_linux_warning_dispositions.py \
             services/tests/test_espeak_runtime_paths.py \
             services/tests/test_postgresql_runtime.py \
+            services/tests/test_postgresql_prerequisites.py \
+            services/tests/test_release_p05_inspect.py \
+            services/tests/test_release_p05_assemble.py \
             services/tests/test_sidecar_llm_auth.py \
             services/tests/test_sidecar_stt_auth.py \
             services/tests/test_sidecar_llm_stream.py \
@@ -303,6 +311,8 @@ jobs:
           python scripts/assemble_linux_bundle.py \
             --base "${{ github.sha }}" \
             --espeak-payload "$RUNNER_TEMP/espeak-native/out/candidate/payload" \
+            --postgresql-runtime-inputs "$RUNNER_TEMP/linux-candidate-input-audit/postgresql-runtime" \
+            --postgresql-build-supplement-inputs "$RUNNER_TEMP/linux-candidate-input-audit/postgresql-build-supplement" \
             --distpath build/bundle-dist \
             --workpath build/bundle-work
 
@@ -371,6 +381,7 @@ jobs:
           path: |
             ${{ runner.temp }}/linux-candidate-input-audit/*
             ${{ runner.temp }}/linux-candidate-input-audit/postgresql-runtime/**
+            ${{ runner.temp }}/linux-candidate-input-audit/postgresql-build-supplement/**
             build/bundle-work/airunner-daemon/warn-airunner-daemon.txt
             build/bundle-work/airunner-daemon/PYZ-00.toc
           if-no-files-found: warn

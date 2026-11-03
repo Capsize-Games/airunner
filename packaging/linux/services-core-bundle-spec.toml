@@ -19,6 +19,10 @@ entry_function = "main"
 entry = "airunner_services.bundle_console_dispatch:main"
 constraints = "package/constraints-linux-core.txt"
 
+# CORE stays SQLite-only and does not include PostgreSQL support.
+[postgresql_runtime]
+mode = "disabled"
+
 [profile]
 services_extra = "core-only"
 aggregates = []

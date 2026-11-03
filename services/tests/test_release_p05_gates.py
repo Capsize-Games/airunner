@@ -233,6 +233,13 @@ def _run_cli(bundle: Path, cwd: Path, expect: int, needle: str) -> None:
         count=1,
     )
     assert changes == 1
+    fixture_source, changes = re.subn(
+        r"(?m)^\[postgresql_runtime\]\nmode\s*=\s*\"locked-ubuntu-debs\"",
+        '[postgresql_runtime]\nmode = "disabled"',
+        fixture_source,
+        count=1,
+    )
+    assert changes == 1
     fixture_spec = cwd / "inspect-fixture.toml"
     fixture_spec.write_text(fixture_source)
     proc = subprocess.run(

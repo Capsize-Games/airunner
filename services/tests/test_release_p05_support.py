@@ -77,6 +77,7 @@ def assemble_mod() -> types.ModuleType:
 def spec(inspect_mod: types.ModuleType) -> dict[str, Any]:
     """The parsed services bundle spec."""
     value = dict(inspect_mod.load_spec(SPEC_PATH))
+    value["postgresql_runtime"] = {"mode": "disabled"}
     # These synthetic P05 tests exercise bundle checks without pretending
     # that the blocked full-profile lock is installed. Dedicated notice
     # tests use temporary synthetic locks and metadata fixtures.
@@ -210,6 +211,7 @@ def make_bundle(
     _stage_extension_fixtures(bundle, spec)
     _stage_binary_fixtures(bundle, spec)
     _stage_frozen_source_fixtures(bundle, spec)
+    assemble_mod.stage_runtime_payload(None, bundle, spec, REPO_ROOT)
     if spec.get("native_speech", {}).get("required", False):
         _stage_speech_fixture(bundle)
     assemble_mod.write_manifest(bundle, spec, base)

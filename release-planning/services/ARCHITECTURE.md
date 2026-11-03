@@ -68,6 +68,20 @@ Five CPU ABI/local-fixture probes and full production notice verification
 establish full model, GPU, API or frozen-artifact acceptance. The visible
 exact-pin inventory is in `DEPENDENCY_DECISIONS.md`.
 
+Full Linux bundle assembly now requires the reviewed Ubuntu 24.04 amd64
+PostgreSQL OS package inputs and stages their exact archives, locks, receipts,
+offline installer and standard-library prerequisite checker. Frozen PostgreSQL
+selection checks the target OS and installed package versions before importing
+its DBAPI. CORE declares PostgreSQL disabled; SQLite does not need those
+packages. Disposable pinned-image validation installed the 24 runtime packages
+and two conditional development compatibility packages from the assembled
+local repository, preserved CUDA/compiler package identities, and passed a
+second invocation without package changes. Missing input, checksum drift,
+wrong architecture and downgrade cases rejected before installation. The
+integrated local bundle/upgrade regression selection passed 163 tests. This
+establishes staging, package installation and metadata checks; actual PostgreSQL
+connections, migrations and a full frozen release remain required.
+
 The reviewed CUDA wrapper `0.3.21+capsize.3` corrects the Qwen MTP loader and
 ctypes context-layout defects found in earlier candidates. Disk caching is an
 explicit extra. Compiled candidate run `41545665728` and notice-completion run
@@ -95,8 +109,18 @@ unexplained. Failure diagnostics now retain bounded, redacted child-log tails
 while preserving the failed result. A subsequent source regression reproduced a metadata-head read attempting
 `PRAGMA journal_mode=WAL` while a writer held `BEGIN IMMEDIATE`; the dedicated
 metadata engine now preserves the journal mode and allows backup/head reads.
-The same fixture failed before that fix and passed afterward; final frozen
-upgrade recovery remains unproven until CI reruns. All four optional runtime-smoke marker
+The same fixture failed before that fix and passed afterward. At `ef91e36d6`,
+CORE candidate run `41718346308` built and clean-installed the package, and its
+published-upgrade job passed migration, data/config preservation, package
+remove/purge preservation, and the installed frozen interruption/recovery probe.
+The interruption probe kills the owned headless entry point after its durable
+pre-upgrade backup and before migration writes, then resumes normal startup;
+it does not simulate arbitrary power loss or interrupted package unpacking.
+Its authenticated API/conversation checks returned 200 and unauthenticated API
+returned 401. The exact published baseline is retained as a checksum-pinned
+test fixture after the original download endpoint returned HTTP 502. These
+results cover the synthetic SQLite CORE scenario, not PostgreSQL or model
+backends. All four optional runtime-smoke marker
 selections are absent in the inspected source; CI reports that explicitly as
 no coverage before dependency setup. Runtime contracts, final full-profile
 packaging checks and physical-model acceptance remain separate requirements.
@@ -235,10 +259,28 @@ consumer pins and safe profile-tree staging. Preserve existing immutable tags.
 Native producer PR [#4](https://github.com/Capsize-Games/airunner-native/pull/4)
 retains the reviewed Whisper v1.9.5 source with a version-specific key-file auth
 patch and binds CPU/CUDA packaging to committed producer recipes. Local
-model-free producer tests and hosted input tests pass; native build workflows
-are running. The CUDA candidate is not accepted or activated. Actual service
+model-free producer tests and hosted input tests pass. Candidate run
+`41712069289` built both Linux and Windows CPU archives and passed their native
+OS help/version checks. CUDA run `41712967565` completed compilation but failed
+the subsequent runtime-notice/package-list verification; it produced no accepted
+CUDA archive. The CUDA candidate is not accepted or activated. Actual service
 inference, offload, lifecycle, quality/latency and final packaged evidence remain
 required before the service release.
+
+The Linux Whisper candidate from that CPU run was also exercised through the
+source `SidecarSTTClient` in an isolated network namespace with the unchanged
+large-v3 model. All 20 fixed synthetic utterances completed; aggregate word error
+rate was 3/185 (1.62%), within the initial 10% fixture target. Unauthenticated
+inference/load returned 401, and both owned daemons exited and were reaped.
+Eight threads preserved all 20 transcripts and reduced median clip wall time
+from 13.381 to 8.092 seconds, with 13.4% more aggregate process CPU time.
+For the 5.962-second clip, real-time factor improved from 2.312 to 1.331;
+the eight-thread observation meets the CPU target of at most 2. These
+sequential shared-host runs have a contention confound and single short/long
+latency observations. They establish neither warm P95 nor real-speaker/noise,
+normal API or frozen-application acceptance. Use eight threads only when the
+service has that CPU capacity; retain bounded configurations for smaller or
+shared budgets. Targets and measurement rules are in `EVALUATION_TARGETS.md`.
 
 ## Shared native LLM request lifecycle
 

@@ -47,6 +47,13 @@ from linux_bundle_assemble import (
 )
 from dependency_notices import collect_dependency_notices
 from stage_espeak_native_payload import stage_espeak_payload, _validate_payload
+from postgresql_runtime_payload import (
+    PostgreSQLPayloadError,
+    stage_runtime_payload,
+    validate_staged_runtime,
+    validate_staged_supplement,
+    validate_build_host,
+)
 from verify_warning_source_reviews import verify_warning_source_reviews
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -97,6 +104,8 @@ def _assemble_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--require-sidecars", action="store_true")
     parser.add_argument("--espeak-payload", type=Path, default=None)
+    parser.add_argument("--postgresql-runtime-inputs", type=Path, default=None)
+    parser.add_argument("--postgresql-build-supplement-inputs", type=Path, default=None)
     parser.add_argument("--policy-trust-store", type=Path, default=None)
     parser.add_argument("--require-signed-policy", action="store_true")
     return parser.parse_args(argv)
@@ -237,6 +246,8 @@ def _freeze_tree(
     command: list[str],
     pyinstaller: str,
     espeak_payload: Path | None = None,
+    postgresql_runtime_inputs: Path | None = None,
+    postgresql_build_supplement_inputs: Path | None = None,
 ) -> Path:
     """Freeze the bundle and stage root payloads; return its dir."""
     write_entry_script(
@@ -248,12 +259,19 @@ def _freeze_tree(
     bundle_dir = distpath / str(spec["bundle"]["executable"])
     if not bundle_dir.is_dir():
         raise SystemExit(f"pyinstaller produced no bundle dir: {bundle_dir}")
-    _finish_tree(spec, bundle_dir, espeak_payload)
+    _finish_tree(
+        spec, bundle_dir, espeak_payload, postgresql_runtime_inputs,
+        postgresql_build_supplement_inputs,
+    )
     return bundle_dir
 
 
 def _finish_tree(
-    spec: dict[str, Any], bundle_dir: Path, espeak_payload: Path | None = None
+    spec: dict[str, Any],
+    bundle_dir: Path,
+    espeak_payload: Path | None = None,
+    postgresql_runtime_inputs: Path | None = None,
+    postgresql_build_supplement_inputs: Path | None = None,
 ) -> None:
     """Stage root payloads, prune hook data, then collect locked notices."""
     (bundle_dir / spec["runtimes"]["bin_dir"]).mkdir(exist_ok=True)
@@ -262,6 +280,10 @@ def _finish_tree(
     print(f"pruned {len(pruned)} hook-collected paths")
     if espeak_payload is not None:
         stage_espeak_payload(espeak_payload, bundle_dir)
+    stage_runtime_payload(
+        postgresql_runtime_inputs, bundle_dir, spec, _REPO_ROOT,
+        postgresql_build_supplement_inputs,
+    )
     if spec.get("dependency_notices", {}).get("required", False):
         collect_dependency_notices(spec, _REPO_ROOT, bundle_dir)
 
@@ -346,6 +368,28 @@ def main(argv: list[str] | None = None) -> int:
         except (OSError, ValueError) as exc:
             print(f"SPEECH: {exc}", file=sys.stderr)
             return 2
+    postgresql_mode = spec.get("postgresql_runtime", {}).get("mode")
+    if postgresql_mode == "locked-ubuntu-debs":
+        if args.postgresql_runtime_inputs is None:
+            print("POSTGRESQL: full bundle requires staged reviewed Ubuntu libpq inputs", file=sys.stderr)
+            return 2
+        if args.postgresql_build_supplement_inputs is None:
+            print("POSTGRESQL: full bundle requires staged glibc build compatibility inputs", file=sys.stderr)
+            return 2
+        try:
+            validate_build_host()
+            validate_staged_runtime(args.postgresql_runtime_inputs, _REPO_ROOT)
+            validate_staged_supplement(args.postgresql_build_supplement_inputs, _REPO_ROOT)
+        except (OSError, PostgreSQLPayloadError) as exc:
+            print(f"POSTGRESQL: {exc}", file=sys.stderr)
+            return 2
+    elif postgresql_mode == "disabled":
+        if args.postgresql_runtime_inputs is not None or args.postgresql_build_supplement_inputs is not None:
+            print("POSTGRESQL: SQLite-only bundle cannot accept PostgreSQL inputs", file=sys.stderr)
+            return 2
+    else:
+        print("POSTGRESQL: bundle spec must explicitly select a runtime policy", file=sys.stderr)
+        return 2
     evidence = spec.get("warn_allowlist", {}).get("source_evidence")
     if evidence:
         problems = verify_warning_source_reviews(_REPO_ROOT / evidence)
@@ -354,7 +398,14 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"SOURCE REVIEW: {problem}", file=sys.stderr)
             return 2
     bundle_dir = _freeze_tree(
-        spec, workpath, distpath, command, args.pyinstaller, args.espeak_payload
+        spec,
+        workpath,
+        distpath,
+        command,
+        args.pyinstaller,
+        args.espeak_payload,
+        args.postgresql_runtime_inputs,
+        args.postgresql_build_supplement_inputs,
     )
     _write_bundle_manifest(bundle_dir, spec, base)
     return _inspect_frozen(inspect, spec, bundle_dir, args)
