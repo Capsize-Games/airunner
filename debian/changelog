@@ -1,8 +1,9 @@
 airunner (6.1.10-1) unstable; urgency=medium
 
   * Match the CORE package version to services 6.1.10.
-  * Include the installed interrupted-upgrade success status required
-    by CORE release promotion.
+  * Include the installed interrupted-upgrade success status.
+  * Validate CORE publication against the installed recovery receipt schema.
+  * Retain the reviewed CORE dependency lock and the headless checkpoint scope.
 
  -- Capsize LLC <contact@capsizegames.com>  Tue, 03 Nov 2026 18:40:00 -0700
 

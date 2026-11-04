@@ -41,3 +41,15 @@ Review covered Debian rules/changelog, service version lookup and setup
 metadata, pytest bootstrap, and the focused tests. No executable hooks or
 dependency changes are introduced; GPL notices remain intact. The focused
 tests read source and use local fixtures without executing adopted ML inputs.
+
+Integration review of concurrent master `a55b257f19c09ab74dfddcc0f50a53c414657a5e`:
+PR #2451 adds standard-library receipt validation, candidate receipt CI and
+version identity checks. Reviewed the validator and promotion integration;
+it checks fixture/source/package identity, migration heads, authentication and
+owned-process cleanup without adding dependencies or network destinations.
+Preserve those checks alongside this producer status repair. Resolve the
+changelog by retaining both entries' facts and preserve both regression sets.
+The producer regression uses valid migration identifiers and records the test
+double's executable as the installed path for promotion validation. Private
+maintenance preservation precedes focused execution. No install hooks or
+third-party dependency updates are activated by this integration.
