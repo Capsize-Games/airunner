@@ -29,3 +29,15 @@ The service version advances to `6.1.10` so the repaired source can use a new
 annotated version tag and the existing CORE candidate/promotion workflow without
 moving `v6.1.9`. CI, merge and release evidence is tracked on the shared incident
 card for run `41752408159`.
+
+Follow-up review at `e80ae8c2d8d604671d0226ef53a48d5d12a1ea46`:
+the private maintenance branch preserves this revision and Actions remains
+disabled. Candidate run `41754243801` passed the installed upgrade probe but
+failed clean-install version identity: Debian still identified the package as
+`6.1.9-1` while the service reported `6.1.10`. Advance the Debian changelog
+to `6.1.10-1` and check its upstream version against the service release in
+the distribution compatibility tests. The version identity gate stays intact.
+Review covered Debian rules/changelog, service version lookup and setup
+metadata, pytest bootstrap, and the focused tests. No executable hooks or
+dependency changes are introduced; GPL notices remain intact. The focused
+tests read source and use local fixtures without executing adopted ML inputs.
