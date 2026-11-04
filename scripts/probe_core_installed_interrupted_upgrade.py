@@ -556,6 +556,7 @@ def run_probe(
 
         receipt: dict[str, Any] = {
             "schema_version": 1,
+            "status": "passed",
             "probe": "installed_frozen_core_interrupted_after_backup_before_write",
             "evidence_scope": "installed frozen CORE candidate runtime",
             "installed_executable": str(binary),

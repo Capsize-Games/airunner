@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
+import signal
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -12,6 +15,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_release_identity as guard  # noqa: E402
 from prepare_core_release_assets import prepare  # noqa: E402
+import probe_core_installed_interrupted_upgrade as installed_probe  # noqa: E402
 from verify_core_candidate_run import (  # noqa: E402
     CandidateRunError,
     verify_candidate_run,
@@ -124,6 +128,124 @@ def test_core_release_refuses_failed_or_mismatched_install_evidence(tmp_path, mo
             artifact_dir=artifact, notices_dir=tmp_path / "notices",
             output_dir=tmp_path / "out", source_sha="a" * 40, tag="v1.2.3",
             workflow_run_id=42, workflow=".github/workflows/core-debian-candidate.yml",
+            candidate_run_id=51, candidate_attempt=2,
+            candidate_run_receipt=tmp_path / "candidate-run.json",
+        )
+
+
+def test_installed_probe_receipt_can_be_promoted(tmp_path, monkeypatch):
+    """Exercise receipt production through promotion with runtime/HTTP doubles."""
+    monkeypatch.chdir(tmp_path)
+    artifact, _ = _fixture(tmp_path)
+    database = tmp_path / "fixture.db"
+    conversation = {"id": 1, "title": "fixture", "payload": "value", "summary": "summary"}
+    with sqlite3.connect(database) as connection:
+        connection.executescript(
+            "CREATE TABLE alembic_version (version_num TEXT);"
+            "INSERT INTO alembic_version VALUES ('old');"
+            "CREATE TABLE core_upgrade_fixture (marker TEXT, payload TEXT);"
+            "INSERT INTO core_upgrade_fixture VALUES ('synthetic-marker', 'marker');"
+            "CREATE TABLE conversations (id INTEGER, title TEXT, value TEXT);"
+            "INSERT INTO conversations VALUES (1, 'fixture', 'value');"
+        )
+    fixture_record = tmp_path / "fixture.json"
+    fixture_record.write_text(json.dumps({
+        "fixture_kind": "published_prior_debian_schema", "source_sha": "a" * 40,
+        "database_sha256": hashlib.sha256(database.read_bytes()).hexdigest(),
+        "migration_source_inventory": {"heads_before_candidate_upgrade": ["old"]},
+        "synthetic_conversation": conversation, "fixture_payload": "marker",
+    }))
+    expected = tmp_path / "expected.json"
+    expected.write_text(json.dumps({
+        "source_sha": "a" * 40, "expected_alembic_heads_after_upgrade": ["new"],
+    }))
+    binary = tmp_path / "runtime-double"
+    binary.touch(mode=0o700)
+
+    class Child:
+        pid = 100
+        returncode = None
+
+        def poll(self):
+            return self.returncode
+
+        def kill(self):
+            self.returncode = -signal.SIGKILL
+
+        def wait(self, timeout):
+            return self.returncode
+
+    stopped = False
+
+    def launch(_binary, env, _config, log):
+        live = Path(env["AIRUNNER_DATA_DIR"]) / "airunner.db"
+        if log.name == "interrupted.log":
+            backup = Path(env["AIRUNNER_UPGRADE_BACKUP_DIR"]) / "backup.db"
+            shutil.copyfile(live, backup)
+            backup.with_suffix(".db.json").write_text(json.dumps({
+                "heads": ["old"], "path": str(backup),
+                "size_bytes": backup.stat().st_size,
+                "sha256": hashlib.sha256(backup.read_bytes()).hexdigest(),
+            }))
+        else:
+            with sqlite3.connect(live) as connection:
+                connection.execute("UPDATE alembic_version SET version_num = 'new'")
+        return Child()
+
+    def request(url, api_key=None):
+        if stopped:
+            raise OSError("owned runtime stopped")
+        if url.endswith("/health"):
+            return 200, b'{"pid": 101}'
+        if url.endswith("/health/daemon"):
+            return (200 if api_key else 401), b"{}"
+        return 200, json.dumps({
+            "conversation": conversation,
+            "messages": [{"content": "published-upgrade-marker-v1"}, {}],
+        }).encode()
+
+    def stop(child):
+        nonlocal stopped
+        stopped = True
+        child.returncode = 0
+        return 0
+
+    monkeypatch.setattr(installed_probe, "_launch", launch)
+    monkeypatch.setattr(installed_probe, "_request", request)
+    monkeypatch.setattr(installed_probe, "_stop_owned", stop)
+    monkeypatch.setattr(installed_probe, "_owned_descendants", lambda _pid: [{"pid": 101, "starttime": 1}])
+    monkeypatch.setattr(installed_probe, "_wait_identities_gone", lambda *_args, **_kwargs: True)
+    receipt_path = tmp_path / "installed-receipt.json"
+    receipt = installed_probe.run_probe(binary, database, fixture_record, expected, receipt_path)
+    assert json.loads(receipt_path.read_text()) == receipt
+    assert receipt["status"] == "passed"
+    assert receipt["database_after_resume"]["heads"] == ["new"]
+    upgrade_path = artifact / "candidate-upgrade-validation.json"
+    upgrade = json.loads(upgrade_path.read_text())
+    upgrade["interrupted_upgrade_recovery_probe"] = receipt
+    upgrade_path.write_text(json.dumps(upgrade))
+    prepare(
+        artifact_dir=artifact, notices_dir=tmp_path / "notices", output_dir=tmp_path / "out",
+        source_sha="a" * 40, tag="v1.2.3", workflow_run_id=42,
+        workflow=".github/workflows/core-debian-candidate.yml",
+        candidate_run_id=51, candidate_attempt=2,
+        candidate_run_receipt=tmp_path / "candidate-run.json",
+    )
+
+
+@pytest.mark.parametrize("probe", [None, {}, {"status": "failed"}, {"status": "incomplete"}])
+def test_core_release_rejects_incomplete_interruption_receipt(tmp_path, monkeypatch, probe):
+    monkeypatch.chdir(tmp_path)
+    artifact, _ = _fixture(tmp_path)
+    path = artifact / "candidate-upgrade-validation.json"
+    upgrade = json.loads(path.read_text())
+    upgrade["interrupted_upgrade_recovery_probe"] = probe
+    path.write_text(json.dumps(upgrade))
+    with pytest.raises(ValueError, match="evidence is incomplete"):
+        prepare(
+            artifact_dir=artifact, notices_dir=tmp_path / "notices", output_dir=tmp_path / "out",
+            source_sha="a" * 40, tag="v1.2.3", workflow_run_id=42,
+            workflow=".github/workflows/core-debian-candidate.yml",
             candidate_run_id=51, candidate_attempt=2,
             candidate_run_receipt=tmp_path / "candidate-run.json",
         )

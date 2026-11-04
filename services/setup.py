@@ -15,7 +15,7 @@ from pathlib import Path
 
 from setuptools import find_packages, setup
 
-_RELEASE_VERSION = "6.1.9"
+_RELEASE_VERSION = "6.1.10"
 VERSION = os.environ.get("AIRUNNER_BUILD_VERSION", _RELEASE_VERSION)
 
 # The project is GPL-3.0-only (issue #2058): the repo-root LICENSE file, every
