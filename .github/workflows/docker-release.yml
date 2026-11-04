@@ -27,10 +27,12 @@ permissions:
 
 jobs:
   build-and-push:
-    # A failed or untested contract run must never publish an image.
+    # R4 remains deferred: the full image OS/Python closure is not reviewed.
+    # A CORE checkpoint must not activate this separate distribution. Restore
+    # this job with the reviewed, locked OS inputs tracked by issue #2449.
     if: >-
-      github.event_name != 'workflow_run' ||
-      github.event.workflow_run.conclusion == 'success'
+      false && (github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-24.04
 
     strategy:
