@@ -5,6 +5,17 @@ latency. These are engineering acceptance targets, not measured results or
 claims of quality parity. Record failures and optimize against them; do not
 silently lower targets to turn a failed run green.
 
+## Release selection
+
+Owner direction, 2026-11-03: use incremental MVP releases. These targets remain
+the engineering backlog and benchmark reference; completing every row is not a
+prerequisite for the first service release. Select shipped capabilities and
+blocking checks through [INCREMENTAL_RELEASES.md](INCREMENTAL_RELEASES.md).
+Authentication, isolation, data integrity and owned-worker correctness remain
+blocking for shipped paths. Record measured latency and benchmark misses; do not
+advertise an unproven SLA or label a deferred benchmark passed. A later change
+that affects a shipped path reruns that path's relevant acceptance checks.
+
 ## Reference conditions
 
 Use the declared Linux/NVIDIA 16 GB service target, exact reviewed release

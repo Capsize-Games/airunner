@@ -4,6 +4,23 @@ Owner direction: 2026-11-01. AI Runner provides model workers, runtimes,
 and authenticated HTTP/WebSocket APIs for other applications. The retired
 Qt interface and paid desktop storefront are outside this release.
 
+## Incremental release policy
+
+Owner direction, 2026-11-03: deliver through CI/CD in small MVP releases instead
+of holding the first release for the entire completion project. The release
+slices and their bounded exit criteria are defined in
+[INCREMENTAL_RELEASES.md](INCREMENTAL_RELEASES.md). That policy supersedes any
+statement below that makes all subsystem phases, the full ML dependency closure,
+all model evaluations, PostgreSQL, or Docker prerequisites of every release.
+Those requirements remain tracked for the release that ships the capability;
+deferral is not completion or evidence of a passing check.
+
+Authentication, isolation, preservation of existing data, bounded owned workers,
+reviewed inputs, licenses, artifact identity and immutable publication remain
+required for each shipped path. A release claims only capabilities exercised
+through its installed artifact. Full-profile historical observations below
+remain scoped to those profiles and sources.
+
 ## Baseline and scope
 
 The service branch was inspected at `f953d5496`, then reconciled with
