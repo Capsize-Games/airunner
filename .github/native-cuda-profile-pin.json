@@ -1,0 +1,19 @@
+{
+  "schema": "airunner-native-cuda-profile-pin-v1",
+  "status": "verified",
+  "release_repository": "Capsize-Games/airunner-native",
+  "tag": "v0.3.0",
+  "asset": "runtime-sidecars-linux-cuda-sm120a.tar.gz",
+  "archive_sha256": "c7ba474841f4a57ac3253cca0abf49b9e48160ef91782d99981cf2c0017860ff",
+  "artifact_id": "cuda-sm120a-7495314cf3a7-7e76ec3afb55",
+  "source": {
+    "repository": "https://github.com/ggml-org/llama.cpp.git",
+    "commit": "7acb4e8cd2ce21f457d1298e75fad729520d263c",
+    "tree": "5a77024ea13397365f3be1610bee5573b0c42f1f"
+  },
+  "producer": {
+    "commit": "7495314cf3a7c9391eb8ee48aab8b74f3e38b659",
+    "recipe_sha256": "020b43658e528a726972e0cff647510263e755c1ec0a045833936a3f4a674d76"
+  },
+  "review_record": "release-planning/services/input-reviews/airunner-native-0.3.0.md"
+}

@@ -1,18 +1,18 @@
 {
-  "tag": "v0.2.3",
-  "source_commit": "35a029f765bd25abdf792b968f229ea1f72ca5e2",
+  "tag": "v0.3.0",
+  "source_commit": "3d1806423402f47d1f7612a8cd8fc70d48c5a3c2",
   "source_review_status": "reviewed",
-  "source_review_note": "Bounded static review recorded in release-planning/services/input-reviews/airunner-native-0.2.3.md and private airunner-native-maintenance review/v0.2.3. Covers this exact source SHA, release/build scripts and workflow, exact llama.cpp and whisper.cpp pins, CMake flags, expected network paths, build hooks, and required licenses. No source build or upstream hooks were run during review; toolchain package inputs and runtime behavior remain outside this review.",
+  "source_review_note": "Bounded source, patch, build/package/promotion and input review is recorded in release-planning/services/input-reviews/airunner-native-0.3.0.md. The exact merged source and annotated tag are preserved in the private native maintenance copy. No exhaustive upstream or toolchain review is claimed.",
   "provenance_status": "verified",
-  "provenance_note": "The published immutable v0.2.3 release was fetched from GitHub. Both archive SHA-256 values were independently calculated and matched the archive manifests and GitHub asset digests. Both provenance files identify source SHA 35a029f765bd25abdf792b968f229ea1f72ca5e2 and refs/tags/v0.2.3.",
+  "provenance_note": "All nine immutable v0.3.0 assets were independently downloaded. Their sizes and SHA-256 values match GitHub digests; archive checksum files and source/tag/platform provenance match the selected release. Native OS smoke and publication run 41745941955 passed. Application/model acceptance scope is recorded separately.",
   "archives": {
     "linux": {
       "asset": "runtime-sidecars-linux.tar.gz",
-      "sha256": "bc22b5928d3b566299fd7cf4cc4c2495bd54a978d0db244c232aaa094f91b15e"
+      "sha256": "59adcd438fed44c63ed65a4b17cfbf4afbdecaba164cfeec3d300b909dd5d9e0"
     },
     "windows": {
       "asset": "runtime-sidecars-windows.tar.gz",
-      "sha256": "4755b91f564d56eac6ccb7027cd86a3bb18456354388e4d80e98f30cb2ce5bb1"
+      "sha256": "b7f671b693b1a78c6d100e5287306bd5a05420a5ef46c7d5d7fd4e72882c7aa1"
     }
   }
 }

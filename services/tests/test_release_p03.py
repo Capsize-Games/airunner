@@ -61,18 +61,18 @@ def test_tag_and_digest_metadata_bind_one_native_sidecar_source() -> None:
     tag = lines[0].strip()
     assert tag and "/" not in tag and " " not in tag, raw
     metadata = json.loads(_read_text(_CHECKSUM_FILE))
-    assert metadata["tag"] == tag == "v0.2.3"
-    assert metadata["source_commit"] == "35a029f765bd25abdf792b968f229ea1f72ca5e2"
+    assert metadata["tag"] == tag == "v0.3.0"
+    assert metadata["source_commit"] == "3d1806423402f47d1f7612a8cd8fc70d48c5a3c2"
     assert metadata["source_review_status"] == "reviewed"
-    assert "bounded static review" in metadata["source_review_note"].lower()
-    assert "toolchain package inputs" in metadata["source_review_note"]
+    review = "release-planning/services/input-reviews/airunner-native-0.3.0.md"
+    assert review in metadata["source_review_note"]
+    assert (_REPO_ROOT / review).is_file()
     assert metadata["provenance_status"] == "verified"
-    assert "independently calculated" in metadata["provenance_note"]
     assert metadata["archives"]["linux"]["sha256"] == (
-        "bc22b5928d3b566299fd7cf4cc4c2495bd54a978d0db244c232aaa094f91b15e"
+        "59adcd438fed44c63ed65a4b17cfbf4afbdecaba164cfeec3d300b909dd5d9e0"
     )
     assert metadata["archives"]["windows"]["sha256"] == (
-        "4755b91f564d56eac6ccb7027cd86a3bb18456354388e4d80e98f30cb2ce5bb1"
+        "b7f671b693b1a78c6d100e5287306bd5a05420a5ef46c7d5d7fd4e72882c7aa1"
     )
 
 
