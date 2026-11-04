@@ -38,6 +38,7 @@ on:
       - "scripts/tests/test_core_debian_candidate_workflow.py"
       - "scripts/tests/test_core_published_upgrade_fixture.py"
       - "scripts/prepare_core_release_assets.py"
+      - "scripts/core_upgrade_receipt.py"
       - "services/tests/test_release_core_promotion.py"
       - "services/**"
 
@@ -339,6 +340,45 @@ jobs:
           path: build/core-debian-candidate/candidate-upgrade-validation.json
           if-no-files-found: ignore
           retention-days: 7
+
+  verify-candidate-receipts:
+    needs: [build-core-debian-candidate, clean-install-smoke, published-upgrade-data-smoke]
+    runs-on: ubuntu-24.04
+    env:
+      CORE_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Check out exact candidate source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Download candidate package and source record
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: core-debian-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/core-receipt-input
+      - name: Download clean-install receipt
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: core-debian-validation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/core-receipt-input
+      - name: Download upgrade receipt
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: core-debian-upgrade-validation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/core-receipt-input
+      - name: Check production publisher against actual candidate receipts
+        run: |
+          PYTHONPATH=scripts python3 - <<'PYCODE'
+          import os
+          from pathlib import Path
+          from prepare_core_release_assets import validate_candidate_acceptance
+          validate_candidate_acceptance(
+              Path("build/core-receipt-input"),
+              source_sha=os.environ["CORE_SOURCE_SHA"],
+          )
+          print("CORE candidate receipt contract verified")
+          PYCODE
 
   publish-core-release:
     if: github.event_name == 'workflow_dispatch' && inputs.publish_core_release == true

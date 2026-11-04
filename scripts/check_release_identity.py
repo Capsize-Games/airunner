@@ -16,6 +16,11 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 
+from core_upgrade_receipt import (
+    CoreUpgradeReceiptError,
+    validate_interrupted_upgrade_receipt,
+)
+
 
 class ReleaseIdentityError(ValueError):
     """A release tag, source, version, or existing asset conflicts."""
@@ -521,7 +526,7 @@ def _require_core_run_receipt(
             raise ReleaseIdentityError(f"CORE candidate run field differs: {key}")
     required_jobs = {
         "build-core-debian-candidate", "clean-install-smoke",
-        "published-upgrade-data-smoke",
+        "published-upgrade-data-smoke", "verify-candidate-receipts",
     }
     if not required_jobs <= set(proof.get("successful_jobs", [])):
         raise ReleaseIdentityError("CORE candidate run jobs are incomplete")
@@ -558,9 +563,14 @@ def _require_core_smoke_receipts(
         raise ReleaseIdentityError("CORE upgrade receipt package/source differs")
     if upgrade.get("upgrade_smoke") != "passed":
         raise ReleaseIdentityError("CORE upgrade receipt is not successful")
-    recovery = upgrade.get("interrupted_upgrade_recovery_probe")
-    if not isinstance(recovery, dict) or recovery.get("status") != "passed":
-        raise ReleaseIdentityError("CORE interrupted-upgrade recovery receipt is not successful")
+    try:
+        validate_interrupted_upgrade_receipt(
+            upgrade, source_sha=source_sha, deb_sha256=deb_sha
+        )
+    except CoreUpgradeReceiptError as exc:
+        raise ReleaseIdentityError(
+            "CORE interrupted-upgrade recovery receipt is not successful"
+        ) from exc
 
 
 def _assert_release_draft(release: dict[str, Any], tag: str) -> None:

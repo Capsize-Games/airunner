@@ -10,6 +10,11 @@ import re
 import tarfile
 from pathlib import Path
 
+from core_upgrade_receipt import (
+    CoreUpgradeReceiptError,
+    validate_interrupted_upgrade_receipt,
+)
+
 
 def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -45,6 +50,13 @@ def prepare(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     _write_checksums(output_dir)
+
+
+def validate_candidate_acceptance(artifact_dir: Path, source_sha: str) -> None:
+    """Validate one candidate's exact package, clean-install and upgrade receipts."""
+    candidate, clean, upgrade = _read_candidate_records(artifact_dir)
+    deb = _resolve_candidate_deb(artifact_dir, candidate)
+    _require_acceptance(candidate, clean, upgrade, deb=deb, source_sha=source_sha)
 
 
 def _require_tag_identity(source_sha: str, tag: str) -> None:
@@ -85,7 +97,6 @@ def _require_acceptance(
     candidate: dict, clean: dict, upgrade: dict, *, deb: Path, source_sha: str
 ) -> None:
     """Require exact package/source binding and successful acceptance statuses."""
-    interruption = upgrade.get("interrupted_upgrade_recovery_probe")
     checks = (
         candidate.get("profile") == "linux-services-core",
         candidate.get("source_sha") == source_sha,
@@ -99,11 +110,15 @@ def _require_acceptance(
         upgrade.get("source_sha") == source_sha,
         upgrade.get("debian_sha256") == _sha(deb),
         upgrade.get("upgrade_smoke") == "passed",
-        isinstance(interruption, dict),
-        isinstance(interruption, dict) and interruption.get("status") == "passed",
     )
     if not all(checks):
         raise ValueError("CORE build, clean-install, or upgrade evidence is incomplete")
+    try:
+        validate_interrupted_upgrade_receipt(
+            upgrade, source_sha=source_sha, deb_sha256=_sha(deb)
+        )
+    except CoreUpgradeReceiptError as exc:
+        raise ValueError("CORE interrupted-upgrade recovery evidence is incomplete") from exc
 
 
 def _require_candidate_run(
