@@ -100,3 +100,18 @@ Run focused tests after setting up the documented dependencies:
 The test suite includes runtime smoke and functional checks that can require sidecars, model files, or GPU capacity. Report skips and missing runtime resources as unverified; they are not evidence that a workload ran.
 
 See the [repository README](../README.md) for dependency and Docker context, [CONTRIBUTING.md](../CONTRIBUTING.md) for contributor guidance, and [SECURITY.md](../SECURITY.md) for the security reporting process.
+
+## LLM stream cancellation
+
+Both message forms on `/api/v1/llm/stream` accept an optional `request_id`.
+Use 1–128 ASCII letters, digits, periods, underscores, colons or hyphens,
+starting with a letter or digit. The server generates a UUID when omitted
+and includes the selected ID in stream frames.
+
+Cancel an active stream with `POST /api/v1/daemon/runtimes/llm/cancel` and
+`{"request_id": "your-id"}`, using the same authentication and namespace.
+Unknown IDs and requests owned by another caller or namespace return 404.
+An ID cannot replace an already active request. Disconnecting also triggers
+cancellation, including while waiting for the first token. Each connection
+buffers at most eight subsequent messages during a stream; exceeding that
+limit closes the connection and cancels its active request.

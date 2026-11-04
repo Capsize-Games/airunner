@@ -193,6 +193,7 @@ class LLMStreamMessage(BaseModel):
     gguf_runtime_profile: Optional[str] = None
     max_tokens: Optional[int] = None
     temperature: float = 0.7
+    request_id: Optional[str] = Field(default=None, min_length=1, max_length=128)
 
 
 class LLMStreamValidationError(ValueError):

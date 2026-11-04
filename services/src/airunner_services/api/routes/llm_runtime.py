@@ -212,13 +212,19 @@ def websocket_chunk(delta: StreamDelta) -> dict[str, Any]:
     if delta.status is EnvelopeStatus.FAILED:
         return {
             "type": "error",
+            "request_id": delta.request_id,
             "content": delta.metadata.get("error", "LLM runtime failed"),
             "done": True,
         }
     if delta.status is EnvelopeStatus.CANCELLED:
-        return {"type": "cancelled", "done": True}
+        return {
+            "type": "cancelled",
+            "request_id": delta.request_id,
+            "done": True,
+        }
     payload = {
         "type": "chunk",
+        "request_id": delta.request_id,
         "content": delta.delta.get("content", ""),
         "done": delta.final,
     }
@@ -230,7 +236,9 @@ def websocket_chunk(delta: StreamDelta) -> dict[str, Any]:
     return payload
 
 
-def websocket_envelope(data: dict[str, Any]) -> RequestEnvelope:
+def websocket_envelope(
+    data: dict[str, Any], request_id: str | None = None
+) -> RequestEnvelope:
     """Build one streaming runtime envelope from a websocket payload."""
     profile = data.get("gguf_runtime_profile")
     payload = LLMInvocationRequest(
@@ -246,10 +254,13 @@ def websocket_envelope(data: dict[str, Any]) -> RequestEnvelope:
         temperature=float(data.get("temperature", 0.7)),
         stream=True,
     )
-    return RequestEnvelope(
-        runtime=RuntimeKind.LLM,
-        action=RuntimeAction.INVOKE,
-        provider="local",
-        stream=True,
-        payload=payload.model_dump(),
-    )
+    envelope_values = {
+        "runtime": RuntimeKind.LLM,
+        "action": RuntimeAction.INVOKE,
+        "provider": "local",
+        "stream": True,
+        "payload": payload.model_dump(),
+    }
+    if request_id is not None:
+        envelope_values["request_id"] = request_id
+    return RequestEnvelope(**envelope_values)

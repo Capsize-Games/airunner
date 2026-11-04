@@ -60,3 +60,17 @@ because one release slice shipped. Record the merged SHA, tag, release URL,
 local checks, CI checks, installed-artifact checks and exclusions per release.
 Mattermost notification of whole-project completion remains reserved for actual
 completion of the retained project scope.
+
+## CORE checkpoint before R1 acceptance
+
+The owner requested a committed, merged and released pausing point before the
+next work session. The CORE checkpoint publishes the frozen SQLite service
+package, legal notices, source/run identity, clean-install and upgrade receipts,
+and checksums. It promotes the exact bytes from an earlier successful candidate
+run on the same annotated tag; promotion does not rebuild the package.
+
+This checkpoint does not establish installed normal-API model inference,
+streaming, physical cancellation or GPU cleanup. Source API regressions and
+native runtime acceptance remain separate evidence. Those installed-model checks
+stay open in R1, and the other release slices remain backlog. A later increment
+uses a new version and tag; it cannot add assets to this immutable checkpoint.

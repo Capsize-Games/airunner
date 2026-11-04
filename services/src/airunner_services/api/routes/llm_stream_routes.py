@@ -29,9 +29,14 @@ from .llm_contracts import (
 from .llm_runtime import (
     require_websocket_runtime_registry,
     resolve_llm_client,
-    stream_runtime,
     websocket_chunk,
     websocket_envelope,
+)
+from .llm_request_registry import (
+    receive_json_or_pending,
+    resolve_request_id,
+    stream_owned_request,
+    websocket_owner,
 )
 
 router = APIRouter()
@@ -124,11 +129,12 @@ async def websocket_chat(websocket: WebSocket):
     )
 
     conn_token = set_tenant_key(get_tenant_key())
+    pending_events: list[dict] = []
     try:
         client = resolve_llm_client(require_websocket_runtime_registry(websocket))
         while True:
             try:
-                data = await websocket.receive_json()
+                data = await receive_json_or_pending(websocket, pending_events)
             except ValueError:
                 # Malformed JSON (json.JSONDecodeError, a ValueError
                 # subclass): reject with the same deterministic
@@ -168,7 +174,21 @@ async def websocket_chat(websocket: WebSocket):
                 continue
 
             if is_client_chat(data):
-                await stream_client_chat(websocket, client, data)
+                request_id = resolve_request_id(data.get("request_id"))
+                if request_id is None:
+                    await websocket.send_json({
+                        "type": "error", "code": "invalid_request_id",
+                        "done": True,
+                    })
+                    continue
+                await stream_client_chat(
+                    websocket,
+                    client,
+                    data,
+                    request_id=request_id,
+                    owner=websocket_owner(websocket, get_tenant_key()),
+                    pending_events=pending_events,
+                )
                 continue
 
             try:
@@ -193,13 +213,22 @@ async def websocket_chat(websocket: WebSocket):
                     }
                 )
                 continue
-
-            async for delta in stream_runtime(
-                client, websocket_envelope(parsed.model_dump())
-            ):
-                await websocket.send_json(websocket_chunk(delta))
-                if delta.final:
-                    break
+            request_id = resolve_request_id(parsed.request_id)
+            if request_id is None:
+                await websocket.send_json({
+                    "type": "error", "code": "invalid_request_id",
+                    "done": True,
+                })
+                continue
+            await stream_owned_request(
+                websocket,
+                client,
+                websocket_envelope(parsed.model_dump(), request_id),
+                request_id,
+                websocket_owner(websocket, get_tenant_key()),
+                websocket_chunk,
+                pending_events,
+            )
     except WebSocketDisconnect:
         logger.info("WebSocket connection closed")
     except HTTPException as exc:

@@ -325,8 +325,17 @@ def _verify_checksum_manifest(paths: list[Path]) -> None:
 
 
 def _require_promotion_groups(
-    paths: list[Path], *, tag: str, source_sha: str, root: Path
+    paths: list[Path], *, tag: str, source_sha: str, root: Path,
+    profile: str = "full",
+    expected_run_id: int | None = None,
 ) -> None:
+    if profile == "core":
+        _require_core_release_assets(
+            paths, tag=tag, source_sha=source_sha, expected_run_id=expected_run_id
+        )
+        return
+    if profile != "full":
+        raise ReleaseIdentityError("unsupported release profile")
     names = {path.name for path in paths}
     by_group = {
         group: [path for path in paths if path.parent.name == group]
@@ -405,6 +414,155 @@ def _require_promotion_groups(
         raise ReleaseIdentityError("Debian manifest does not bind this tag/source/package")
 
 
+def _require_core_release_assets(
+    paths: list[Path], *, tag: str, source_sha: str,
+    expected_run_id: int | None,
+) -> None:
+    names = {path.name for path in paths}
+    required = {
+        "SHA256SUMS", "airunner-core-release.json", "airunner-core-notices.tar.gz",
+        "airunner-core-candidate-run.json",
+        "airunner-core-clean-install-validation.json",
+        "airunner-core-upgrade-validation.json",
+    }
+    debs = [
+        path for path in paths
+        if re.fullmatch(r"airunner_[0-9][A-Za-z0-9.+~:-]*_amd64\.deb", path.name)
+    ]
+    if len(paths) != 7 or len(names) != len(paths) or len(debs) != 1 or not required <= names:
+        raise ReleaseIdentityError(
+            "CORE promotion needs exactly the package, notices, manifest, and checksums"
+        )
+    assets = {path.name: path for path in paths}
+    manifest = _read_core_json(assets["airunner-core-release.json"])
+    run_proof = _read_core_json(assets["airunner-core-candidate-run.json"])
+    clean_proof = _read_core_json(assets["airunner-core-clean-install-validation.json"])
+    upgrade_proof = _read_core_json(assets["airunner-core-upgrade-validation.json"])
+    _require_core_manifest(
+        manifest, tag=tag, source_sha=source_sha, expected_run_id=expected_run_id,
+        deb=debs[0], assets=assets,
+    )
+    _require_core_run_receipt(run_proof, manifest=manifest, tag=tag, source_sha=source_sha)
+    _require_core_smoke_receipts(
+        clean_proof, upgrade_proof, source_sha=source_sha,
+        deb_sha=manifest.get("debian_sha256"),
+    )
+
+
+def _read_core_json(path: Path) -> dict[str, Any]:
+    """Read one JSON object from the CORE release asset set."""
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ReleaseIdentityError("CORE release evidence JSON is invalid") from exc
+    if not isinstance(value, dict):
+        raise ReleaseIdentityError("CORE release evidence JSON is invalid")
+    return value
+
+
+def _require_core_manifest(
+    manifest: dict[str, Any], *, tag: str, source_sha: str,
+    expected_run_id: int | None, deb: Path, assets: dict[str, Path],
+) -> None:
+    """Check CORE release manifest identities and every declared digest."""
+    required_values = {
+        "schema_version": 1,
+        "profile": "linux-services-core",
+        "source_sha": source_sha,
+        "tag": tag,
+        "workflow": ".github/workflows/core-debian-candidate.yml",
+        "debian_filename": deb.name,
+        "build_status": "passed",
+        "clean_install_smoke": "passed",
+        "upgrade_smoke": "passed",
+        "notices_path": "/usr/lib/airunner/legal",
+        "promotion_workflow_run_id": expected_run_id,
+    }
+    for key, expected in required_values.items():
+        if manifest.get(key) != expected:
+            raise ReleaseIdentityError(f"CORE release manifest field differs: {key}")
+    version = manifest.get("debian_version")
+    upstream_version = (
+        version.rsplit(":", 1)[-1].split("-", 1)[0]
+        if isinstance(version, str)
+        else None
+    )
+    if upstream_version != tag.removeprefix("v"):
+        raise ReleaseIdentityError("CORE release package version differs from tag")
+    file_fields = {
+        "debian_sha256": deb,
+        "notices_sha256": assets["airunner-core-notices.tar.gz"],
+        "candidate_run_receipt_sha256": assets["airunner-core-candidate-run.json"],
+        "clean_install_validation_sha256": assets["airunner-core-clean-install-validation.json"],
+        "upgrade_validation_sha256": assets["airunner-core-upgrade-validation.json"],
+    }
+    for key, path in file_fields.items():
+        if manifest.get(key) != hashlib.sha256(path.read_bytes()).hexdigest():
+            raise ReleaseIdentityError(f"CORE release digest differs: {key}")
+    for key in ("requirements_sha256", "lock_sha256"):
+        if not isinstance(manifest.get(key), str) or not _HEX_RE.fullmatch(manifest[key]):
+            raise ReleaseIdentityError(f"CORE release digest is invalid: {key}")
+
+
+def _require_core_run_receipt(
+    proof: dict[str, Any], *, manifest: dict[str, Any], tag: str, source_sha: str,
+) -> None:
+    """Verify successful candidate workflow identity, jobs and exact attempt artifacts."""
+    expected = {
+        "workflow": ".github/workflows/core-debian-candidate.yml",
+        "run_id": manifest.get("candidate_workflow_run_id"),
+        "run_attempt": manifest.get("candidate_run_attempt"),
+        "source_sha": source_sha,
+        "tag": tag,
+        "run_conclusion": "success",
+    }
+    for key, value in expected.items():
+        if proof.get(key) != value:
+            raise ReleaseIdentityError(f"CORE candidate run field differs: {key}")
+    required_jobs = {
+        "build-core-debian-candidate", "clean-install-smoke",
+        "published-upgrade-data-smoke",
+    }
+    if not required_jobs <= set(proof.get("successful_jobs", [])):
+        raise ReleaseIdentityError("CORE candidate run jobs are incomplete")
+    run_id, attempt = proof.get("run_id"), proof.get("run_attempt")
+    if not isinstance(run_id, int) or isinstance(run_id, bool) or run_id < 1:
+        raise ReleaseIdentityError("CORE candidate run ID is invalid")
+    if not isinstance(attempt, int) or isinstance(attempt, bool) or attempt < 1:
+        raise ReleaseIdentityError("CORE candidate run attempt is invalid")
+    names = {
+        f"core-debian-candidate-{run_id}-{attempt}",
+        f"core-debian-validation-{run_id}-{attempt}",
+        f"core-debian-upgrade-validation-{run_id}-{attempt}",
+    }
+    artifacts = proof.get("artifacts")
+    if not isinstance(artifacts, dict) or set(artifacts) != names:
+        raise ReleaseIdentityError("CORE candidate artifact set differs")
+    for name, record in artifacts.items():
+        if not isinstance(record, dict) or record.get("name") != name:
+            raise ReleaseIdentityError("CORE candidate artifact record is invalid")
+        size = record.get("size_in_bytes")
+        if not isinstance(record.get("id"), int) or not isinstance(size, int) or size < 1:
+            raise ReleaseIdentityError("CORE candidate artifact metadata is invalid")
+
+
+def _require_core_smoke_receipts(
+    clean: dict[str, Any], upgrade: dict[str, Any], *, source_sha: str, deb_sha: str,
+) -> None:
+    """Require successful package-bound install and upgrade smoke records."""
+    if clean.get("source_sha") != source_sha or clean.get("debian_sha256") != deb_sha:
+        raise ReleaseIdentityError("CORE clean-install receipt package/source differs")
+    if clean.get("clean_install_smoke") != "passed":
+        raise ReleaseIdentityError("CORE clean-install receipt is not successful")
+    if upgrade.get("source_sha") != source_sha or upgrade.get("debian_sha256") != deb_sha:
+        raise ReleaseIdentityError("CORE upgrade receipt package/source differs")
+    if upgrade.get("upgrade_smoke") != "passed":
+        raise ReleaseIdentityError("CORE upgrade receipt is not successful")
+    recovery = upgrade.get("interrupted_upgrade_recovery_probe")
+    if not isinstance(recovery, dict) or recovery.get("status") != "passed":
+        raise ReleaseIdentityError("CORE interrupted-upgrade recovery receipt is not successful")
+
+
 def _assert_release_draft(release: dict[str, Any], tag: str) -> None:
     if (
         release.get("tag_name") != tag
@@ -425,6 +583,7 @@ def promote_release_assets(
     asset_dirs: list[Path],
     asset_files: list[Path],
     expected_run_id: int,
+    profile: str = "full",
     opener: Callable[..., Any] | None = None,
 ) -> dict[str, Any]:
     """Create or resume one draft, attach verified assets, then publish once."""
@@ -455,7 +614,17 @@ def promote_release_assets(
         raise ReleaseIdentityError("release promotion requires its exact annotated version tag")
 
     paths = _asset_paths(asset_dirs, asset_files)
-    _require_promotion_groups(paths, tag=tag, source_sha=source_sha, root=root)
+    _require_promotion_groups(
+        paths, tag=tag, source_sha=source_sha, root=root,
+        profile=profile, expected_run_id=expected_run_id,
+    )
+    if profile == "core":
+        _verify_checksum_manifest(paths)
+        expected = _local_asset_digests(paths)
+        return _publish_verified_assets(
+            repository=repository, tag=tag, source_sha=source_sha, token=token,
+            expected=expected, paths=paths, opener=opener,
+        )
     manifest_paths = [path for path in paths if path.name == "airunner-apt-release.json"]
     if len(manifest_paths) != 1:
         raise ReleaseIdentityError("promotion needs exactly one Debian manifest")
@@ -473,6 +642,16 @@ def promote_release_assets(
         raise ReleaseIdentityError("Debian manifest is not bound to this promotion run")
     _verify_checksum_manifest(paths)
     expected = _local_asset_digests(paths)
+    return _publish_verified_assets(
+        repository=repository, tag=tag, source_sha=source_sha, token=token,
+        expected=expected, paths=paths, opener=opener,
+    )
+
+
+def _publish_verified_assets(
+    *, repository: str, tag: str, source_sha: str, token: str,
+    expected: dict[str, str], paths: list[Path], opener: Callable[..., Any] | None,
+) -> dict[str, Any]:
     api_root = f"https://api.github.com/repos/{repository}"
     release = _release_by_tag(repository, tag, token, opener=opener)
     if release is None:
@@ -577,6 +756,20 @@ def verify_published_release(
     ):
         raise ReleaseIdentityError("published release is not immutable and stable")
     assets = _asset_digest_map(_release_assets(repository, release["id"], token, opener=opener))
+    if "airunner-core-release.json" in assets:
+        core_debs = [
+            name for name in assets
+            if re.fullmatch(r"airunner_[0-9][A-Za-z0-9.+~:-]*_amd64\.deb", name)
+        ]
+        required_core = {
+            "SHA256SUMS", "airunner-core-release.json", "airunner-core-notices.tar.gz",
+            "airunner-core-candidate-run.json",
+            "airunner-core-clean-install-validation.json",
+            "airunner-core-upgrade-validation.json",
+        }
+        if len(assets) != 7 or len(core_debs) != 1 or not required_core <= set(assets):
+            raise ReleaseIdentityError("published immutable CORE release has an unexpected asset set")
+        return release
     required = {"SHA256SUMS", "airunner-apt-release.json", "runtime-sidecars-linux.tar.gz", "runtime-sidecars-windows.tar.gz"}
     version = read_service_release_version(root)
     candidate = f"airunner-services-linux-{version}-{source_sha[:12]}.tar.gz"
@@ -691,6 +884,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--promote-release", choices=("true", "false"), default="false")
     parser.add_argument("--promote-release-assets", action="store_true")
     parser.add_argument("--run-id", type=int)
+    parser.add_argument("--release-profile", choices=("full", "core"), default="full")
     parser.add_argument("--verify-published-release", action="store_true")
     parser.add_argument("--check-release-assets", action="store_true")
     parser.add_argument("--repository")
@@ -711,6 +905,7 @@ def main(argv: list[str] | None = None) -> int:
                 asset_dirs=args.asset_dir,
                 asset_files=args.asset_file,
                 expected_run_id=args.run_id or 0,
+                profile=args.release_profile,
             )
             print(f"published immutable release {release['tag_name']}")
             return 0

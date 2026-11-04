@@ -292,6 +292,10 @@ def create_app(
 
     app.state.runtime_registry = None
     app.state.lifecycle_service = None
+    from airunner_services.api.routes.llm_request_registry import (
+        ActiveLLMRequestRegistry,
+    )
+    app.state.active_llm_requests = ActiveLLMRequestRegistry()
 
     try:
         app.state.runtime_registry = build_runtime_registry(

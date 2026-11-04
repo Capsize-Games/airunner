@@ -137,6 +137,7 @@ def test_client_frame_marks_final_with_call_chain() -> None:
     frame = client_frame(delta, "42")
     assert frame == {
         "type": "chunk",
+        "request_id": "r",
         "content": "x",
         "done": True,
         "call_chain_id": "42",
@@ -180,7 +181,10 @@ def test_stream_serves_client_chat(
         )
         first = ws.receive_json()
         second = ws.receive_json()
-    assert first == {"type": "chunk", "content": "Hello", "done": False}
+    assert first["type"] == "chunk"
+    assert first["content"] == "Hello"
+    assert first["done"] is False
+    assert first["request_id"]
     assert second["type"] == "chunk"
     assert second["content"] == " world"
     assert second["done"] is True

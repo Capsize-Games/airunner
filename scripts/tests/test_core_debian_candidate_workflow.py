@@ -40,7 +40,10 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
     def test_has_only_candidate_triggers_and_read_only_permissions(self):
         self.assertEqual(set(self.workflow["on"]), {"workflow_dispatch", "pull_request"})
         self.assertEqual(self.workflow["permissions"], {"contents": "read"})
-        self.assertIn("github.event_name == 'pull_request' || github.ref_type == 'branch'", self.workflow_text)
+        self.assertIn("github.event_name == 'pull_request'", self.workflow_text)
+        self.assertIn("inputs.publish_core_release != true", self.workflow_text)
+        self.assertIn("publish_core_release", self.workflow_text)
+        self.assertIn("publish-core-release", self.workflow["jobs"])
         for path in (
             "scripts/core_debian_candidate_smoke.sh",
             "scripts/core_debian_upgrade_smoke.sh",
@@ -53,7 +56,7 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
             self.assertIn(f'"{path}"', self.workflow_text)
 
     def test_checks_out_exact_candidate_without_persisting_credentials(self):
-        self.assertEqual(self.workflow_text.count("persist-credentials: false"), 3)
+        self.assertEqual(self.workflow_text.count("persist-credentials: false"), 4)
         self.assertEqual(self.workflow_text.count("ref: ${{ github.event.pull_request.head.sha || github.sha }}"), 3)
         self.assertIn("actions/checkout@11d5960a326750d5838078e36cf38b85af677262", self.workflow_text)
 
@@ -94,7 +97,7 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
         self.assertIn('${CORE_SOURCE_SHA:?', self.smoke)
         self.assertIn("actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02", self.workflow_text)
         self.assertNotIn("secrets.", self.workflow_text)
-        for forbidden in ("contents: write", "create-release", "gh release", "aptly", "gpg --"):
+        for forbidden in ("create-release", "gh release", "aptly", "gpg --"):
             self.assertNotIn(forbidden, self.workflow_text)
 
     def test_smoke_uses_production_ports_and_authenticated_health_api(self):
@@ -189,7 +192,23 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
             self.published_fixture,
         )
         self.assertIn('null_keyring / "keyring.py"', self.published_fixture)
-        self.assertNotIn("contents: write", self.workflow_text)
+        self.assertEqual(self.workflow["jobs"]["build-core-debian-candidate"]["permissions"], {"contents": "read"})
+
+    def test_core_release_requires_both_install_acceptance_jobs_and_exact_assets(self):
+        job = self.workflow["jobs"]["publish-core-release"]
+        self.assertNotIn("needs", job)
+        self.assertEqual(job["permissions"], {"contents": "write", "actions": "read"})
+        text = "\n".join(str(step.get("run", "")) for step in job["steps"])
+        self.assertIn("prepare_core_release_assets.py", text)
+        self.assertIn("verify_core_candidate_run.py", text)
+        self.assertIn("candidate_run_id", self.workflow_text)
+        self.assertIn("run-id: ${{ steps.candidate-run.outputs.run_id }}", self.workflow_text)
+        self.assertIn("--release-profile core", text)
+        self.assertIn("dpkg-deb -x", text)
+        self.assertIn("candidate-validation.json", text)
+        self.assertIn("candidate-upgrade-validation.json", text)
+        self.assertIn("airunner-core-notices.tar.gz", (ROOT / "scripts/prepare_core_release_assets.py").read_text())
+        self.assertNotIn("publish_pypi", text)
 
     def test_checked_in_baseline_preserves_the_published_package_identity(self):
         fixture = ROOT / "packaging/ci-fixtures/published-prior"

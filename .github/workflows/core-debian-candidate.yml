@@ -2,6 +2,21 @@ name: CORE Debian candidate
 
 on:
   workflow_dispatch:
+    inputs:
+      publish_core_release:
+        description: >-
+          Publish the tested CORE Debian package and notices as an immutable
+          GitHub Release from the exact annotated service-version tag.
+        type: boolean
+        required: false
+        default: false
+      candidate_run_id:
+        description: >-
+          Successful CORE candidate workflow run ID from this exact version tag.
+          Promotion reuses that run's package and validation artifacts.
+        type: string
+        required: false
+        default: ""
   pull_request:
     paths:
       - ".github/workflows/core-debian-candidate.yml"
@@ -12,6 +27,7 @@ on:
       - "packaging/linux/services-core-bundle-spec.toml"
       - "scripts/assemble_linux_bundle.py"
       - "scripts/check_core_input_readiness.py"
+      - "scripts/check_release_identity.py"
       - "scripts/core_debian_candidate_smoke.sh"
       - "scripts/core_debian_upgrade_smoke.sh"
       - "scripts/create_core_upgrade_fixture.py"
@@ -21,6 +37,8 @@ on:
       - "scripts/tests/test_core_interrupted_upgrade_probe.py"
       - "scripts/tests/test_core_debian_candidate_workflow.py"
       - "scripts/tests/test_core_published_upgrade_fixture.py"
+      - "scripts/prepare_core_release_assets.py"
+      - "services/tests/test_release_core_promotion.py"
       - "services/**"
 
 permissions:
@@ -32,7 +50,10 @@ concurrency:
 
 jobs:
   build-core-debian-candidate:
-    if: github.event_name == 'pull_request' || github.ref_type == 'branch'
+    if: >-
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish_core_release != true &&
+      (github.ref_type == 'branch' || github.ref_type == 'tag'))
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -49,6 +70,16 @@ jobs:
 
       - name: Verify CORE input record
         run: python3 scripts/check_core_input_readiness.py --mode verify-record
+
+      - name: Verify CORE release tag and source
+        if: ${{ inputs.publish_core_release }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: >-
+          python3 scripts/check_release_identity.py
+          --event "$GITHUB_EVENT_NAME" --ref "$GITHUB_REF"
+          --source-sha "$GITHUB_SHA" --promote-release true
 
       - name: Check CORE inputs before installation
         run: python3 scripts/check_core_input_readiness.py --mode activate
@@ -308,3 +339,116 @@ jobs:
           path: build/core-debian-candidate/candidate-upgrade-validation.json
           if-no-files-found: ignore
           retention-days: 7
+
+  publish-core-release:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_core_release == true
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Check out exact release source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify prior successful candidate run
+        id: candidate-run
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
+        run: |
+          test -n "$CANDIDATE_RUN_ID"
+          python3 scripts/verify_core_candidate_run.py \
+            --repository "$GITHUB_REPOSITORY" \
+            --run-id "$CANDIDATE_RUN_ID" \
+            --tag "${GITHUB_REF#refs/tags/}" \
+            --source-sha "$GITHUB_SHA" \
+            --output-json build/core-candidate-run.json \
+            --output-env "$GITHUB_OUTPUT"
+
+      - name: Download exact candidate package and build record
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: core-debian-candidate-${{ steps.candidate-run.outputs.run_id }}-${{ steps.candidate-run.outputs.run_attempt }}
+          run-id: ${{ steps.candidate-run.outputs.run_id }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          path: build/core-release-input
+
+      - name: Download exact clean-install evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: core-debian-validation-${{ steps.candidate-run.outputs.run_id }}-${{ steps.candidate-run.outputs.run_attempt }}
+          run-id: ${{ steps.candidate-run.outputs.run_id }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          path: build/core-release-input
+
+      - name: Download exact upgrade evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: core-debian-upgrade-validation-${{ steps.candidate-run.outputs.run_id }}-${{ steps.candidate-run.outputs.run_attempt }}
+          run-id: ${{ steps.candidate-run.outputs.run_id }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          path: build/core-release-input
+
+      - name: Recheck exact version tag and tested evidence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          CORE_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          python3 scripts/check_release_identity.py \
+            --event "$GITHUB_EVENT_NAME" --ref "$GITHUB_REF" \
+            --source-sha "$GITHUB_SHA" --promote-release true
+          (cd build/core-release-input && sha256sum --check SHA256SUMS)
+          python3 - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          root = Path("build/core-release-input")
+          record = json.loads((root / "candidate.json").read_text())
+          assert record["source_sha"] == __import__("os").environ["CORE_SOURCE_SHA"]
+          assert record["build_status"] == "passed"
+          for name, key in (("candidate-validation.json", "clean_install_smoke"),
+                            ("candidate-upgrade-validation.json", "upgrade_smoke")):
+              evidence = json.loads((root / name).read_text())
+              assert evidence["source_sha"] == record["source_sha"]
+              assert evidence[key] == "passed"
+              assert evidence["debian_sha256"] == record["debian_sha256"]
+          PY
+
+      - name: Extract package notices and prepare source-bound CORE assets
+        env:
+          CANDIDATE_RUN_ID: ${{ steps.candidate-run.outputs.run_id }}
+          CANDIDATE_ATTEMPT: ${{ steps.candidate-run.outputs.run_attempt }}
+        run: |
+          set -euo pipefail
+          package=$(find build/core-release-input -maxdepth 1 -name 'airunner_*_amd64.deb' -type f -print -quit)
+          test -n "$package"
+          mkdir -p build/core-release-extracted
+          dpkg-deb -x "$package" build/core-release-extracted
+          python3 scripts/prepare_core_release_assets.py \
+            --artifact-dir build/core-release-input \
+            --notices-dir build/core-release-extracted/usr/lib/airunner/legal \
+            --output-dir build/core-release-assets \
+            --source-sha "$GITHUB_SHA" --tag "${GITHUB_REF#refs/tags/}" \
+            --workflow-run-id "$GITHUB_RUN_ID" \
+            --candidate-run-id "$CANDIDATE_RUN_ID" \
+            --candidate-attempt "$CANDIDATE_ATTEMPT" \
+            --candidate-run-receipt build/core-candidate-run.json \
+            --workflow .github/workflows/core-debian-candidate.yml
+
+      - name: Create draft, attach CORE assets, and publish immutable release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/check_release_identity.py \
+            --event "$GITHUB_EVENT_NAME" --ref "$GITHUB_REF" \
+            --source-sha "$GITHUB_SHA" --promote-release-assets \
+            --release-profile core --run-id "$GITHUB_RUN_ID" \
+            --repository "$GITHUB_REPOSITORY" \
+            --asset-dir build/core-release-assets

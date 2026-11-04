@@ -116,7 +116,9 @@ def _temperature(data: Dict[str, Any]) -> float:
 
 
 def client_envelope(
-    messages: List[RuntimeChatMessage], data: Dict[str, Any]
+    messages: List[RuntimeChatMessage],
+    data: Dict[str, Any],
+    request_id: str | None = None,
 ) -> RequestEnvelope:
     """Build one streaming runtime envelope from a client chat frame."""
     try:
@@ -131,13 +133,16 @@ def client_envelope(
         )
     except ValidationError as exc:
         raise ClientChatError("invalid_tool_request") from exc
-    return RequestEnvelope(
-        runtime=RuntimeKind.LLM,
-        action=RuntimeAction.INVOKE,
-        provider="local",
-        stream=True,
-        payload=payload.model_dump(),
-    )
+    envelope_values = {
+        "runtime": RuntimeKind.LLM,
+        "action": RuntimeAction.INVOKE,
+        "provider": "local",
+        "stream": True,
+        "payload": payload.model_dump(),
+    }
+    if request_id is not None:
+        envelope_values["request_id"] = request_id
+    return RequestEnvelope(**envelope_values)
 
 
 def client_frame(delta: Any, call_chain_id: Optional[str]) -> Dict[str, Any]:
@@ -145,13 +150,19 @@ def client_frame(delta: Any, call_chain_id: Optional[str]) -> Dict[str, Any]:
     if delta.status is EnvelopeStatus.FAILED:
         return {
             "type": "error",
+            "request_id": delta.request_id,
             "content": delta.metadata.get("error", "LLM runtime failed"),
             "done": True,
         }
     if delta.status is EnvelopeStatus.CANCELLED:
-        return {"type": "cancelled", "done": True}
+        return {
+            "type": "cancelled",
+            "request_id": delta.request_id,
+            "done": True,
+        }
     frame: Dict[str, Any] = {
         "type": "chunk",
+        "request_id": delta.request_id,
         "content": delta.delta.get("content", ""),
         "done": delta.final,
     }
@@ -170,6 +181,9 @@ async def stream_client_chat(
     websocket: WebSocket,
     client: RuntimeClient,
     data: Dict[str, Any],
+    request_id: str | None = None,
+    owner: Any | None = None,
+    pending_events: list[dict] | None = None,
 ) -> None:
     """Stream one client chat frame as client-shaped frames."""
     try:
@@ -177,7 +191,7 @@ async def stream_client_chat(
         require_sidecar_for_function_tools(
             client, messages, data.get("tools", []), data.get("tool_choice")
         )
-        envelope = client_envelope(messages, data)
+        envelope = client_envelope(messages, data, request_id)
     except HTTPException:
         await websocket.send_json(
             {"type": "error", "content": "unsupported_tool_runtime", "done": True}
@@ -189,7 +203,20 @@ async def stream_client_chat(
         )
         return
     call_chain_id = str(data.get("conversation_id") or "") or None
-    async for delta in stream_runtime(client, envelope):
-        await websocket.send_json(client_frame(delta, call_chain_id))
-        if delta.final:
-            break
+    if owner is None or request_id is None:
+        async for delta in stream_runtime(client, envelope):
+            await websocket.send_json(client_frame(delta, call_chain_id))
+            if delta.final:
+                break
+        return
+    from .llm_request_registry import stream_owned_request
+
+    await stream_owned_request(
+        websocket,
+        client,
+        envelope,
+        request_id,
+        owner,
+        lambda delta: client_frame(delta, call_chain_id),
+        pending_events if pending_events is not None else [],
+    )
