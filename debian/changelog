@@ -1,3 +1,10 @@
+airunner (6.1.10-1) unstable; urgency=medium
+
+  * Validate CORE publication against the installed recovery receipt schema.
+  * Retain the reviewed CORE dependency lock and the headless checkpoint scope.
+
+ -- Capsize LLC <contact@capsizegames.com>  Tue, 03 Nov 2026 18:17:00 -0700
+
 airunner (6.1.9-1) unstable; urgency=medium
 
   * Prepare the services-only package for services 6.1.9 and native

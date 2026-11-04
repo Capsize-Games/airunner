@@ -17,6 +17,7 @@ REQUIRED_JOBS = {
     "build-core-debian-candidate",
     "clean-install-smoke",
     "published-upgrade-data-smoke",
+    "verify-candidate-receipts",
 }
 
 

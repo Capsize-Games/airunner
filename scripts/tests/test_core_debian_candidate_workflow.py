@@ -56,9 +56,35 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
             self.assertIn(f'"{path}"', self.workflow_text)
 
     def test_checks_out_exact_candidate_without_persisting_credentials(self):
-        self.assertEqual(self.workflow_text.count("persist-credentials: false"), 4)
-        self.assertEqual(self.workflow_text.count("ref: ${{ github.event.pull_request.head.sha || github.sha }}"), 3)
+        for name, job in self.workflow["jobs"].items():
+            for step in job.get("steps", []):
+                if not step.get("uses", "").startswith("actions/checkout@"):
+                    continue
+                self.assertEqual(step["with"]["persist-credentials"], "false")
+                expected = (
+                    "${{ github.sha }}" if name == "publish-core-release"
+                    else "${{ github.event.pull_request.head.sha || github.sha }}"
+                )
+                self.assertEqual(step["with"]["ref"], expected)
         self.assertIn("actions/checkout@11d5960a326750d5838078e36cf38b85af677262", self.workflow_text)
+
+    def test_real_candidate_receipts_are_checked_before_run_success(self):
+        job = self.workflow["jobs"]["verify-candidate-receipts"]
+        self.assertEqual(set(job["needs"]), {
+            "build-core-debian-candidate", "clean-install-smoke",
+            "published-upgrade-data-smoke",
+        })
+        steps = job["steps"]
+        downloads = [step for step in steps if step.get("uses", "").startswith("actions/download-artifact@")]
+        self.assertEqual({step["with"]["name"] for step in downloads}, {
+            "core-debian-candidate-${{ github.run_id }}-${{ github.run_attempt }}",
+            "core-debian-validation-${{ github.run_id }}-${{ github.run_attempt }}",
+            "core-debian-upgrade-validation-${{ github.run_id }}-${{ github.run_attempt }}",
+        })
+        consumer = steps[-1]["run"]
+        self.assertIn("validate_candidate_acceptance", consumer)
+        self.assertIn('source_sha=os.environ["CORE_SOURCE_SHA"]', consumer)
+        self.assertNotIn("continue-on-error", job)
 
     def test_every_action_uses_a_full_commit_pin(self):
         for line in self.workflow_text.splitlines():
