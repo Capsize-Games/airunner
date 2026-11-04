@@ -94,6 +94,28 @@ class ComponentLoaderMixin:
                 "Creating ChatModel via factory for model_path=%s",
                 self._current_model_path,
             )
+            runtime_client = None
+            from airunner_services.llm.adapters.chat_model_factory_helpers import (
+                build_provider_runtime_config,
+            )
+
+            provider_runtime = build_provider_runtime_config(
+                self.llm_settings,
+                getattr(self, "chatbot", None),
+            )
+            if provider_runtime.provider == "local":
+                api = self.refresh_api_reference()
+                registry = getattr(api, "runtime_registry", None)
+                if registry is None:
+                    raise RuntimeError(
+                        "The service LLM runtime registry is unavailable"
+                    )
+                from airunner_services.runtimes.contracts import RuntimeKind
+
+                runtime_client = registry.resolve(
+                    RuntimeKind.LLM,
+                    provider="local",
+                )
             self._chat_model = ChatModelFactory.create_from_settings(
                 llm_settings=self.llm_settings,
                 model=self._model,
@@ -105,6 +127,7 @@ class ComponentLoaderMixin:
                     "gguf_runtime_profile",
                     None,
                 ),
+                runtime_client=runtime_client,
             )
             self._release_local_execution_ownership()
             self._last_load_error = None
@@ -227,9 +250,14 @@ class ComponentLoaderMixin:
                 try:
                     llama.close()
                 except Exception as exc:
-                    self.logger.debug(
+                    self.logger.error(
                         "Failed to close llama.cpp model: %s", exc
                     )
+                    # Preserve adapter ownership and make the unload caller keep
+                    # model status/resources intact for a later retry.
+                    raise RuntimeError(
+                        "Failed to close llama.cpp model"
+                    ) from exc
                 if hasattr(chat, "_llama"):
                     chat._llama = None  # type: ignore[attr-defined]
             self._chat_model = None
@@ -356,23 +384,27 @@ class ComponentLoaderMixin:
     def _unload_components(self) -> None:
         """Unload all components in sequence.
 
-        Calls all unload methods in proper order: workflow manager,
-        tool manager, chat model, tokenizer, and model.
+        Close the chat runtime before releasing its workflow, tools, tokenizer,
+        and model references.
         """
-        unload_funcs = [
-            self._unload_workflow_manager,
-            self._unload_tool_manager,
-        ]
-        if not self._park_unused_model_on_cpu():
-            unload_funcs.extend(
-                [
-                    self._unload_chat_model,
-                    self._unload_tokenizer,
-                    self._unload_model,
-                ]
-            )
+        if self._park_unused_model_on_cpu():
+            unload_funcs = [
+                self._unload_workflow_manager,
+                self._unload_tool_manager,
+            ]
+        else:
+            # A shared chat backend must release its request lease before any
+            # dependent workflow/tool or model state is torn down.
+            unload_funcs = [
+                self._unload_chat_model,
+                self._unload_workflow_manager,
+                self._unload_tool_manager,
+                self._unload_tokenizer,
+                self._unload_model,
+            ]
         for unload_func in unload_funcs:
             try:
                 unload_func()
             except Exception as e:
                 self.logger.error(f"Error during unload: {e}", exc_info=True)
+                raise

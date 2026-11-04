@@ -15,6 +15,15 @@ def sync_request_scope_to_workflow_manager(owner) -> None:
     """Propagate the active request ID to workflow-scoped emitters."""
     if not owner._workflow_manager:
         return
+    # The model manager's chatbot property follows the current application
+    # selection. Refresh the workflow's captured reference before creating
+    # per-request config so hidden ownership metadata cannot remain bound to
+    # the previously selected chatbot.
+    if hasattr(owner, "_request_chatbot"):
+        chatbot = owner._request_chatbot
+    else:
+        chatbot = getattr(owner, "chatbot", None)
+    setattr(owner._workflow_manager, "chatbot", chatbot)
     request_id = getattr(owner, "_current_request_id", None)
     setattr(
         owner._workflow_manager,

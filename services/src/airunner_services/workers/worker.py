@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import queue
+import threading
 from abc import ABC
 from abc import abstractmethod
 from enum import Enum
@@ -61,8 +62,27 @@ class Worker(
         self.queue = queue.Queue()
         self.items: dict[int, Any] = {}
         self.current_index = 0
-        self.paused = False
+        # One pause flag lives in _resume_event (set means running);
+        # one lock guards the queue-adjacent fields the API thread
+        # mutates while the worker thread reads them (#2428). The
+        # paused property below keeps direct assignments (including
+        # subclass signal handlers) in sync with the event.
+        self._queue_lock = threading.Lock()
+        self._resume_event = threading.Event()
+        self._resume_event.set()
         self.register(SignalCode.QUIT_APPLICATION, self.stop)
+
+    @property
+    def paused(self) -> bool:
+        """Return True while worker processing is paused."""
+        return not self._resume_event.is_set()
+
+    @paused.setter
+    def paused(self, value: bool) -> None:
+        if value:
+            self._resume_event.clear()
+        else:
+            self._resume_event.set()
 
     @abstractmethod
     def handle_message(self, message: Any) -> None:
@@ -87,6 +107,7 @@ class Worker(
 
     def run_thread(self) -> None:
         """Process one queued item when available."""
+        self._resume_event.wait()
         try:
             message = self.get_item_from_queue()
             if message is not None:
@@ -98,9 +119,6 @@ class Worker(
                 "Unhandled exception in %s.run_thread",
                 self.__class__.__name__,
             )
-        if self.paused:
-            while self.paused:
-                QThread.msleep(self._sleep_time_in_ms)
         QThread.msleep(self._sleep_time_in_ms)
 
     def preprocess(self) -> None:
@@ -108,7 +126,8 @@ class Worker(
 
     def clear_queue(self) -> None:
         """Clear all queued items."""
-        self.queue = queue.Queue()
+        with self._queue_lock:
+            self.queue = queue.Queue()
 
     def get_item_from_queue(self) -> Any:
         """Return the next queued item according to queue policy."""
@@ -118,60 +137,73 @@ class Worker(
 
     def get_last_item(self) -> Any:
         """Return the newest queued item and drop older entries."""
-        index = None
-        while not self.queue.empty():
-            try:
-                index = self.queue.get_nowait()
-                if index in self.items:
-                    break
-            except queue.Empty:
-                pass
-        if index in self.items:
-            message = self.items.pop(index)
-            self.items = {}
-            self.queue.empty()
-            return message
-        return None
+        with self._queue_lock:
+            index = None
+            while not self.queue.empty():
+                try:
+                    index = self.queue.get_nowait()
+                    if index in self.items:
+                        break
+                except queue.Empty:
+                    pass
+            if index in self.items:
+                message = self.items.pop(index)
+                self.items = {}
+                self.queue.empty()
+                return message
+            return None
 
     def get_next_item(self) -> Any:
         """Return the next queued item in FIFO order."""
-        try:
-            index = self.queue.get_nowait()
-        except queue.Empty:
-            return None
-        return self.items.pop(index, None)
+        with self._queue_lock:
+            try:
+                index = self.queue.get_nowait()
+            except queue.Empty:
+                return None
+            return self.items.pop(index, None)
 
     def pause(self) -> None:
-        """Mark the worker paused."""
-        self.state = WorkerState.PAUSED
+        """Pause processing; run_thread blocks until resume/unpause."""
+        with self._queue_lock:
+            self.state = WorkerState.PAUSED
+        self.paused = True
 
     def unpause(self) -> None:
         """Mark the worker running after a pause request."""
-        if self.state == WorkerState.PAUSED:
-            self.state = WorkerState.RUNNING
+        with self._queue_lock:
+            if self.state == WorkerState.PAUSED:
+                self.state = WorkerState.RUNNING
+        self.paused = False
 
     def resume(self) -> None:
         """Resume active processing after a hard pause."""
+        with self._queue_lock:
+            if self.state == WorkerState.PAUSED:
+                self.state = WorkerState.RUNNING
         self.paused = False
 
     def add_to_queue(self, message: Any) -> None:
         """Queue one message for worker processing."""
-        if (
-            isinstance(message, dict)
-            and "options" in message
-            and message["options"].get("empty_queue")
-        ):
-            self.empty_queue()
-        if self._queue_type_matches("GET_LAST_ITEM"):
-            self.items = {}
-            self.queue.empty()
-            self.current_index = 0
-        self.items[self.current_index] = message
-        self.queue.put(self.current_index)
-        self.current_index += 1
+        with self._queue_lock:
+            if (
+                isinstance(message, dict)
+                and "options" in message
+                and message["options"].get("empty_queue")
+            ):
+                self._reset_queue_locked()
+            if self._queue_type_matches("GET_LAST_ITEM"):
+                self._reset_queue_locked()
+            self.items[self.current_index] = message
+            self.queue.put(self.current_index)
+            self.current_index += 1
 
     def empty_queue(self) -> None:
         """Reset worker queue state."""
+        with self._queue_lock:
+            self._reset_queue_locked()
+
+    def _reset_queue_locked(self) -> None:
+        """Replace queue state; caller must hold _queue_lock."""
         self.queue = queue.Queue()
         self.items = {}
         self.current_index = 0
@@ -180,13 +212,15 @@ class Worker(
         """Stop the worker loop and emit the finished signal."""
         self.logger.debug("Stopping")
         self.running = False
+        self._resume_event.set()
         self.finished.emit()
 
     def cancel(self) -> None:
         """Drop any queued work without stopping the worker loop."""
         self.logger.debug("Canceling")
-        while not self.queue.empty():
-            self.queue.get()
+        with self._queue_lock:
+            while not self.queue.empty():
+                self.queue.get()
 
     def _queue_type_matches(self, expected_name: str) -> bool:
         """Return whether the active queue type matches one expected name."""

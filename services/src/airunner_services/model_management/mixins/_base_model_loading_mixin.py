@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 from typing import Optional
 
@@ -22,6 +23,9 @@ class ModelLoadingMixin:
         self,
         model_id: str,
         model_type: str,
+        preferred_quantization: Optional[Any] = None,
+        estimated_vram_gb: Optional[float] = None,
+        estimated_ram_gb: Optional[float] = None,
     ) -> dict[str, Any]:
         """Restore a CPU-offloaded model to GPU without full reload."""
         self.set_model_state(model_id, ModelState.LOADING, model_type)
@@ -32,7 +36,9 @@ class ModelLoadingMixin:
             )
         quantization = self._select_quantization(
             metadata.size_gb,
-            None,
+            preferred_quantization,
+            estimated_vram_gb=estimated_vram_gb,
+            estimated_ram_gb=estimated_ram_gb,
         )
         allocation = self.memory_allocator.allocate(model_id, quantization)
         if allocation is None:
@@ -59,18 +65,40 @@ class ModelLoadingMixin:
         model_type: str = "llm",
         preferred_quantization: Optional[Any] = None,
         auto_swap: bool = True,
+        require_registered: bool = False,
+        estimated_vram_gb: Optional[float] = None,
+        estimated_ram_gb: Optional[float] = None,
     ) -> dict[str, Any]:
         """Prepare memory and swap state for one model load.
 
         Short-circuits to a CPU restore when the model is already
         residing in system RAM (LOADED_CPU).
         """
+        refresh = getattr(self, "refresh_hardware_snapshot", None)
+        if callable(refresh):
+            refresh()
         current_state = self._model_states.get(model_id)
         if current_state is ModelState.LOADED_CPU:
-            return self._prepare_cpu_restore(model_id, model_type)
+            return self._prepare_cpu_restore(
+                model_id,
+                model_type,
+                preferred_quantization,
+                estimated_vram_gb,
+                estimated_ram_gb,
+            )
         self.set_model_state(model_id, ModelState.LOADING, model_type)
         metadata = self.registry.get_model(model_id)
         if metadata is None:
+            if require_registered:
+                self.set_model_state(model_id, ModelState.UNLOADED)
+                return {
+                    "can_load": False,
+                    "reason": (
+                        f"Model {model_id!r} is not registered; "
+                        "resource preflight cannot be performed"
+                    ),
+                    "swapped_models": [],
+                }
             return self._prepare_unregistered_model(
                 model_id,
                 model_type,
@@ -79,6 +107,8 @@ class ModelLoadingMixin:
         quantization = self._select_quantization(
             metadata.size_gb,
             preferred_quantization,
+            estimated_vram_gb=estimated_vram_gb,
+            estimated_ram_gb=estimated_ram_gb,
         )
         allocation, swapped_models = self._allocate_for_model(
             model_id,
@@ -166,14 +196,28 @@ class ModelLoadingMixin:
         self,
         model_size_gb: float,
         preferred_quantization: Optional[Any],
+        *,
+        estimated_vram_gb: Optional[float] = None,
+        estimated_ram_gb: Optional[float] = None,
     ) -> Any:
         """Select quantization for one model against current hardware."""
         hardware = self.hardware_profiler.get_profile()
-        return self.quantization_strategy.select_quantization(
+        quantization = self.quantization_strategy.select_quantization(
             model_size_gb,
             hardware,
             preferred_quantization,
         )
+        if estimated_vram_gb is not None or estimated_ram_gb is not None:
+            quantization = replace(
+                quantization,
+                estimated_memory_gb=(
+                    estimated_vram_gb
+                    if estimated_vram_gb is not None
+                    else quantization.estimated_memory_gb
+                ),
+                estimated_ram_gb=estimated_ram_gb,
+            )
+        return quantization
 
     def _allocate_for_model(
         self,

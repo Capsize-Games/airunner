@@ -1,0 +1,142 @@
+{
+  "candidate": {
+    "distribution": "triton",
+    "platform": "linux_x86_64",
+    "python": "3.13",
+    "recipe_sha256": "fdcd4e9788e890c6b6539e749a458863fda1f9ebd24f37a08c01bd847d297db5",
+    "source_wheel_sha256": "59688b9b924f887316dcd0fae9e8cbe697ee1d1f6ab386723982cc9ecdebee01",
+    "version": "3.7.1+capsize.2",
+    "wheel_sha256": "a90ecd98dd9aa6207e820396a2e2d5ee5ef9c118cf59d25098955b35f8ac4e93"
+  },
+  "cupti": {
+    "env": "TRITON_CUPTI_LIB_PATH",
+    "official_archive_url": "https://developer.download.nvidia.com/compute/cuda/redist/cuda_cupti/linux-x86_64/cuda_cupti-linux-x86_64-12.8.90-archive.tar.xz",
+    "reason": "keeps Triton Proton profiling paths available without bundling the vendor libraries; source third_party/proton/csrc/include/Driver/GPU/CuptiApi.h resolves libcupti.so via this variable.",
+    "required_files": [
+      {
+        "path": "triton/backends/nvidia/lib/cupti/libcheckpoint.so",
+        "sha256": "06ba82bd09237b934cf16da2172ed5943c582caa35c79b52cfcfeb0ff71f7250",
+        "size_bytes": 1644872
+      },
+      {
+        "path": "triton/backends/nvidia/lib/cupti/libcupti.so",
+        "sha256": "fccdc5fcc7c32f8cf4b3ed9b17f7f187a185a6fa0a5bcc06e3434cbd1687c808",
+        "size_bytes": 7595792
+      },
+      {
+        "path": "triton/backends/nvidia/lib/cupti/libcupti.so.12",
+        "sha256": "fccdc5fcc7c32f8cf4b3ed9b17f7f187a185a6fa0a5bcc06e3434cbd1687c808",
+        "size_bytes": 7595792
+      },
+      {
+        "path": "triton/backends/nvidia/lib/cupti/libcupti.so.2025.1.1",
+        "sha256": "fccdc5fcc7c32f8cf4b3ed9b17f7f187a185a6fa0a5bcc06e3434cbd1687c808",
+        "size_bytes": 7595792
+      },
+      {
+        "path": "triton/backends/nvidia/lib/cupti/libcupti_static.a",
+        "sha256": "ab6d9db248f9d87527e34c2c27afb983d0050ff698b4e4aa225349adb46a3a4a",
+        "size_bytes": 43563448
+      },
+      {
+        "path": "triton/backends/nvidia/lib/cupti/libnvperf_host.so",
+        "sha256": "609f54063c253daff6efba79fe49252fdd2324308ab0ffb991cc125d3e9a1eab",
+        "size_bytes": 25825936
+      },
+      {
+        "path": "triton/backends/nvidia/lib/cupti/libnvperf_host_static.a",
+        "sha256": "b132e85f9606f3525706848a9b77cba3444074fdc7a884a682dc7c2f8ed717ee",
+        "size_bytes": 33480030
+      },
+      {
+        "path": "triton/backends/nvidia/lib/cupti/libnvperf_target.so",
+        "sha256": "2f10e1109fc341a57434c28e4006b45a89247801e20f5ace135c302c173e0770",
+        "size_bytes": 5275312
+      },
+      {
+        "path": "triton/backends/nvidia/lib/cupti/libpcsamplingutil.so",
+        "sha256": "e6fa2783077974fb2765bfa9cbaebf980736df74eebf994c59c7596988aec83b",
+        "size_bytes": 970064
+      }
+    ],
+    "version": "12.8.90"
+  },
+  "excluded_counts": {
+    "triton/backends/nvidia/bin": 4,
+    "triton/backends/nvidia/include": 154,
+    "triton/backends/nvidia/lib/cupti": 9
+  },
+  "excluded_roots": [
+    "triton/backends/nvidia/bin",
+    "triton/backends/nvidia/include",
+    "triton/backends/nvidia/lib/cupti"
+  ],
+  "headers": {
+    "env_any_of": [
+      "TRITON_CUDACRT_PATH",
+      "TRITON_CUDART_PATH"
+    ],
+    "required_files": [
+      {
+        "relative_path": "cuda.h",
+        "sha256": "756c5d0b68c4bf33d279419d5db479d63263abe80c1e476f8899f4b077215bf5",
+        "size_bytes": 1177046,
+        "source_member": "triton/backends/nvidia/include/cuda.h"
+      }
+    ]
+  },
+  "libdevice": {
+    "env": "TRITON_LIBDEVICE_PATH",
+    "reason": "optional override; exact redistributable libdevice.10.bc remains bundled. If set, validate it against the retained member hash.",
+    "required": false,
+    "retained_wheel_member": {
+      "path": "triton/backends/nvidia/lib/libdevice.10.bc",
+      "reason": "CUDA EULA 13.1 Attachment A explicitly lists Linux libdevice.10.bc as redistributable.",
+      "sha256": "5c2fae37c86e68c3a38605a95f512d7d12d5f3db986310be47f57304aa72a5ee",
+      "size_bytes": 473728
+    }
+  },
+  "schema_version": 1,
+  "tools": [
+    {
+      "env": "TRITON_PTXAS_PATH",
+      "name": "ptxas",
+      "official_archive_url": "https://developer.download.nvidia.com/compute/cuda/redist/cuda_nvcc/linux-x86_64/cuda_nvcc-linux-x86_64-12.8.93-archive.tar.xz",
+      "path": "triton/backends/nvidia/bin/ptxas",
+      "redistribution_status": "excluded-from-wheel; external source installation required",
+      "sha256": "c960a4f238b17d5c5d3c01ad2bbc1ebd2c5aecc459cb4d223bff10b45f9b8fca",
+      "size_bytes": 31912192,
+      "version": "12.8.93"
+    },
+    {
+      "env": "TRITON_PTXAS_BLACKWELL_PATH",
+      "name": "ptxas-blackwell",
+      "official_archive_url": "https://developer.download.nvidia.com/compute/cuda/redist/cuda_nvcc/linux-x86_64/cuda_nvcc-linux-x86_64-13.1.80-archive.tar.xz",
+      "path": "triton/backends/nvidia/bin/ptxas-blackwell",
+      "redistribution_status": "excluded-from-wheel; external source installation required",
+      "sha256": "cdcbf106e11a09f4cc5ff6f064a060570103d7ab123e31b1b0b75a8dbbc43119",
+      "size_bytes": 41369696,
+      "version": "13.1.80"
+    },
+    {
+      "env": "TRITON_CUOBJDUMP_PATH",
+      "name": "cuobjdump",
+      "official_archive_url": "https://developer.download.nvidia.com/compute/cuda/redist/cuda_cuobjdump/linux-x86_64/cuda_cuobjdump-linux-x86_64-13.1.80-archive.tar.xz",
+      "path": "triton/backends/nvidia/bin/cuobjdump",
+      "redistribution_status": "excluded-from-wheel; external source installation required",
+      "sha256": "8f240516056740fee62c40eec6e1ba5d3d5ab5a309fbba4b0fe26fd54c79767d",
+      "size_bytes": 744760,
+      "version": "13.1.80"
+    },
+    {
+      "env": "TRITON_NVDISASM_PATH",
+      "name": "nvdisasm",
+      "official_archive_url": "https://developer.download.nvidia.com/compute/cuda/redist/cuda_nvdisasm/linux-x86_64/cuda_nvdisasm-linux-x86_64-13.1.80-archive.tar.xz",
+      "path": "triton/backends/nvidia/bin/nvdisasm",
+      "redistribution_status": "excluded-from-wheel; external source installation required",
+      "sha256": "12153e5bcb8176cadfe15f6498c866db1a58de7bd53d660fe870428b6814049c",
+      "size_bytes": 5006832,
+      "version": "13.1.80"
+    }
+  ]
+}

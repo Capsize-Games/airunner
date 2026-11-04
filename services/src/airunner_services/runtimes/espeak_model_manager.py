@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+import threading
 from abc import ABCMeta
 from typing import Optional
 
@@ -15,6 +17,36 @@ from airunner_services.database.models.espeak_settings import EspeakSettings
 from airunner_services.requests.tts_request import TTSRequest
 from airunner_services.runtimes.tts_model_manager import TTSModelManager
 
+#: eSpeak driver ranges enforced before setProperty.
+ESPEAK_VOLUME_MIN = 0
+ESPEAK_VOLUME_MAX = 100
+ESPEAK_RATE_MIN = 50
+ESPEAK_RATE_MAX = 400
+ESPEAK_PITCH_MIN = 0
+ESPEAK_PITCH_MAX = 100
+
+_CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def _clamp_int(value: object, *, minimum: int, maximum: int, default: int) -> int:
+    """Return one integer setting clamped into its driver range."""
+    try:
+        number = int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, min(maximum, number))
+
+
+def sanitize_speech_text(message: str) -> str:
+    """Strip backend-significant characters from one speech request.
+
+    The previous implementation replaced only double quotes, leaving
+    single quotes, backslashes and control characters for the driver.
+    """
+    text = message.replace('"', "'").replace("\\", "")
+    text = _CONTROL_CHARS_RE.sub("", text)
+    return text.strip()
+
 
 class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
     """Manage the local eSpeak TTS runtime."""
@@ -23,6 +55,7 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
         super().__init__(*args, **kwargs)
         self._tts_request: Optional[TTSRequest] = None
         self._engine = None
+        self._engine_lock = threading.Lock()
 
     @property
     def espeak_settings(self) -> EspeakSettings:
@@ -76,8 +109,18 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
         if self.tts_request:
             volume = getattr(self.tts_request, "volume", None)
             if volume is not None:
-                return int(volume)
-        return int(self._setting_value("volume", 100))
+                return _clamp_int(
+                    volume,
+                    minimum=ESPEAK_VOLUME_MIN,
+                    maximum=ESPEAK_VOLUME_MAX,
+                    default=100,
+                )
+        return _clamp_int(
+            self._setting_value("volume", 100),
+            minimum=ESPEAK_VOLUME_MIN,
+            maximum=ESPEAK_VOLUME_MAX,
+            default=100,
+        )
 
     @property
     def pitch(self) -> int:
@@ -85,8 +128,18 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
         if self.tts_request:
             pitch = getattr(self.tts_request, "pitch", None)
             if pitch is not None:
-                return int(pitch)
-        return int(self._setting_value("pitch", 100))
+                return _clamp_int(
+                    pitch,
+                    minimum=ESPEAK_PITCH_MIN,
+                    maximum=ESPEAK_PITCH_MAX,
+                    default=100,
+                )
+        return _clamp_int(
+            self._setting_value("pitch", 100),
+            minimum=ESPEAK_PITCH_MIN,
+            maximum=ESPEAK_PITCH_MAX,
+            default=100,
+        )
 
     @property
     def rate(self) -> int:
@@ -94,8 +147,18 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
         if self.tts_request:
             rate = getattr(self.tts_request, "rate", None)
             if rate is not None:
-                return int(rate)
-        return int(self._setting_value("rate", 100))
+                return _clamp_int(
+                    rate,
+                    minimum=ESPEAK_RATE_MIN,
+                    maximum=ESPEAK_RATE_MAX,
+                    default=100,
+                )
+        return _clamp_int(
+            self._setting_value("rate", 100),
+            minimum=ESPEAK_RATE_MIN,
+            maximum=ESPEAK_RATE_MAX,
+            default=100,
+        )
 
     @property
     def status(self) -> ModelStatus:
@@ -103,24 +166,29 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
         return self._model_status.get(ModelType.TTS, ModelStatus.UNLOADED)
 
     def generate(self, tts_request: TTSRequest):
-        """Generate speech for one request when the engine is ready."""
-        if not self._engine or self.status is not ModelStatus.LOADED:
-            self.logger.warning(
-                "TTS engine not available or not loaded. Current status: %s",
-                self.status,
-            )
-            return None
+        """Generate speech for one request when the engine is ready.
 
-        self.tts_request = tts_request
-        message = tts_request.message.replace('"', "'")
-        if not message:
+        The pyttsx3 driver is not thread-safe, so generation is
+        serialized on the engine lock.
+        """
+        with self._engine_lock:
+            if not self._engine or self.status is not ModelStatus.LOADED:
+                self.logger.warning(
+                    "TTS engine not available or not loaded. Current status: %s",
+                    self.status,
+                )
+                return None
+
+            self.tts_request = tts_request
+            message = sanitize_speech_text(tts_request.message)
+            if not message:
+                return None
+            try:
+                self._engine.say(message)
+                self._engine.runAndWait()
+            except Exception as exc:
+                self.logger.error("Error during speech generation: %s", exc)
             return None
-        try:
-            self._engine.say(message)
-            self._engine.runAndWait()
-        except Exception as exc:
-            self.logger.error("Error during speech generation: %s", exc)
-        return None
 
     def load(self, target_model=None):
         """Load and initialize the eSpeak engine."""
@@ -217,4 +285,13 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
             self.change_model_status(ModelType.TTS, ModelStatus.FAILED)
 
 
-__all__ = ["EspeakModelManager"]
+__all__ = [
+    "ESPEAK_PITCH_MAX",
+    "ESPEAK_PITCH_MIN",
+    "ESPEAK_RATE_MAX",
+    "ESPEAK_RATE_MIN",
+    "ESPEAK_VOLUME_MAX",
+    "ESPEAK_VOLUME_MIN",
+    "EspeakModelManager",
+    "sanitize_speech_text",
+]

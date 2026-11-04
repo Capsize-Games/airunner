@@ -2,13 +2,51 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
+from pathlib import PurePosixPath
 from typing import Any, Optional
 
 from airunner_services.llm.provider_config import LLMProviderConfig
+from airunner_services.runtimes.file_policy import PathPolicyError
 from airunner_common.settings import AIRUNNER_BASE_PATH
 
+#: owner/repo with safe characters only; rejects ".." and absolute IDs.
+REPO_ID_RE = re.compile(r"^[\w.-]+/[\w.-]+$")
+
+
+def validate_repo_id(repo_id: str) -> str:
+    """Return repo_id when it matches owner/repo charset, else raise."""
+    if not isinstance(repo_id, str) or not REPO_ID_RE.match(repo_id):
+        raise ValueError(f"Invalid HuggingFace repo_id: {repo_id!r}")
+    if any(part in (".", "..", "") for part in repo_id.split("/")):
+        raise ValueError(f"Invalid HuggingFace repo_id: {repo_id!r}")
+    return repo_id
+
 _LLM_DOWNLOAD_TYPES = {"gguf", "llm"}
+
+
+def safe_hf_filename(filename: str) -> str:
+    """Return one normalized HF-relative path, rejecting escape attempts.
+
+    HuggingFace file names legitimately contain ``/`` subdirectories
+    (``tokenizer/merges.txt``), so unlike ``job_service._safe_filename``
+    this keeps relative subpaths but still rejects NUL bytes, absolute
+    paths, backslashes, and ``..`` components so a server-supplied name
+    can never escape the model directory.
+    """
+    raw = str(filename or "").strip()
+    if not raw or "\x00" in raw:
+        raise PathPolicyError("HuggingFace filename is not allowed")
+    if "\\" in raw:
+        raise PathPolicyError("HuggingFace filename is not allowed")
+    pure = PurePosixPath(raw)
+    if pure.is_absolute() or ".." in pure.parts:
+        raise PathPolicyError("HuggingFace filename is not allowed")
+    normalized = str(pure)
+    if not normalized or normalized in {".", ".."}:
+        raise PathPolicyError("HuggingFace filename is not allowed")
+    return normalized
 
 
 @dataclass(frozen=True)
@@ -47,6 +85,7 @@ def prepare_huggingface_download_request(
     prefer_pre_quantized: bool = True,
 ) -> HuggingFaceDownloadRequest:
     """Return one normalized request for the shared HF download worker."""
+    validate_repo_id(repo_id)
     resolved_download = _resolve_preferred_download(
         repo_id,
         model_type,
@@ -66,7 +105,12 @@ def prepare_huggingface_download_request(
         resolved_download,
         prefer_pre_quantized,
     )
+    if gguf_filename is not None:
+        safe_hf_filename(gguf_filename)
+    for missing_name in missing_files or []:
+        safe_hf_filename(missing_name)
     repo_id = _resolved_repo_id(repo_id, resolved_download)
+    validate_repo_id(repo_id)
     return HuggingFaceDownloadRequest(
         repo_id=repo_id,
         model_type=model_type,

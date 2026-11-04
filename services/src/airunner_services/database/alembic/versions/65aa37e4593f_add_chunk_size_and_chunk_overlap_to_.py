@@ -8,8 +8,6 @@ Create Date: 2025-11-04 11:50:56.868000
 
 from typing import Sequence, Union
 
-from alembic import op
-import sqlalchemy as sa
 
 from airunner_services.database.db import add_column, drop_column
 from airunner_services.database.models.rag_settings import RAGSettings

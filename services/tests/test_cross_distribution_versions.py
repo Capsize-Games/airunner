@@ -1,4 +1,4 @@
-"""Check that in-tree package edges follow the repository version policy."""
+"""Check in-tree launcher/service compatibility after the GUI retirement."""
 
 from __future__ import annotations
 
@@ -7,33 +7,20 @@ from pathlib import Path
 
 from packaging.specifiers import SpecifierSet
 
-
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def _release_version(path: Path) -> str:
-    source = path.read_text(encoding="utf-8")
-    match = re.search(r'^_RELEASE_VERSION = "([^"]+)"$', source, re.MULTILINE)
-    assert match is not None, f"missing release version in {path}"
-    return match.group(1)
-
-
-def test_airunner_services_source_dependency_tracks_its_independent_version() -> None:
-    root_setup = (ROOT / "setup.py").read_text(encoding="utf-8")
-    service_version = _release_version(ROOT / "services" / "setup.py")
-
-    requirement = re.search(
-        r'^\s*"airunner-services(~=|==)([^"]+)"\s*,?$',
-        root_setup,
-        re.MULTILINE,
+def test_launcher_accepts_the_in_tree_service_version() -> None:
+    """The launcher service extras must accept this release's daemon."""
+    service_source = (ROOT / "services/setup.py").read_text()
+    native_source = (ROOT / "native/setup.py").read_text()
+    version = re.search(
+        r'^_RELEASE_VERSION = "([^"]+)"$', service_source, re.MULTILINE
     )
-    assert requirement is not None, "missing AIRunner services dependency"
-    assert requirement.group(1) == "~=", (
-        "development installations use a compatible services range; only "
-        "the release lockfile pins the tested exact pair"
+    assert version is not None
+    requirements = re.findall(
+        r'"airunner-services([^"\n]+)"', native_source
     )
-    specifier = SpecifierSet(f"{requirement.group(1)}{requirement.group(2)}")
-    assert service_version in specifier, (
-        f"in-tree services version {service_version} does not satisfy "
-        f"root dependency {specifier}"
-    )
+    assert requirements, "launcher must declare its service dependency"
+    for requirement in requirements:
+        assert version.group(1) in SpecifierSet(requirement)

@@ -1,5 +1,4 @@
-"""Setup installation endpoint — moves model download orchestration
-from the GUI setup wizard into the daemon.
+"""Administrative setup installation and model download orchestration.
 
 The daemon receives a declarative install configuration and runs all
 directory creation, model downloads, NLTK/unidic data installation
@@ -13,14 +12,19 @@ import logging
 import os
 from typing import Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from pydantic import field_validator
+
+from airunner_services.api.admin_auth import require_admin_key
+from airunner_services.url_safety import is_offline_mode
 
 from airunner_services.bootstrap.model_bootstrap_data import (
     model_bootstrap_data,
 )
 from airunner_common.settings import AIRUNNER_BASE_PATH
+from .setup_nltk import install_nltk_data as _install_nltk_data
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -33,10 +37,46 @@ class SetupInstallRequest(BaseModel):
     base_path: str = str(AIRUNNER_BASE_PATH)
     prefer_pre_quantized: bool = True
 
+    @field_validator("enabled_models")
+    @classmethod
+    def supported_models(cls, value: dict[str, bool]) -> dict[str, bool]:
+        """Reject configuration keys the installer cannot implement."""
+        if set(value) - {"llm", "stable_diffusion"}:
+            raise ValueError("Unsupported setup model family")
+        return value
+
 
 def _emit(msg: dict[str, Any]) -> str:
     """Return one SSE-formatted event string."""
     return f"data: {json.dumps(msg)}\n\n"
+
+
+def _allowed_base_roots() -> list[str]:
+    """Return the real paths a setup install may create directories in."""
+    return [
+        os.path.realpath(os.path.expanduser(str(AIRUNNER_BASE_PATH)))
+    ]
+
+
+def _resolve_base_path(raw: str) -> str:
+    """Require the data root used by this daemon and its runtime workers.
+
+    Symlinks, ``..`` segments, and tilde are resolved before the
+    comparison. Installing into a child directory would not reconfigure
+    the model download service or the runtime's language-data search path.
+    """
+    candidate = os.path.realpath(os.path.expanduser(raw or ""))
+    for root in _allowed_base_roots():
+        if candidate == root:
+            return candidate
+        if candidate.startswith(root + os.sep):
+            raise HTTPException(
+                status_code=409,
+                detail="base_path_requires_daemon_reconfiguration",
+            )
+    raise HTTPException(
+        status_code=400, detail="base_path_outside_allowed_root"
+    )
 
 
 def _create_directories(base_path: str) -> list[str]:
@@ -63,39 +103,6 @@ def _create_directories(base_path: str) -> list[str]:
     return created
 
 
-async def _install_nltk_data() -> list[str]:
-    """Install required NLTK data packages."""
-    # Imported lazily: nltk >= 3.10 installs an import-security finder at
-    # import time that blocks CWD-resolved imports unless
-    # NLTK_DISABLE_IMPORT_SECURITY is set (see daemon.py). This routes module
-    # must stay importable without that env var so consumers and the test
-    # suite can import the API surface without NLTK side effects (issue
-    # #2055). nltk is a hard dependency of this package; mirror the graceful
-    # guard used by job_service.py.
-    try:
-        import nltk
-    except ImportError:  # pragma: no cover - nltk is a declared dependency
-        nltk = None
-    if nltk is None:
-        raise RuntimeError(
-            "nltk is not installed; it is required for the setup data install"
-        )
-    packages = [
-        "punkt",
-        "punkt_tab",
-        "averaged_perceptron_tagger",
-        "averaged_perceptron_tagger_eng",
-    ]
-    installed = []
-    for pkg in packages:
-        try:
-            nltk.download(pkg, quiet=True)
-            installed.append(pkg)
-        except Exception as exc:
-            logger.warning("NLTK download failed for %s: %s", pkg, exc)
-    return installed
-
-
 def _resolve_download_jobs(
     enabled: dict[str, bool],
 ) -> list[dict[str, Any]]:
@@ -114,7 +121,7 @@ def _resolve_download_jobs(
 
     if enabled.get("stable_diffusion"):
         for model in model_bootstrap_data:
-            if model.get("category") not in {None, "art"}:
+            if model.get("model_type") != "art":
                 continue
             if model.get("pipeline_action") == "embedding":
                 continue
@@ -133,32 +140,44 @@ async def setup_install(
     payload: SetupInstallRequest,
     request: Request,
 ):
-    """Install AIRunner models and data through the daemon."""
+    """Install data and queue model downloads with explicit outcomes."""
+    require_admin_key(request)
+    resolved_base = _resolve_base_path(payload.base_path)
+    if is_offline_mode():
+        raise HTTPException(403, "offline_mode")
+    jobs = _resolve_download_jobs(payload.enabled_models)
+    if len(jobs) > 16:
+        raise HTTPException(400, "too_many_setup_downloads")
+    download_service = getattr(request.app.state, "download_job_service", None)
+    if jobs and download_service is None:
+        raise HTTPException(503, "download_service_unavailable")
 
     async def _stream():
-        download_service = getattr(
-            request.app.state, "download_job_service", None,
-        )
-
         # Phase 1: Create directories
         yield _emit({"status": "installing", "message": "Creating directories...", "progress": 0})
-        created = _create_directories(payload.base_path)
+        try:
+            created = _create_directories(resolved_base)
+        except OSError:
+            logger.exception("Setup directory creation failed")
+            yield _emit({"status": "failed", "message": "Directory creation failed"})
+            return
         yield _emit({"status": "installing", "message": f"Created {len(created)} directories", "progress": 2})
 
         # Phase 2: Install NLTK data
         yield _emit({"status": "installing", "message": "Installing NLTK data...", "progress": 5})
-        nltk_installed = await _install_nltk_data()
+        try:
+            nltk_installed = await _install_nltk_data(resolved_base)
+        except Exception:
+            logger.exception("Setup data installation failed")
+            yield _emit({"status": "failed", "message": "Data installation failed"})
+            return
         yield _emit({"status": "installing", "message": f"NLTK installed: {nltk_installed}", "progress": 8})
 
         # Phase 3: Queue downloads
-        jobs = _resolve_download_jobs(payload.enabled_models)
         total_jobs = len(jobs)
         yield _emit({"status": "installing", "message": f"Queuing {total_jobs} model downloads...", "progress": 10})
 
-        if download_service is None:
-            yield _emit({"status": "completed", "message": "Setup complete (no download service available)", "progress": 100})
-            return
-
+        queued = 0
         for idx, job in enumerate(jobs):
             try:
                 job_id = await download_service.start_huggingface_download(
@@ -166,8 +185,11 @@ async def setup_install(
                     model_type=job["model_type"],
                     prefer_pre_quantized=payload.prefer_pre_quantized,
                 )
+                if not job_id:
+                    raise RuntimeError("Download was not queued")
+                queued += 1
                 yield _emit({
-                    "status": "installing",
+                    "status": "queued",
                     "message": f"Started: {job['repo_id']}",
                     "progress": 10 + int(85 * idx / max(total_jobs, 1)),
                     "job_id": job_id,
@@ -178,12 +200,22 @@ async def setup_install(
                 # Generic message only; the exception detail stays in the
                 # server log (CodeQL py/stack-trace-exposure, issue #2079).
                 yield _emit({
-                    "status": "installing",
+                    "status": "failed",
                     "message": f"Failed: {job['repo_id']}",
                     "progress": 10 + int(85 * idx / max(total_jobs, 1)),
                 })
 
-        yield _emit({"status": "completed", "message": "Setup complete", "progress": 100})
+        if queued < total_jobs:
+            status = "partial" if queued else "failed"
+            message = "Some downloads were not queued"
+        elif total_jobs:
+            status, message = "queued", "Model downloads queued"
+        else:
+            status, message = "completed", "Data installation complete"
+        yield _emit({
+            "status": status, "message": message, "progress": 100,
+            "queued": queued, "failed": total_jobs - queued,
+        })
 
     return StreamingResponse(
         _stream(),

@@ -14,6 +14,10 @@ a synthetic fixture rather than real vendored code.
 from __future__ import annotations
 
 import sys
+import hashlib
+import json
+
+import pytest
 from pathlib import Path
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -72,3 +76,31 @@ def test_missing_notice_entry_is_reported(tmp_path: Path) -> None:
 
     problems = run_check(repo_root=root)
     assert any("not listed" in problem for problem in problems)
+
+
+@pytest.mark.parametrize("directory", ["watchfiles-rust-crates", "pydantic-core-rust-crates"])
+def test_cargo_notice_payload_matches_reviewed_source_index(directory: str) -> None:
+    """Detect missing or altered original notices before candidate assembly."""
+    root = _PROJECT_ROOT / "packaging" / "licenses" / directory
+    index = json.loads((root / f"{directory}.source.json").read_text())
+    paths = set()
+    crates = index["compiled_crates"] if directory == "watchfiles-rust-crates" else index["crates"]
+    for crate in crates:
+        assert crate["crate_archive_sha256"] == crate["registry_checksum"]
+        assert crate["notices"], f"Missing notices for {crate['name']}"
+        for notice in crate["notices"]:
+            relative = Path(notice["bundle_path"])
+            assert len(relative.parts) == 1 and not relative.is_absolute()
+            path = root / relative
+            assert not path.is_symlink()
+            content = path.read_bytes()
+            assert content and len(content) == notice["size"]
+            assert hashlib.sha256(content).hexdigest() == notice["sha256"]
+            paths.add(relative.name)
+    if "package_license_notice" in index:
+        notice = index["package_license_notice"]
+        content = (root / notice["bundle_path"]).read_bytes()
+        assert len(content) == notice["size"]
+        assert hashlib.sha256(content).hexdigest() == notice["sha256"]
+        paths.add(notice["bundle_path"])
+    assert paths == {path.name for path in root.iterdir() if not path.name.endswith(".source.json")}

@@ -220,12 +220,10 @@ class ModelDownloadMixin:
             self.logger.error("Unable to show GUI download dialog")
             return
 
-        # Run the headless download off-thread. The download-required
-        # signal can be emitted synchronously from the request path (model
-        # load), so blocking here would stall request handling and cause
-        # re-entrant generation once the download completes. The completion
-        # handler loads the model and retries any pending request on this
-        # background thread instead.
+        # Run the headless download off-thread. The download-required signal
+        # can be emitted synchronously during request handling; completion is
+        # queued back to the LLM worker so model loading and retries stay
+        # serialized with ordinary generation.
         self._download_dialog_showing = True
         threading.Thread(
             target=self._download_headless,
@@ -335,9 +333,7 @@ class ModelDownloadMixin:
                         "model_type": download_model_type,
                     }
                     progress.on_download_complete(complete_data)
-                    self.on_huggingface_download_complete_signal(
-                        complete_data
-                    )
+                    self.on_huggingface_download_complete_signal(complete_data)
                     self._download_dialog_showing = False
                     return True
 
@@ -346,6 +342,12 @@ class ModelDownloadMixin:
                     progress.on_download_failed({"error": error})
                     self.logger.error(f"Download failed: {error}")
                     self._download_dialog_showing = False
+                    self.add_to_queue(
+                        {
+                            "_message_type": "download_failed",
+                            "data": {"error": error},
+                        }
+                    )
                     return False
 
                 if job.status is JobStatus.CANCELLED:
@@ -353,6 +355,12 @@ class ModelDownloadMixin:
                         {"error": "Download cancelled"}
                     )
                     self._download_dialog_showing = False
+                    self.add_to_queue(
+                        {
+                            "_message_type": "download_failed",
+                            "data": {"error": "Download cancelled"},
+                        }
+                    )
                     return False
 
                 time.sleep(0.1)
@@ -360,6 +368,12 @@ class ModelDownloadMixin:
         except Exception as exc:
             self.logger.error(f"Error during headless download: {exc}")
             self._download_dialog_showing = False
+            self.add_to_queue(
+                {
+                    "_message_type": "download_failed",
+                    "data": {"error": str(exc) or "Download failed"},
+                }
+            )
             return False
 
     def _get_model_info(self, repo_id: str) -> Optional[Dict]:
@@ -381,7 +395,13 @@ class ModelDownloadMixin:
         }
 
     def on_huggingface_download_complete_signal(self, data: Dict) -> None:
-        """Handle download completion and trigger model load or conversion."""
+        """Queue completion so model loading stays on the worker thread."""
+        self.add_to_queue(
+            {"_message_type": "download_complete", "data": dict(data)}
+        )
+
+    def _handle_huggingface_download_complete(self, data: Dict) -> None:
+        """Load a completed model and queue waiting requests for retry."""
         self._download_dialog_showing = False
         self._download_dialog = None
 
@@ -453,38 +473,36 @@ class ModelDownloadMixin:
 
     def _auto_load_downloaded_model(self) -> None:
         """Load the downloaded model and replay any pending request."""
-        if self.model_manager:
-            self.logger.info("Triggering automatic model load after download")
-
-            load_success = self.model_manager.load()
-            self.logger.info(f"Model load returned: {load_success}")
-
-            if self.model_manager.model_status[ModelType.LLM] != ModelStatus.LOADED:
-                self.logger.error(
-                    "Model failed to load after download - status: %s",
-                    self.model_manager.model_status[ModelType.LLM],
-                )
-                if hasattr(self, "_pending_llm_request"):
-                    self._pending_llm_request = None
-                return
-
-            self.logger.info("Model loaded successfully!")
-
-            if (
-                hasattr(self, "_pending_llm_request")
-                and self._pending_llm_request
-            ):
-                self.logger.info(
-                    "Retrying pending LLM request after model download"
-                )
-                self.handle_message(self._pending_llm_request)
-                self._pending_llm_request = None
-            else:
-                self.logger.info("No pending request to retry")
-        else:
+        if not self.model_manager:
             self.logger.warning(
                 "Model manager not available after download - cannot auto-load"
             )
+            fail_pending = getattr(self, "_fail_pending_llm_requests", None)
+            if callable(fail_pending):
+                fail_pending("model manager is unavailable")
+            return
+
+        self.logger.info("Triggering automatic model load after download")
+        load_success = self.model_manager.load()
+        self.logger.info(f"Model load returned: {load_success}")
+        if self.model_manager.model_status[ModelType.LLM] != ModelStatus.LOADED:
+            error = getattr(self.model_manager, "_last_load_error", None)
+            error = error or (
+                "model status is "
+                f"{self.model_manager.model_status[ModelType.LLM]}"
+            )
+            self.logger.error("Model failed to load after download: %s", error)
+            fail_pending = getattr(self, "_fail_pending_llm_requests", None)
+            if callable(fail_pending):
+                fail_pending(str(error))
+            return
+
+        self.logger.info("Model loaded successfully")
+        schedule_retries = getattr(
+            self, "_schedule_pending_llm_retries", None
+        )
+        if callable(schedule_retries):
+            schedule_retries()
 
 
 __all__ = ["HeadlessDownloadProgress", "ModelDownloadMixin"]

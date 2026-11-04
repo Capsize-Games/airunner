@@ -1,0 +1,58 @@
+# Docker Compose for AI Runner operators (headless services only).
+# This is the RELEASE variant: it runs the published image exactly as
+# built, with NO source bind-mounts. Container behavior therefore
+# matches what the image smoke gate verified. Developers iterating on
+# live repo code must use docker-compose.dev.yml instead.
+#
+# Usage:
+#   Headless mode: docker compose -f docker-compose.release.yml run --rm --service-ports airunner
+#   With args:     docker compose -f docker-compose.release.yml run --rm --service-ports airunner --port 8080
+#
+# Note: --service-ports is required to expose port 8080.
+#
+# This file uses relative paths so airunner can be located anywhere.
+#
+# Host user configuration:
+#   The container runs as your host UID/GID so created files are owned by you.
+#   Compose cannot run `id -u` itself, so it interpolates the UID and GID
+#   environment variables and falls back to UID/GID 1000 only when they are
+#   unset. If your UID is not 1000, copy .env.example to .env and set the
+#   variables to your values:
+#     cp .env.example .env
+
+services:
+  # AI Runner headless service: local model runtimes behind the FastAPI
+  # daemon consumed by airunnerweb.
+  airunner:
+    image: ghcr.io/capsize-games/airunner/airunner:linux-headless
+    # Run as host user to avoid file permission issues. UID/GID are taken from
+    # the environment (see .env.example); 1000 is only a last-resort fallback.
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes:
+      # Mount local airunner data folder (models, database, etc.)
+      - ~/.local/share/airunner:/home/airunner/.local/share/airunner
+      # Mount local huggingface cache
+      - ~/.cache/huggingface:/home/airunner/.cache/huggingface
+    ports:
+      # Bind to loopback only by default; set e.g. "0.0.0.0:8080:8080" to
+      # expose the API on all interfaces (requires AIRUNNER_API_KEY).
+      - "127.0.0.1:8080:8080"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+    environment:
+      - PYTHONUNBUFFERED=1
+      - HOME=/home/airunner
+      - HF_HOME=/home/airunner/.cache/huggingface
+      - AIRUNNER_DATA_DIR=/home/airunner/.local/share/airunner
+      - AIRUNNER_HEADLESS=1
+      # NVIDIA
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    # Prevent 'docker compose up' from starting this service
+    profiles:
+      - manual

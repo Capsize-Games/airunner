@@ -65,11 +65,16 @@ def upgrade() -> None:
     image_filter_values["yellow_blue"]["max_value"] = 1.0
 
     for param_name, param_data in image_filter_values.items():
+        # Insert-only: never overwrite rows the user may have tuned.
         connection.execute(
             sa.text(
-                "UPDATE image_filter_values "
-                "SET value = :value, value_type = :value_type, min_value = :min_value, max_value = :max_value "
-                "WHERE image_filter_id = :image_filter_id AND name = :name"
+                "INSERT INTO image_filter_values (image_filter_id, name, "
+                "value, value_type, min_value, max_value) "
+                "SELECT :image_filter_id, :name, :value, :value_type, "
+                ":min_value, :max_value "
+                "WHERE NOT EXISTS (SELECT 1 FROM image_filter_values "
+                "WHERE image_filter_id = :image_filter_id "
+                "AND name = :name)"
             ),
             {
                 "image_filter_id": filter_id,
@@ -83,29 +88,10 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    connection = op.get_bind()
-    filter_id = connection.execute(
-        sa.text(
-            "SELECT id FROM image_filter_settings WHERE name = :name LIMIT 1"
-        ),
-        {"name": "color_balance"},
-    ).scalar()
-    if not filter_id:
-        return
-
-    for param_name, param_data in color_balance_data.items():
-        connection.execute(
-            sa.text(
-                "UPDATE image_filter_values "
-                "SET value = :value, value_type = :value_type, min_value = :min_value, max_value = :max_value "
-                "WHERE image_filter_id = :image_filter_id AND name = :name"
-            ),
-            {
-                "image_filter_id": filter_id,
-                "name": param_name,
-                "value": param_data["value"],
-                "value_type": param_data["value_type"],
-                "min_value": param_data["min_value"],
-                "max_value": param_data["max_value"],
-            },
-        )
+    """Reject an unsafe rollback without per-row bootstrap provenance."""
+    raise RuntimeError(
+        "Cannot downgrade this revision safely: bootstrap rows may have been "
+        "user-edited, and this revision records no per-row provenance. "
+        "Restore a pre-upgrade database backup to roll back; otherwise keep "
+        "this revision and upgrade forward."
+    )

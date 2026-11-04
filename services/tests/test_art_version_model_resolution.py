@@ -16,7 +16,7 @@ import tempfile
 import time
 from collections.abc import Callable, Coroutine
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 from typing import Any, Iterator
 
 import pytest
@@ -94,7 +94,9 @@ def _fake_tracker_class(captured: dict[str, list]) -> type:
     class _FakeTracker:
         """Record job creation without tracker side effects."""
 
-        async def create_job(self, metadata: dict | None = None) -> str:
+        async def create_art_job(
+            self, metadata: dict | None = None, *, capacity: int = 1
+        ) -> str:
             """Record one job metadata payload."""
             captured["job_metadata"].append(metadata)
             return "job-1"
@@ -103,6 +105,24 @@ def _fake_tracker_class(captured: dict[str, list]) -> type:
             self, *_args: object, **_kwargs: object
         ) -> None:
             """Ignore progress updates during route tests."""
+            return None
+
+        async def mark_art_job_running(self, _job_id: str) -> bool:
+            return True
+
+        async def fail_job(self, *_args: object, **_kwargs: object) -> None:
+            return None
+
+        async def get_status(self, _job_id: str):
+            return SimpleNamespace(status="running")
+
+        async def finish_art_job(self, *_args: object) -> None:
+            return None
+
+        def attach_art_task(self, *_args: object) -> None:
+            return None
+
+        def bind_art_client(self, *_args: object) -> None:
             return None
 
     return _FakeTracker

@@ -1,0 +1,32 @@
+{
+  "distribution": "langsmith",
+  "exact_pin": "langsmith==0.14.4",
+  "files": [
+    {
+      "path": "packaging/licenses/langsmith-0.14.4-supplement/LICENSE.txt",
+      "sha256": "34e0b9842c7a31d34e53bc7eb224e81e07a34996106e029bbc72dea2d449f496",
+      "size_bytes": 1066,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "langchain-ai/langsmith-sdk",
+        "revision": "a39745c67839496a98e5e846122664d8070c8dca",
+        "sha256": "34e0b9842c7a31d34e53bc7eb224e81e07a34996106e029bbc72dea2d449f496",
+        "size_bytes": 1066
+      }
+    }
+  ],
+  "license_source": "The selected wheel and source archive omit a standalone project license notice. The source package metadata declares MIT; the root LICENSE text is retained byte-for-byte from the exact 0.14.4 source commit. Source/wheel correspondence is recorded separately as bounded review evidence.",
+  "package_source_evidence": {
+    "path": "langsmith-0.14.4/PKG-INFO",
+    "sha256": "0e8ae796753fa98c7b9185b987096b62aa72a77285643d7c5b7b62b623219b46"
+  },
+  "selected_wheel": {
+    "filename": "langsmith-0.14.4-py3-none-any.whl",
+    "sha256": "ae0d98c2b0f9292ef7e12451d480937d79a0e7dcf2412ba847de6f053391b44a"
+  },
+  "source_distribution": {
+    "filename": "langsmith-0.14.4.tar.gz",
+    "sha256": "a340199fcd2af60358f09dd1d7011bf7282f0d46a98aaa101bc7a521746da764"
+  },
+  "version": "0.14.4"
+}

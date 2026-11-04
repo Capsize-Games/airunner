@@ -19,22 +19,78 @@ _STAGE = _ROOT / "packaging" / "linux" / "stage-sidecars.sh"
 _SPEC = _ROOT / "packaging" / "linux" / "services-bundle-spec.toml"
 
 _REQUIRED_TESTS = (
-    "services/tests/test_content_safety_gate.py",
-    "services/tests/test_model_load_security.py",
+    "scripts/tests/test_cuda_source_recipe.py",
+    "scripts/tests/test_cuda_wheel_handoff.py",
+    "scripts/tests/test_linux_ci_dependency_inputs.py",
+    "scripts/tests/test_apt_release_publisher.py",
+    "scripts/tests/test_apt_daemon_health_probe.py",
+    "scripts/tests/test_github_release_promotion.py",
+    "services/tests/test_release_identity.py",
+    "services/tests/test_release_core_promotion.py",
+    "services/tests/test_debian_postinst_safety.py",
+    "scripts/tests/test_core_interrupted_upgrade_probe.py",
+    "services/tests/test_release_core_bundle.py",
+    "services/tests/test_core_input_readiness.py",
+    "services/tests/test_dependency_notices.py",
+    "services/tests/test_service_bootstrap.py",
+    "services/tests/test_legacy_api_surface.py",
     "services/tests/test_loopback_auth.py",
     "services/tests/test_secret_storage.py",
+    "services/tests/test_model_load_security.py",
+    "services/tests/test_cross_distribution_versions.py",
+    "services/tests/test_tool_sandbox_security.py",
+    "services/tests/test_dependency_constraints.py",
+    "services/tests/test_native_package_isolation.py",
+    "services/tests/test_zimage_model_dir_config.py",
+    "services/tests/test_third_party_notices.py",
+    "services/tests/test_llm_request_for_action_parity.py",
+    "services/tests/test_content_safety_gate.py",
+    "services/tests/test_content_policy_mode.py",
+    "services/tests/test_optional_policy_streaming.py",
+    "services/tests/test_release_s04_packaged.py",
     "services/tests/test_download_security.py",
+    "services/tests/test_security_package_pins.py",
     "services/tests/test_release_b02.py",
+    "services/tests/test_import_boundaries.py",
+    "services/tests/test_run_tests_optional_smoke.py",
+    "services/tests/test_gguf_chat_handler_cpu_contract.py",
+    "services/tests/test_e5_model_identity.py",
+    "services/tests/test_e5_manager_runtime_lock.py",
+    "services/tests/test_embedding_space_fingerprint.py",
+    "services/tests/test_rag_reindex_transaction.py",
+    "services/tests/test_rag_reindex_worker.py",
+    "services/tests/test_rag_reindex_route.py",
+    "services/tests/test_rag_dependency_isolation.py",
+    "services/tests/test_rag_service_interface.py",
+    "services/tests/test_rag_document_delete.py",
+    "services/tests/test_rag_document_delete_route.py",
+    "services/tests/test_rag_document_formats.py",
+    "services/tests/test_rag_document_scope.py",
+    "services/tests/test_rag_index_admission_results.py",
+    "services/tests/test_rag_tool_config_injection.py",
+    "services/tests/test_offline_remote_url_guards.py",
+    "services/tests/test_zimage_resource_budget.py",
+    "services/tests/test_tts_buffered_response.py",
+    "scripts/tests/test_espeak_build_recipes.py",
+    "services/tests/test_llm_request_ownership.py",
+    "services/tests/test_llm_request_cancellation_api.py",
+    "services/tests/test_release_p05_binaries.py",
+    "services/tests/test_release_p05_gates.py",
+    "services/tests/test_local_fallback_loaded_metadata.py",
+    "services/tests/test_ollama_embedding_contract.py",
+    "services/tests/test_ollama_runtime_metadata.py",
+    "services/tests/test_llm_worker_embedding_queue.py",
+    "services/tests/test_art_job_admission.py",
+    "services/tests/test_art_model_scan_path_safety.py",
 )
 _GATE_NEEDS = (
-    "provision-policy",
-    "provision-policy-fixture",
     "fetch-sidecars",
     "linux-candidate",
 )
 _REQUIRED_JOBS = _GATE_NEEDS + (
     "candidate-gate",
     "build-python-package",
+    "build-debian-package",
     "publish-release-assets",
 )
 _PUBLISH_MARKERS = (
@@ -87,6 +143,29 @@ def _release_checks(result: str = "success") -> list[str]:
 def _sha256_of(path: Path) -> str:
     """Return the hex SHA-256 of one file."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _write_test_sidecar_pin(
+    root: Path, archive: Path, platform: str = "linux"
+) -> tuple[Path, Path]:
+    """Write an explicit synthetic trusted pin for one fixture archive."""
+    pin = root / "native-sidecar-checksums.json"
+    tag = root / "native-sidecar-version"
+    records = {
+        name: {
+            "asset": f"runtime-sidecars-{name}.tar.gz",
+            "sha256": _sha256_of(archive) if name == platform else None,
+        }
+        for name in ("linux", "windows")
+    }
+    pin.write_text(json.dumps({
+        "tag": "v0.1.0",
+        "source_commit": "0554185f27ac7db8f58e1ae8d59ba041e4118e62",
+        "provenance_status": "verified",
+        "archives": records,
+    }), encoding="utf-8")
+    tag.write_text("v0.1.0\n", encoding="utf-8")
+    return pin, tag
 
 
 def _write_fake_manifest(bundle: Path) -> None:

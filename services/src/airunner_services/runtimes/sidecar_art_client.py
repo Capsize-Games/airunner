@@ -83,8 +83,11 @@ class SidecarArtClient(RuntimeClient):
 			)
 		self._session = session or requests.Session()
 		self._active_jobs: dict[str, str] = {}
+		self._owned_requests: set[str] = set()
+		self._cancel_requested: set[str] = set()
 		self._active_jobs_lock = threading.Lock()
 		self._invoke_lock = threading.Lock()
+		self._closing = threading.Event()
 		self._last_known_model_status: Optional[str] = None
 		self.descriptor = RuntimeDescriptor(
 			runtime=RuntimeKind.ART,
@@ -156,7 +159,12 @@ class SidecarArtClient(RuntimeClient):
 	def cancel(self, request_id: str) -> Any:
 		"""Cancel an active art job on a best-effort basis."""
 		messages = load_message_types()
-		job_id = self._untrack_job(request_id)
+		with self._active_jobs_lock:
+			job_id = self._active_jobs.pop(request_id, None)
+			if job_id is None and request_id in self._owned_requests:
+				# Preserve cancellation while POST /generate is still returning;
+				# _track_job delivers it as soon as the child job id is known.
+				self._cancel_requested.add(request_id)
 		if job_id is not None:
 			try:
 				self._request("DELETE", f"/cancel/{job_id}")
@@ -170,12 +178,24 @@ class SidecarArtClient(RuntimeClient):
 
 	def close(self) -> None:
 		"""Release the managed sidecar process during shutdown."""
+		self._closing.set()
 		self._remember_model_status("unloaded")
-		if self._launcher is not None:
+		if self._managed_launcher and self._launcher is not None:
 			self._launcher.stop()
 		close = getattr(self._session, "close", None)
 		if close is not None:
 			close()
+
+	def finish_request(self, request_id: str) -> None:
+		"""Clear request-owned mapping and any unconsumed cancel marker."""
+		self._untrack_job(request_id)
+		with self._active_jobs_lock:
+			self._owned_requests.discard(request_id)
+
+	def register_request(self, request_id: str) -> None:
+		"""Register an admitted API request before child submission begins."""
+		with self._active_jobs_lock:
+			self._owned_requests.add(request_id)
 
 	def _has_active_jobs(self) -> bool:
 		"""Return whether the sidecar currently has one tracked art job."""
@@ -356,27 +376,47 @@ class SidecarArtClient(RuntimeClient):
 					f"(endpoint={launcher.endpoint})"
 				)
 				launcher.start()
+				self._require_execution_finished_status()
 				logger.info(
 					"[SidecarArtClient] Sidecar launcher ready, "
 					"submitting art job"
 				)
 				if self._last_known_model_status not in {"loaded", "ready"}:
 					self._remember_model_status("loading")
-				job_id = self._submit_job(invocation)
+				try:
+					job_id = self._submit_job(invocation)
+				except Exception as exc:
+					self._settle_ambiguous_submission()
+					raise RuntimeError(
+						"Art job submission outcome was uncertain; the client "
+						"closed or stopped the owned sidecar before releasing "
+						"its reservation"
+					) from exc
 				logger.info(
 					"[SidecarArtClient] Art job submitted to sidecar: "
 					f"job_id={job_id}"
 				)
+				cancel_on_track = self._track_job(
+					request.request_id, job_id
+				)
+				if cancel_on_track:
+					self._best_effort_cancel(job_id)
 				if progress_callback is not None:
-					progress_callback(
-						{
-							"job_id": job_id,
-							"status": "running",
-							"progress": 2.0,
-							"phase": "submitted",
-						}
-					)
-				self._track_job(request.request_id, job_id)
+					try:
+						progress_callback(
+							{
+								"job_id": job_id,
+								"status": "running",
+								"progress": 2.0,
+								"phase": "submitted",
+							}
+						)
+					except Exception as exc:
+						logger.warning(
+							"Sidecar art progress callback failed "
+							"(type=%s)",
+							type(exc).__name__,
+						)
 				status, payload, error = self._wait_for_job(
 					job_id,
 					progress_callback,
@@ -388,7 +428,7 @@ class SidecarArtClient(RuntimeClient):
 					self._remember_model_status("loaded")
 				else:
 					self._remember_model_status("unloaded")
-			except RuntimeError as exc:
+			except Exception as exc:
 				return self._runtime_error_response(request.request_id, str(exc))
 			finally:
 				self._untrack_job(request.request_id)
@@ -492,6 +532,27 @@ class SidecarArtClient(RuntimeClient):
 			raise RuntimeError("Art runtime did not return a job id")
 		return job_id
 
+	def _settle_ambiguous_submission(self) -> None:
+		"""Keep the caller reserved until uncertain child work is stopped."""
+		launcher = self._launcher
+		if self._managed_launcher and launcher is not None:
+			try:
+				launcher.stop()
+				is_running = getattr(launcher, "is_running", None)
+				if callable(is_running) and not is_running():
+					return
+			except Exception as exc:
+				logger.error(
+					"Failed to confirm managed art sidecar termination "
+					"after ambiguous submission (type=%s)",
+					type(exc).__name__,
+				)
+		logger.error(
+			"Art submission outcome is unknown; retaining capacity until "
+			"the sidecar client is explicitly closed"
+		)
+		self._closing.wait()
+
 	def _wait_for_job(
 		self,
 		job_id: str,
@@ -500,33 +561,134 @@ class SidecarArtClient(RuntimeClient):
 		"""Poll the remote art job until it completes or fails."""
 		messages = load_message_types()
 		deadline = self._deadline()
+		cancellation_started = False
+		terminal_unconfirmed_logged = False
 		last_status: Optional[str] = None
 		last_progress: Optional[float] = None
-		while time.monotonic() < deadline:
-			response = self._request("GET", f"/status/{job_id}")
-			status = str(response.get("status", "")).lower()
-			progress = float(response.get("progress") or 0.0)
-			self._observe_job_status(status, progress)
+		while True:
+			if self._closing.is_set():
+				logger.warning(
+					"Sidecar client is closing before physical job completion "
+					"was confirmed (job_id=%s)",
+					job_id,
+				)
+				return (
+					messages.EnvelopeStatus.FAILED,
+					{},
+					"Sidecar client closed before job termination was confirmed",
+				)
+			if not cancellation_started and time.monotonic() >= deadline:
+				logger.error(
+					"Art job exceeded its response deadline; waiting for the "
+					"sidecar to confirm physical termination (job_id=%s)",
+					job_id,
+				)
+				self._best_effort_cancel(job_id)
+				cancellation_started = True
+			try:
+				response = self._request("GET", f"/status/{job_id}")
+			except Exception as exc:
+				if self._closing.is_set():
+					return (
+						messages.EnvelopeStatus.FAILED,
+						{},
+						"Sidecar client closed before job termination was confirmed",
+					)
+				if not cancellation_started:
+					logger.error(
+						"Unable to observe sidecar job; requesting cancellation "
+						"and retaining parent capacity (job_id=%s)",
+						job_id,
+					)
+					self._best_effort_cancel(job_id)
+					cancellation_started = True
+				else:
+					logger.warning(
+						"Sidecar execution status remains unavailable "
+						"(error_type=%s)",
+						type(exc).__name__,
+					)
+				time.sleep(self._settings.status_poll_interval_seconds)
+				continue
+			try:
+				status = str(response.get("status", "")).lower()
+				progress = float(response.get("progress") or 0.0)
+			except (AttributeError, TypeError, ValueError) as exc:
+				if not cancellation_started:
+					self._best_effort_cancel(job_id)
+					cancellation_started = True
+				logger.warning(
+					"Malformed sidecar execution status; retaining capacity "
+					"until physical completion is confirmed (type=%s)",
+					type(exc).__name__,
+				)
+				time.sleep(self._settings.status_poll_interval_seconds)
+				continue
+			terminal = status in {"completed", "failed", "cancelled", "canceled"}
+			finished = response.get("execution_finished") is True
+			if not terminal or finished:
+				self._observe_job_status(status, progress)
 			if progress_callback is not None and (
 				status != last_status or progress != last_progress
 			):
-				progress_callback(response)
+				try:
+					progress_callback(response)
+				except Exception as exc:
+					logger.warning(
+						"Sidecar art progress callback failed (type=%s)",
+						type(exc).__name__,
+					)
 				last_status = status
 				last_progress = progress
-			if status == "completed":
+			if terminal and finished and cancellation_started:
+				return (
+					messages.EnvelopeStatus.FAILED,
+					{},
+					"Timed out waiting for art response",
+				)
+			if terminal and finished and status == "completed":
 				return (
 					messages.EnvelopeStatus.SUCCEEDED,
 					self._result_payload(job_id),
 					None,
 				)
-			if status == "failed":
+			if terminal and finished and status == "failed":
 				message = response.get("error") or "Art generation failed"
 				return messages.EnvelopeStatus.FAILED, {}, str(message)
-			if status == "cancelled":
+			if terminal and finished:
 				return messages.EnvelopeStatus.CANCELLED, {}, None
+			if terminal and not finished and not terminal_unconfirmed_logged:
+				logger.warning(
+					"Sidecar reports terminal status without physical "
+					"completion (job_id=%s)",
+					job_id,
+				)
+				terminal_unconfirmed_logged = True
 			time.sleep(self._settings.status_poll_interval_seconds)
-		self._best_effort_cancel(job_id)
-		return messages.EnvelopeStatus.FAILED, {}, "Timed out waiting for art response"
+
+	def _require_execution_finished_status(self) -> None:
+		"""Reject sidecars that cannot confirm physical job termination."""
+		launcher = self._require_launcher()
+		try:
+			response = self._session.request(
+				"GET",
+				f"{launcher.endpoint}/health",
+				headers=self._loopback_headers(),
+				timeout=self._settings.request_timeout_seconds,
+			)
+			response.raise_for_status()
+			payload = response.json()
+		except (requests.RequestException, ValueError, TypeError) as exc:
+			raise RuntimeError(
+				"Cannot verify sidecar execution completion support"
+			) from exc
+		if (
+			not isinstance(payload, dict)
+			or payload.get("art_execution_finished_status") is not True
+		):
+			raise RuntimeError(
+				"Art sidecar lacks physical execution completion status"
+			)
 
 	def _result_payload(self, job_id: str) -> dict[str, Any]:
 		"""Download one remote art result and encode it as base64 PNG."""
@@ -580,14 +742,18 @@ class SidecarArtClient(RuntimeClient):
 		except RuntimeError:
 			return
 
-	def _track_job(self, request_id: str, job_id: str) -> None:
-		"""Track one active job for cancellation."""
+	def _track_job(self, request_id: str, job_id: str) -> bool:
+		"""Track one child job and report an earlier cancellation request."""
 		with self._active_jobs_lock:
 			self._active_jobs[request_id] = job_id
+			cancel_requested = request_id in self._cancel_requested
+			self._cancel_requested.discard(request_id)
+			return cancel_requested
 
 	def _untrack_job(self, request_id: str) -> Optional[str]:
 		"""Remove and return one active job mapping when it exists."""
 		with self._active_jobs_lock:
+			self._cancel_requested.discard(request_id)
 			return self._active_jobs.pop(request_id, None)
 
 	def _metadata(self) -> dict[str, Any]:

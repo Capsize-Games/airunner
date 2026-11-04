@@ -5,6 +5,7 @@ This mixin handles all memory efficiency settings including VAE slicing,
 attention slicing, CPU offload, ToMe SD, and other VRAM optimizations.
 """
 
+import re
 from dataclasses import asdict, is_dataclass
 
 import torch
@@ -88,6 +89,25 @@ class SDMemoryManagementMixin:
             "tome_sd_applied", "use_tome_sd", self._apply_tome
         )
 
+        # torch.compile is an explicit opt-in and requires the reviewed
+        # external Triton toolchain. Keep the eager UNet active when the
+        # environment is unsupported or incomplete.
+        compile_enabled = bool(
+            getattr(self.memory_settings, "use_torch_compile", False)
+        )
+        if (
+            self._memory_settings_flags.get("torch_compile_applied")
+            != compile_enabled
+        ):
+            if compile_enabled:
+                applied = self._apply_torch_compile(True)
+                self._memory_settings_flags["torch_compile_applied"] = (
+                    True if applied else None
+                )
+            else:
+                self._apply_torch_compile(False)
+                self._memory_settings_flags["torch_compile_applied"] = False
+
     def _settings_to_dict(self, settings: object) -> dict:
         """Convert settings object to dict, supporting both ORM
         models and bridge dataclasses.
@@ -116,6 +136,196 @@ class SDMemoryManagementMixin:
         if self._memory_settings_flags[setting_name] != attr_val:
             apply_func(attr_val)
             self._memory_settings_flags[setting_name] = attr_val
+
+    def _apply_torch_compile(self, enabled: bool) -> bool:
+        """Configure lazy UNet compilation only after the opt-in preflight.
+
+        ``torch.compile`` creates a lazy wrapper; model compilation itself
+        occurs on the first forward pass and is intentionally not triggered
+        while loading a model.
+        """
+        if not enabled:
+            owner_pipe = getattr(self, "_torch_compile_owner_pipe", None)
+            original = getattr(self, "_torch_compile_original_unet", None)
+            compiled = getattr(self, "_torch_compile_compiled_unet", None)
+            if (
+                owner_pipe is not None
+                and owner_pipe is self._pipe
+                and original is not None
+                and compiled is not None
+                and getattr(owner_pipe, "unet", None) is compiled
+            ):
+                owner_pipe.unet = original
+            self._torch_compile_original_unet = None
+            self._torch_compile_owner_pipe = None
+            self._torch_compile_compiled_unet = None
+            self.torch_compile_applied = False
+            self._set_torch_compile_status("disabled")
+            return True
+
+        owner_pipe = getattr(self, "_torch_compile_owner_pipe", None)
+        compiled_unet = getattr(self, "_torch_compile_compiled_unet", None)
+        if owner_pipe is not None and (
+            owner_pipe is not self._pipe
+            or getattr(owner_pipe, "unet", None) is not compiled_unet
+        ):
+            # Release stale pipeline/module references before preflight can
+            # return early on an unavailable toolchain.
+            self._torch_compile_original_unet = None
+            self._torch_compile_owner_pipe = None
+            self._torch_compile_compiled_unet = None
+            self.torch_compile_applied = False
+
+        if not torch.cuda.is_available():
+            self.torch_compile_applied = False
+            self._set_torch_compile_status(
+                "unavailable: CUDA is not available"
+            )
+            return False
+
+        from airunner_services.art.triton_runtime import ensure_available
+
+        available, reason = ensure_available()
+        if not available:
+            self.torch_compile_applied = False
+            self._set_torch_compile_status(f"unavailable: {reason}")
+            self.logger.warning(
+                "torch.compile remains disabled; "
+                "install the reviewed Triton candidate and configure its NVIDIA "
+                "toolchain paths. "
+                f"{reason}"
+            )
+            return False
+
+        compile_pipe = self._pipe
+        current_unet = compile_pipe.unet
+        owner_pipe = getattr(self, "_torch_compile_owner_pipe", None)
+        original = getattr(self, "_torch_compile_original_unet", None)
+        compiled_unet = getattr(self, "_torch_compile_compiled_unet", None)
+        if owner_pipe is not compile_pipe or current_unet is not compiled_unet:
+            # A new pipeline (or a replacement UNet on the same pipeline) owns
+            # its own eager module. Never restore a previous pipeline's UNet
+            # over the component currently installed here.
+            original = current_unet
+            self._torch_compile_original_unet = original
+            self._torch_compile_owner_pipe = compile_pipe
+            self._torch_compile_compiled_unet = None
+            compiled_unet = None
+
+        if current_unet is original:
+            try:
+                compiled_unet = torch.compile(current_unet)
+                compiled_forward = compiled_unet.forward
+
+                def _forward_with_eager_fallback(*args, **kwargs):
+                    try:
+                        return compiled_forward(*args, **kwargs)
+                    except Exception as exc:
+                        if not self._is_compile_backend_failure(exc):
+                            raise
+                        if (
+                            self._pipe is compile_pipe
+                            and compile_pipe.unet is compiled_unet
+                        ):
+                            compile_pipe.unet = original
+                        if (
+                            self._pipe is compile_pipe
+                            and self._torch_compile_owner_pipe is compile_pipe
+                            and compile_pipe.unet is original
+                        ):
+                            self._torch_compile_original_unet = None
+                            self._torch_compile_owner_pipe = None
+                            self._torch_compile_compiled_unet = None
+                            self.torch_compile_applied = False
+                            self._memory_settings_flags[
+                                "torch_compile_applied"
+                            ] = None
+                            self._set_torch_compile_status(
+                                "compile failed on forward; eager UNet fallback is active"
+                            )
+                            self.logger.warning(
+                                "torch.compile failed during UNet execution; "
+                                "using the eager UNet for this and later calls: "
+                                f"{type(exc).__name__}"
+                            )
+                        return original(*args, **kwargs)
+
+                compiled_unet.forward = _forward_with_eager_fallback
+                compile_pipe.unet = compiled_unet
+                self._torch_compile_compiled_unet = compiled_unet
+            except Exception as exc:
+                if not self._is_compile_backend_failure(exc):
+                    self._torch_compile_original_unet = None
+                    self._torch_compile_owner_pipe = None
+                    self._torch_compile_compiled_unet = None
+                    self.torch_compile_applied = False
+                    self._set_torch_compile_status(
+                        "setup interrupted; eager UNet remains active"
+                    )
+                    raise
+                if (
+                    self._pipe is compile_pipe
+                    and compile_pipe.unet is compiled_unet
+                ):
+                    compile_pipe.unet = original
+                self._torch_compile_original_unet = None
+                self._torch_compile_owner_pipe = None
+                self._torch_compile_compiled_unet = None
+                self.torch_compile_applied = False
+                self._set_torch_compile_status(
+                    "unavailable: compiler setup failed"
+                )
+                self.logger.warning(
+                    "torch.compile compiler setup failed; the eager UNet remains active: "
+                    f"{type(exc).__name__}"
+                )
+                return False
+        self.torch_compile_applied = True
+        self._set_torch_compile_status(
+            "configured; compilation starts on the first UNet forward pass"
+        )
+        return True
+
+    def _set_torch_compile_status(self, status: str) -> None:
+        self.torch_compile_status = status
+        flags = getattr(self, "_memory_settings_flags", None)
+        if isinstance(flags, dict):
+            flags["torch_compile_status"] = status
+
+    @staticmethod
+    def _is_compile_backend_failure(exc: Exception) -> bool:
+        """Classify compiler failures without swallowing resource/model errors."""
+        pending: list[BaseException] = [exc]
+        seen: set[int] = set()
+        compiler_failure = False
+        while pending:
+            current = pending.pop()
+            identity = id(current)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            module = type(current).__module__
+            name = type(current).__name__
+            message = str(current).lower()
+            if (
+                "out of memory" in message
+                or "outofmemory" in message
+                or re.search(r"\boom\b", message) is not None
+                or name.lower() in {"outofmemoryerror", "cudaoutofmemoryerror"}
+                or name.lower() == "oom"
+            ):
+                return False
+            if (
+                module.startswith("torch._dynamo")
+                or module.startswith("torch._inductor")
+                or module.startswith("triton.compiler")
+            ) and name not in {"OutOfMemoryError", "CudaOutOfMemoryError"}:
+                compiler_failure = True
+            if current.__cause__ is not None:
+                pending.append(current.__cause__)
+            if current.__context__ is not None:
+                pending.append(current.__context__)
+        return compiler_failure
 
     def _apply_last_channels(self, attr_val):
         """
@@ -363,6 +573,9 @@ class SDMemoryManagementMixin:
         Forces reapplication of memory settings on next call.
         """
         self.logger.debug("Clearing memory efficient settings")
+        # A pipeline swap/unload must not retain a torch.compile wrapper on
+        # the reusable UNet component.
+        self._apply_torch_compile(False)
         for key in self._memory_settings_flags:
             if key.endswith("_applied"):
                 self._memory_settings_flags[key] = None

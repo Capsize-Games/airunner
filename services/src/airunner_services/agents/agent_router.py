@@ -1,10 +1,15 @@
 """Router for directing tasks to appropriate expert agents."""
 
+import asyncio
 from typing import Dict, List, Optional, Any
 from airunner_services.agents.agent_registry import AgentRegistry
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.utils.application.log_hygiene import summarize_text
+
+#: Default per-agent execution timeout so one hung agent cannot stall
+#: routing forever.
+DEFAULT_AGENT_TIMEOUT_SECONDS = 120.0
 
 
 class AgentRouter:
@@ -30,6 +35,7 @@ class AgentRouter:
         context: Optional[Dict] = None,
         min_score: float = 0.3,
         max_agents: int = 1,
+        agent_timeout_seconds: float = DEFAULT_AGENT_TIMEOUT_SECONDS,
     ) -> Dict[str, Any]:
         """Route a task to the most appropriate agent(s).
 
@@ -38,6 +44,9 @@ class AgentRouter:
             context: Optional context dictionary
             min_score: Minimum relevance score to consider agent
             max_agents: Maximum number of agents to use
+            agent_timeout_seconds: Per-agent execution budget; a hung
+                agent is recorded as a failure instead of stalling
+                routing forever
 
         Returns:
             Dictionary containing:
@@ -83,12 +92,30 @@ class AgentRouter:
                     f"Executing task with agent '{agent_name}' "
                     f"(score: {score:.2f})"
                 )
-                result = await agent.execute_task(task, context)
+                result = await asyncio.wait_for(
+                    agent.execute_task(task, context),
+                    timeout=agent_timeout_seconds,
+                )
                 results.append(
                     {"agent": agent_name, "score": score, "result": result}
                 )
                 agents_used.append(agent_name)
                 scores[agent_name] = score
+            except asyncio.TimeoutError:
+                self.logger.error(
+                    f"Agent '{agent_name}' timed out after "
+                    f"{agent_timeout_seconds}s"
+                )
+                results.append(
+                    {
+                        "agent": agent_name,
+                        "score": score,
+                        "error": (
+                            "Agent timed out after "
+                            f"{agent_timeout_seconds}s"
+                        ),
+                    }
+                )
             except Exception as e:
                 self.logger.error(
                     f"Agent '{agent_name}' failed to execute task: {e}"
@@ -165,6 +192,7 @@ class AgentRouter:
         task: str,
         required_agents: List[str],
         context: Optional[Dict] = None,
+        agent_timeout_seconds: float = DEFAULT_AGENT_TIMEOUT_SECONDS,
     ) -> Dict[str, Any]:
         """Execute a task requiring collaboration of specific agents.
 
@@ -172,6 +200,7 @@ class AgentRouter:
             task: Task description
             required_agents: List of agent names that must participate
             context: Optional context dictionary
+            agent_timeout_seconds: Per-agent execution budget
 
         Returns:
             Dictionary containing collaborative results
@@ -189,7 +218,10 @@ class AgentRouter:
                 self.logger.info(
                     f"Collaborating agent '{agent_name}' executing task"
                 )
-                result = await agent.execute_task(task, context)
+                result = await asyncio.wait_for(
+                    agent.execute_task(task, context),
+                    timeout=agent_timeout_seconds,
+                )
                 results.append({"agent": agent_name, "result": result})
                 agents_used.append(agent_name)
 

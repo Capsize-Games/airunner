@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from typing import Optional
 
 from airunner_common.startup_env import (
@@ -182,11 +183,6 @@ class ServiceApp(HeadlessRuntimeMixin, MediatorMixin):
         self.is_running = False
         self.logger.info("Cleaning up ServiceApp resources...")
 
-        try:
-            self.emit_signal(SignalCode.QUIT_APPLICATION, {})
-        except Exception as exc:
-            self.logger.debug("Error emitting quit signal: %s", exc)
-
         server_thread = getattr(self, "api_server_thread", None)
         stopper = getattr(server_thread, "stop", None)
         if callable(stopper):
@@ -194,6 +190,23 @@ class ServiceApp(HeadlessRuntimeMixin, MediatorMixin):
                 stopper()
             except Exception as exc:
                 self.logger.debug("Error stopping API server thread: %s", exc)
+        joiner = getattr(server_thread, "join", None)
+        if callable(joiner) and server_thread is not threading.current_thread():
+            try:
+                joiner(timeout=30)
+                is_alive = getattr(server_thread, "is_alive", None)
+                if callable(is_alive) and is_alive():
+                    self.logger.error(
+                        "API server did not stop before worker shutdown; "
+                        "active requests may still be running"
+                    )
+            except Exception as exc:
+                self.logger.debug("Error waiting for API server shutdown: %s", exc)
+
+        try:
+            self.emit_signal(SignalCode.QUIT_APPLICATION, {})
+        except Exception as exc:
+            self.logger.debug("Error emitting quit signal: %s", exc)
 
         qt_app = self.app or QCoreApplication.instance()
         if qt_app is not None:

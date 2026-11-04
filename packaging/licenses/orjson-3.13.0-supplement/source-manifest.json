@@ -1,0 +1,280 @@
+{
+  "distribution": "orjson",
+  "version": "3.13.0",
+  "exact_pin": "orjson==3.13.0",
+  "license_source": "hash-verified PyPI source distribution; texts copied byte-for-byte",
+  "source_distribution": {
+    "filename": "orjson-3.13.0.tar.gz",
+    "sha256": "d1de5eb04485110c5da4c657e49168995d55e076b1ce60f1a042e254f4186c4f"
+  },
+  "selected_wheel": {
+    "filename": "orjson-3.13.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "sha256": "cbed5f4c4b88d94bcc36115f4c3bb3aa25da1563a5c3328aa3acebce2b083040"
+  },
+  "files": [
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/LICENSE-APACHE",
+      "source_archive_path": "orjson-3.13.0/LICENSE-APACHE",
+      "size_bytes": 10847,
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/LICENSE-MIT",
+      "source_archive_path": "orjson-3.13.0/LICENSE-MIT",
+      "size_bytes": 1023,
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/LICENSE-MPL-2.0",
+      "source_archive_path": "orjson-3.13.0/LICENSE-MPL-2.0",
+      "size_bytes": 16727,
+      "sha256": "66a3107d5ad6a058aab753eaac2047ccb2ed0e39465dd0fe5844da3e300d5172"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--associative-cache-3.0.1--LICENSE-APACHE",
+      "source_archive_path": "orjson-3.13.0/include/cargo/associative-cache-3.0.1/LICENSE-APACHE",
+      "size_bytes": 10847,
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--associative-cache-3.0.1--LICENSE-MIT",
+      "source_archive_path": "orjson-3.13.0/include/cargo/associative-cache-3.0.1/LICENSE-MIT",
+      "size_bytes": 1059,
+      "sha256": "65f94e99ddaf4f5d1782a6dae23f35d4293a9a01444a13135a6887017d353cee"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--bytecount-0.6.9--LICENSE.Apache2",
+      "source_archive_path": "orjson-3.13.0/include/cargo/bytecount-0.6.9/LICENSE.Apache2",
+      "size_bytes": 11357,
+      "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--bytecount-0.6.9--LICENSE.MIT",
+      "source_archive_path": "orjson-3.13.0/include/cargo/bytecount-0.6.9/LICENSE.MIT",
+      "size_bytes": 1068,
+      "sha256": "a5dea80c1f383cb5f80a6bb0da5e55a2beb9f24adb123ce6300af2cbaaa3bf65"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--cc-1.6.0--LICENSE-APACHE",
+      "source_archive_path": "orjson-3.13.0/include/cargo/cc-1.6.0/LICENSE-APACHE",
+      "size_bytes": 10847,
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--cc-1.6.0--LICENSE-MIT",
+      "source_archive_path": "orjson-3.13.0/include/cargo/cc-1.6.0/LICENSE-MIT",
+      "size_bytes": 1057,
+      "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--find-msvc-tools-0.1.14--LICENSE-APACHE",
+      "source_archive_path": "orjson-3.13.0/include/cargo/find-msvc-tools-0.1.14/LICENSE-APACHE",
+      "size_bytes": 10847,
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--find-msvc-tools-0.1.14--LICENSE-MIT",
+      "source_archive_path": "orjson-3.13.0/include/cargo/find-msvc-tools-0.1.14/LICENSE-MIT",
+      "size_bytes": 1057,
+      "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--gimli-0.34.0--LICENSE-APACHE",
+      "source_archive_path": "orjson-3.13.0/include/cargo/gimli-0.34.0/LICENSE-APACHE",
+      "size_bytes": 10847,
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--gimli-0.34.0--LICENSE-MIT",
+      "source_archive_path": "orjson-3.13.0/include/cargo/gimli-0.34.0/LICENSE-MIT",
+      "size_bytes": 1071,
+      "sha256": "7b63ecd5f1902af1b63729947373683c32745c16a10e8e6292e2e2dcd7e90ae0"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--itoap-1.0.1--LICENSE",
+      "source_archive_path": "orjson-3.13.0/include/cargo/itoap-1.0.1/LICENSE",
+      "size_bytes": 1122,
+      "sha256": "5891374673c9ae0ff2a4d400dab3eb836483205897d265b6ff97fe46c75d8610"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--jiff-core-0.1.1--COPYING",
+      "source_archive_path": "orjson-3.13.0/include/cargo/jiff-core-0.1.1/COPYING",
+      "size_bytes": 126,
+      "sha256": "01c266bced4a434da0051174d6bee16a4c82cf634e2679b6155d40d75012390f"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--jiff-core-0.1.1--LICENSE-MIT",
+      "source_archive_path": "orjson-3.13.0/include/cargo/jiff-core-0.1.1/LICENSE-MIT",
+      "size_bytes": 1081,
+      "sha256": "0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--libc-0.2.190--LICENSE-APACHE",
+      "source_archive_path": "orjson-3.13.0/include/cargo/libc-0.2.190/LICENSE-APACHE",
+      "size_bytes": 9723,
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--libc-0.2.190--LICENSE-MIT",
+      "source_archive_path": "orjson-3.13.0/include/cargo/libc-0.2.190/LICENSE-MIT",
+      "size_bytes": 1066,
+      "sha256": "123a331b5dbf04c30097fa43b8f858bc85df671fe776de498d01f3d6b7c1f69e"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--no-panic-0.1.37--LICENSE-APACHE",
+      "source_archive_path": "orjson-3.13.0/include/cargo/no-panic-0.1.37/LICENSE-APACHE",
+      "size_bytes": 9723,
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--no-panic-0.1.37--LICENSE-MIT",
+      "source_archive_path": "orjson-3.13.0/include/cargo/no-panic-0.1.37/LICENSE-MIT",
+      "size_bytes": 1023,
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--once_cell-1.21.4--LICENSE-APACHE",
+      "source_archive_path": "orjson-3.13.0/include/cargo/once_cell-1.21.4/LICENSE-APACHE",
+      "size_bytes": 10847,
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--once_cell-1.21.4--LICENSE-MIT",
+      "source_archive_path": "orjson-3.13.0/include/cargo/once_cell-1.21.4/LICENSE-MIT",
+      "size_bytes": 1023,
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--proc-macro2-1.0.107--LICENSE-APACHE",
+      "source_archive_path": "orjson-3.13.0/include/cargo/proc-macro2-1.0.107/LICENSE-APACHE",
+      "size_bytes": 9723,
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--proc-macro2-1.0.107--LICENSE-MIT",
+      "source_archive_path": "orjson-3.13.0/include/cargo/proc-macro2-1.0.107/LICENSE-MIT",
+      "size_bytes": 1023,
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--pyo3-build-config-0.29.3--LICENSE-APACHE",
+      "source_archive_path": "orjson-3.13.0/include/cargo/pyo3-build-config-0.29.3/LICENSE-APACHE",
+      "size_bytes": 9807,
+      "sha256": "32c76dbe0e73d79100d5ece77c158399f2e2541bc5c78548a4ba45c1cb53c5c9"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--pyo3-build-config-0.29.3--LICENSE-MIT",
+      "source_archive_path": "orjson-3.13.0/include/cargo/pyo3-build-config-0.29.3/LICENSE-MIT",
+      "size_bytes": 1107,
+      "sha256": "afcbe3b2e6b37172b5a9ca869ee4c0b8cdc09316e5d4384864154482c33e5af6"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--pyo3-ffi-0.29.3--LICENSE-APACHE",
+      "source_archive_path": "orjson-3.13.0/include/cargo/pyo3-ffi-0.29.3/LICENSE-APACHE",
+      "size_bytes": 9807,
+      "sha256": "32c76dbe0e73d79100d5ece77c158399f2e2541bc5c78548a4ba45c1cb53c5c9"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--pyo3-ffi-0.29.3--LICENSE-MIT",
+      "source_archive_path": "orjson-3.13.0/include/cargo/pyo3-ffi-0.29.3/LICENSE-MIT",
+      "size_bytes": 1107,
+      "sha256": "afcbe3b2e6b37172b5a9ca869ee4c0b8cdc09316e5d4384864154482c33e5af6"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--quote-1.0.47--LICENSE-APACHE",
+      "source_archive_path": "orjson-3.13.0/include/cargo/quote-1.0.47/LICENSE-APACHE",
+      "size_bytes": 9723,
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--quote-1.0.47--LICENSE-MIT",
+      "source_archive_path": "orjson-3.13.0/include/cargo/quote-1.0.47/LICENSE-MIT",
+      "size_bytes": 1023,
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--shlex-2.0.1--LICENSE-APACHE",
+      "source_archive_path": "orjson-3.13.0/include/cargo/shlex-2.0.1/LICENSE-APACHE",
+      "size_bytes": 566,
+      "sha256": "553fffcd9b1cb158bc3e9edc35da85ca5c3b3d7d2e61c883ebcfa8a65814b583"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--shlex-2.0.1--LICENSE-MIT",
+      "source_archive_path": "orjson-3.13.0/include/cargo/shlex-2.0.1/LICENSE-MIT",
+      "size_bytes": 1092,
+      "sha256": "4455bf75a91154108304cb283e0fea9948c14f13e20d60887cf2552449dea3b1"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--simdutf8-0.1.5--LICENSE-Apache",
+      "source_archive_path": "orjson-3.13.0/include/cargo/simdutf8-0.1.5/LICENSE-Apache",
+      "size_bytes": 10173,
+      "sha256": "0cec06e0e55fbc3dc5cee4fca9b607f66cb8f4e4dbcf3b3c013594dd156732e9"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--simdutf8-0.1.5--LICENSE-MIT",
+      "source_archive_path": "orjson-3.13.0/include/cargo/simdutf8-0.1.5/LICENSE-MIT",
+      "size_bytes": 1035,
+      "sha256": "1847e0e0698142ed4347c1441a9fa81c8fbddd44b1d8bbcd5e3647f991759d7f"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--syn-3.0.6--LICENSE-APACHE",
+      "source_archive_path": "orjson-3.13.0/include/cargo/syn-3.0.6/LICENSE-APACHE",
+      "size_bytes": 9723,
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--syn-3.0.6--LICENSE-MIT",
+      "source_archive_path": "orjson-3.13.0/include/cargo/syn-3.0.6/LICENSE-MIT",
+      "size_bytes": 1023,
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--target-lexicon-0.13.5--LICENSE",
+      "source_archive_path": "orjson-3.13.0/include/cargo/target-lexicon-0.13.5/LICENSE",
+      "size_bytes": 12243,
+      "sha256": "268872b9816f90fd8e85db5a28d33f8150ebb8dd016653fb39ef1f94f2686bc5"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--unicode-ident-1.0.26--LICENSE-APACHE",
+      "source_archive_path": "orjson-3.13.0/include/cargo/unicode-ident-1.0.26/LICENSE-APACHE",
+      "size_bytes": 9723,
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--unicode-ident-1.0.26--LICENSE-MIT",
+      "source_archive_path": "orjson-3.13.0/include/cargo/unicode-ident-1.0.26/LICENSE-MIT",
+      "size_bytes": 1023,
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--unicode-ident-1.0.26--LICENSE-UNICODE",
+      "source_archive_path": "orjson-3.13.0/include/cargo/unicode-ident-1.0.26/LICENSE-UNICODE",
+      "size_bytes": 1995,
+      "sha256": "f7db81051789b729fea528a63ec4c938fdcb93d9d61d97dc8cc2e9df6d47f2a1"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--unwinding-0.2.10--LICENSE-APACHE",
+      "source_archive_path": "orjson-3.13.0/include/cargo/unwinding-0.2.10/LICENSE-APACHE",
+      "size_bytes": 9723,
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--unwinding-0.2.10--LICENSE-MIT",
+      "source_archive_path": "orjson-3.13.0/include/cargo/unwinding-0.2.10/LICENSE-MIT",
+      "size_bytes": 1023,
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--xxhash-rust-0.8.19--LICENSE",
+      "source_archive_path": "orjson-3.13.0/include/cargo/xxhash-rust-0.8.19/LICENSE",
+      "size_bytes": 1338,
+      "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566"
+    },
+    {
+      "path": "packaging/licenses/orjson-3.13.0-supplement/include--cargo--zmij-1.0.23--LICENSE-MIT",
+      "source_archive_path": "orjson-3.13.0/include/cargo/zmij-1.0.23/LICENSE-MIT",
+      "size_bytes": 1023,
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+    }
+  ]
+}

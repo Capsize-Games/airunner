@@ -1,6 +1,7 @@
 """Service-owned top-level LLM model manager."""
 
 import os
+import threading
 
 from typing import Any, List, Optional
 
@@ -88,6 +89,8 @@ class LLMModelManager(
 	llm_settings: LLMSettings
 
 	def __init__(self, *args, **kwargs):
+		self._request_state_lock = threading.RLock()
+		self._runtime_activity_lock = threading.RLock()
 		super().__init__(*args, **kwargs)
 		self.llm_request: Optional[Any] = None
 		RAGMixin.__init__(self)
@@ -101,6 +104,11 @@ class LLMModelManager(
 		self._last_load_error = None
 		self._active_gguf_runtime_profile = None
 		apply_cudnn_benchmark(self.memory_settings)
+
+	@property
+	def runtime_activity_lock(self):
+		"""Return the manager-owned lock shared by model and RAG activity."""
+		return self._runtime_activity_lock
 
 	def _requested_gguf_runtime_profile(self) -> Optional[str]:
 		"""Return the normalized GGUF runtime profile for one request."""
@@ -139,6 +147,11 @@ class LLMModelManager(
 			)
 
 	def load(self) -> None:
+		"""Load under the same manager lock used by embedding inference."""
+		with self._runtime_activity_lock:
+			return self._load_model_locked()
+
+	def _load_model_locked(self) -> None:
 		"""Load the LLM model and its supporting orchestration components."""
 		current_status = self.model_status[ModelType.LLM]
 		self.logger.info(
@@ -176,16 +189,29 @@ class LLMModelManager(
 				self._current_model_path == target_model_path
 				and self._active_gguf_runtime_profile == target_runtime_profile
 			):
-				self.logger.info(
-					"Returning early - requested model already loaded "
-					"(model_id=%s, model_name=%s, profile=%s)",
-					target_model_id or "unknown",
-					target_model_name or "unknown",
-					target_runtime_profile or "default",
-				)
-				return
+				chat = self._chat_model
+				llama = getattr(chat, "_llama", None)
+				reconcile_binding = getattr(llama, "reconcile_binding", None)
+				if callable(reconcile_binding) and not reconcile_binding():
+					self.logger.info(
+						"[LLM LOAD] Cached graph model binding is stale; reloading"
+					)
+					self.unload()
+					current_status = self.model_status[ModelType.LLM]
+				else:
+					self.logger.info(
+						"Returning early - requested model already loaded "
+						"(model_id=%s, model_name=%s, profile=%s)",
+						target_model_id or "unknown",
+						target_model_name or "unknown",
+						target_runtime_profile or "default",
+					)
+					return
 
-			if self._current_model_path == target_model_path:
+			if (
+				current_status is ModelStatus.LOADED
+				and self._current_model_path == target_model_path
+			):
 				self.logger.info(
 					"[LLM LOAD] Switching GGUF runtime profile: %s -> %s",
 					self._active_gguf_runtime_profile or "default",
@@ -193,7 +219,7 @@ class LLMModelManager(
 				)
 				self.unload()
 				current_status = self.model_status[ModelType.LLM]
-			else:
+			elif current_status is ModelStatus.LOADED:
 				current_model_id = self._resolve_model_id_from_path(
 					self._current_model_path,
 				)
@@ -288,8 +314,14 @@ class LLMModelManager(
 		return str(model_info.get("name", "") or model_id)
 
 	def unload(self) -> None:
+		"""Unload under the same manager lock used by embedding inference."""
+		with self._runtime_activity_lock:
+			return self._unload_model_locked()
+
+	def _unload_model_locked(self) -> None:
 		"""Unload all LLM components and clear reserved resources."""
-		if self.model_status[ModelType.LLM] in (
+		current_status = self.model_status[ModelType.LLM]
+		if current_status in (
 			ModelStatus.LOADING,
 			ModelStatus.UNLOADED,
 		):
@@ -308,7 +340,15 @@ class LLMModelManager(
 
 		self._last_load_error = None
 		self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
-		self._unload_components()
+		try:
+			self._unload_components()
+		except Exception as exc:
+			# A shared backend may still have active request leases. In that
+			# case the component owner remains attached and no model/resource
+			# cleanup below may claim that unload completed.
+			self._last_load_error = str(exc)
+			self.change_model_status(ModelType.LLM, current_status)
+			raise
 
 		resource_manager = ModelResourceManager()
 		resource_manager.cleanup_model(

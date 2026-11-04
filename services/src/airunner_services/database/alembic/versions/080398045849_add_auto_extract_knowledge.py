@@ -7,6 +7,7 @@ Create Date: 2025-01-26 00:00:00.000000
 """
 
 from alembic import op
+from airunner_services.database.db.column import drop_column_by_name
 import sqlalchemy as sa
 
 
@@ -55,4 +56,4 @@ def upgrade():
 
 def downgrade():
     """Remove auto_extract_knowledge column from llm_generator_settings table."""
-    op.drop_column("llm_generator_settings", "auto_extract_knowledge")
+    drop_column_by_name("llm_generator_settings", "auto_extract_knowledge")

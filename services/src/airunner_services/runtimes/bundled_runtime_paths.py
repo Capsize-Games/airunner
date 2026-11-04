@@ -12,10 +12,25 @@ IS_WINDOWS = os.name == "nt"
 
 
 def resolve_runtime_executable(env_name: str, binary_name: str) -> str:
-	"""Return an override, bundled binary, or PATH-based executable."""
+	"""Return an override, bundled binary, or PATH-based executable.
+
+	Raises:
+		FileNotFoundError: When the environment override names a file
+			that does not exist.
+		PermissionError: When the override exists but is not executable.
+	"""
 	override = os.environ.get(env_name, "").strip()
 	if override:
-		return os.path.expanduser(override)
+		candidate = os.path.expanduser(override)
+		if not os.path.isfile(candidate):
+			raise FileNotFoundError(
+				f"{env_name} points at a missing file: {candidate}"
+			)
+		if not os.access(candidate, os.X_OK):
+			raise PermissionError(
+				f"{env_name} points at a non-executable file: {candidate}"
+			)
+		return candidate
 
 	bundled_path = _resolve_bundled_binary(binary_name)
 	if bundled_path is not None:

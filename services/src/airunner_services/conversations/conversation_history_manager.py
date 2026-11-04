@@ -74,17 +74,27 @@ class ConversationHistoryManager:
             )
             return None
 
-    def list_conversations(self, limit: int = 50) -> List[Dict[str, Any]]:
-        """Return serialized conversation metadata for service consumers."""
-        conversations = Conversation.objects.filter(Conversation.id >= 1) or []
-        ordered = sorted(
-            conversations,
-            key=lambda item: getattr(item, "id", 0),
-            reverse=True,
-        )
-        if limit > 0:
-            ordered = ordered[:limit]
-        return [self._conversation_payload(item) for item in ordered]
+    def list_conversations(
+        self,
+        limit: int = 50,
+        offset: int = 0,
+        chatbot_id: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        """Return serialized metadata, paging in SQL when a limit is supplied.
+
+        ``limit=0`` remains an explicit legacy full-read request for internal
+        callers; public list routes must pass a validated positive limit.
+        """
+        filters = [Conversation.id >= 1]
+        if chatbot_id is not None:
+            filters.append(Conversation.chatbot_id == chatbot_id)
+        conversations = Conversation.objects.filter(
+            *filters,
+            limit=limit if limit > 0 else None,
+            offset=max(0, offset),
+            order_clauses=[Conversation.id.desc()],
+        ) or []
+        return [self._conversation_payload(item) for item in conversations]
 
     def get_conversation_session(
         self,
@@ -237,7 +247,7 @@ class ConversationHistoryManager:
             return summary
 
         try:
-            summary = str(conversation.summarize() or "").strip()
+            summary = self._generate_summary(conversation)
         except Exception as exc:
             self.logger.warning(
                 "Failed to summarize conversation %s: %s",
@@ -259,6 +269,24 @@ class ConversationHistoryManager:
             )
         conversation.summary = summary
         return summary
+
+    def _generate_summary(self, conversation: Any) -> str:
+        """Generate a summary for an ORM or dataclass conversation.
+
+        ``RealBaseManager`` returns generated ``ConversationData``
+        dataclasses, which carry fields only and have no
+        ``summarize`` method; reuse the ORM summarizer on a
+        transient instance for those. Empty conversations
+        short-circuit without importing the summarizer stack.
+        """
+        raw_messages = getattr(conversation, "value", None)
+        if not isinstance(raw_messages, list) or not raw_messages:
+            return ""
+        summarize = getattr(conversation, "summarize", None)
+        if callable(summarize):
+            return str(summarize() or "").strip()
+        transient = Conversation(value=raw_messages)
+        return str(transient.summarize() or "").strip()
 
     @staticmethod
     def _serialize_timestamp(timestamp: Any) -> str:

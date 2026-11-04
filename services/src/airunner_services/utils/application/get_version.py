@@ -7,10 +7,10 @@ from importlib.metadata import version as package_version
 
 
 PACKAGE_NAMES = (
-    "airunner",
-    "airunner-native",
     "airunner-services",
+    "airunner-native",
     "airunner-common",
+    "airunner",
 )
 
 
@@ -27,7 +27,7 @@ def _load_checkout_version() -> str:
 
 
 def get_version() -> str:
-    """Return the current AIRunner version from installed metadata or checkout."""
+    """Prefer the installed service version over independently released packages."""
     for package_name in PACKAGE_NAMES:
         try:
             return package_version(package_name)

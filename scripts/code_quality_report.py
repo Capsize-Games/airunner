@@ -14,8 +14,7 @@ Generates an LLM-friendly report of code quality issues including:
 Command-line flags (new and existing):
 
 - --path PATH
-    Path to analyze. Defaults to `src/airunner` (automatically discovered by looking for
-    the project's `setup.py` when not provided).
+    Path to analyze. Defaults to `services/src/airunner_services`.
 
 - --verbose
     Show a detailed breakdown of issues grouped by file.
@@ -28,8 +27,8 @@ Command-line flags (new and existing):
     excluded to speed up reports; use this flag to analyze GUI code as well.
 
 - --exclude PATTERN [PATTERN ...]
-    Additional substring patterns to exclude from analysis. The script always excludes
-    `alembic`, `/data/`, `vendor`, and `_ui.py` files regardless of this option.
+    Additional substring patterns to exclude from analysis. Slash-delimited
+    patterns match relative path components, not the absolute checkout path.
 
 - --class-lines N
     Threshold (in code lines) above which a class will be reported as `long_class`.
@@ -59,6 +58,8 @@ from pathlib import Path
 from typing import List, Dict, Any, Set
 from dataclasses import dataclass, field, asdict
 from collections import defaultdict
+
+DEFAULT_PATH = Path("services/src/airunner_services")
 
 
 @dataclass
@@ -413,6 +414,8 @@ def find_python_files(
     Returns:
         List of Python file paths
     """
+    root_path = root_path.resolve()
+
     # If root_path is a file, return it directly
     if root_path.is_file() and root_path.suffix == ".py":
         return [root_path]
@@ -421,10 +424,20 @@ def find_python_files(
     python_files = []
 
     for py_file in root_path.rglob("*.py"):
-        # Check exclusions
+        relative_path = py_file.relative_to(root_path).as_posix()
+        path_parts = py_file.relative_to(root_path).parts
         skip = False
         for pattern in exclude_patterns:
-            if pattern in str(py_file):
+            normalized = pattern.replace("\\", "/")
+            if normalized.startswith("/") or normalized.endswith("/"):
+                # Slash-delimited exclusions name path components. Match
+                # relative to the scan root so absolute checkout locations
+                # cannot accidentally exclude the entire tree.
+                component = normalized.strip("/")
+                if component and component in path_parts:
+                    skip = True
+                    break
+            elif normalized in relative_path:
                 skip = True
                 break
 
@@ -506,8 +519,8 @@ def main():
     parser.add_argument(
         "--path",
         type=Path,
-        default=None,
-        help="Path to analyze (default: src/airunner)",
+        default=DEFAULT_PATH,
+        help="Path to analyze (default: services/src/airunner_services)",
     )
     parser.add_argument(
         "--verbose",
@@ -538,7 +551,7 @@ def main():
             "vendor",
             "__init__.py",
         ],
-        help="Patterns to exclude from analysis (alembic, data, vendor, _ui.py always excluded)",
+        help="Relative path substrings/components to exclude",
     )
 
     parser.add_argument(
@@ -561,7 +574,7 @@ def main():
     args = parser.parse_args()
 
     # Always exclude these patterns regardless of user input
-    permanent_exclusions = ["alembic", "/data/", "vendor", "_ui.py", '/bin/', '/db/', '/services/']
+    permanent_exclusions = ["alembic", "/data/", "vendor", "_ui.py", '/bin/', '/db/']
 
     # Conditionally add /gui/ to permanent exclusions
     if not args.include_gui:
@@ -570,23 +583,7 @@ def main():
     # Merge user exclusions with permanent ones
     all_exclusions = list(set(args.exclude + permanent_exclusions))
 
-    # Determine root path
-    if args.path:
-        root_path = args.path
-    else:
-        # Find project root (look for setup.py)
-        current = Path.cwd()
-        while current != current.parent:
-            if (current / "setup.py").exists():
-                root_path = current / "src" / "airunner"
-                break
-            current = current.parent
-        else:
-            print(
-                "ERROR: Could not find project root (setup.py)",
-                file=sys.stderr,
-            )
-            sys.exit(1)
+    root_path = args.path
 
     if not root_path.exists():
         print(f"ERROR: Path does not exist: {root_path}", file=sys.stderr)
@@ -597,9 +594,10 @@ def main():
 
     if not python_files:
         print(
-            f"WARNING: No Python files found in {root_path}", file=sys.stderr
+            f"ERROR: No Python files found in {root_path} after exclusions",
+            file=sys.stderr,
         )
-        sys.exit(0)
+        sys.exit(2)
 
     # Analyze all files
     report = QualityReport()

@@ -101,7 +101,13 @@ class RAGDocumentMixin:
             self.logger.error(f"Error getting active document names: {e}")
             return []
 
-    def _mark_document_indexed(self, file_path: str):
+    def _mark_document_indexed(
+        self,
+        file_path: str,
+        *,
+        file_hash: Optional[str] = None,
+        file_size: Optional[int] = None,
+    ):
         """Mark a document as indexed in the database with current hash.
 
         Updates the document's indexed flag, file hash, timestamp, and size.
@@ -113,12 +119,17 @@ class RAGDocumentMixin:
             docs = DBDocument.objects.filter_by(path=file_path)
             if docs and len(docs) > 0:
                 doc = docs[0]
-                file_hash = self._calculate_file_hash(file_path)
-                file_size = (
-                    os.path.getsize(file_path)
-                    if os.path.exists(file_path)
-                    else None
+                file_hash = (
+                    self._calculate_file_hash(file_path)
+                    if file_hash is None
+                    else file_hash
                 )
+                if file_size is None:
+                    file_size = (
+                        os.path.getsize(file_path)
+                        if os.path.exists(file_path)
+                        else None
+                    )
 
                 DBDocument.objects.update(
                     pk=doc.id,

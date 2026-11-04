@@ -1,65 +1,270 @@
 name: Docker Release
 
+# Images only publish from gated sources: completed Hybrid Runtime CI
+# runs that succeeded, published releases, or a manual dispatch. A
+# plain master push no longer publishes untested `latest` tags.
 on:
-  push:
-    branches:
-      - master
+  workflow_run:
+    workflows: ["Hybrid Runtime CI"]
+    types: [completed]
+    branches: [master]
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      publish_image:
+        description: >-
+          Publish this image to GHCR. Manual runs can publish only from master
+          or a v* version tag.
+        type: boolean
+        required: false
+        default: false
 
 permissions:
+  actions: read
   contents: read
   packages: write
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest
+    # R4 remains deferred: the full image OS/Python closure is not reviewed.
+    # A CORE checkpoint must not activate this separate distribution. Restore
+    # this job with the reviewed, locked OS inputs tracked by issue #2449.
+    if: >-
+      false && (github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-24.04
 
     strategy:
       matrix:
         include:
-          - name: headless
-            profiles: core,llm-native,stt-native,art-python,tts-python
+          - name: linux-release
+            profiles: linux-release
             tags: |
               ghcr.io/capsize-games/airunner/airunner:linux-headless
-          # `latest` is included below deliberately: `docker pull
-          # ghcr.io/capsize-games/airunner/airunner` with no tag resolves to
-          # :latest, which did not exist -- so the obvious command every
-          # reader tries returned "manifest unknown". The desktop build is
-          # the right default for that. (Note: inside a `|` block scalar, a
-          # line starting with `#` is literal string content, not a YAML
-          # comment -- keep any explanatory comments outside the block, or
-          # they become part of the tags list and break every push here.)
-          - name: desktop
-            profiles: core,llm-native,stt-native,art-python,tts-python,gui,computer-use
-            tags: |
-              ghcr.io/capsize-games/airunner/airunner:linux-desktop
               ghcr.io/capsize-games/airunner/airunner:linux
               ghcr.io/capsize-games/airunner/airunner:latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # For workflow_run events this is the tested head commit;
+          # for releases/dispatches it uses the immutable event SHA.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Require reviewed service inputs and active lock
+        run: >-
+          python scripts/check_reviewed_release_inputs.py
+          --workflow .github/workflows/docker-release.yml
+
+      - name: Record disk capacity before staging
+        run: |
+          df -B1 --output=source,size,used,avail,pcent,target \
+            "$RUNNER_TEMP" "$GITHUB_WORKSPACE"
+          docker system df
+
+      - name: Stage reviewed Docker build inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          inputs="$RUNNER_TEMP/docker-release-inputs"
+          python scripts/stage_docker_release_inputs.py --output-dir "$inputs"
+          echo "DOCKER_RELEASE_INPUTS=$inputs" >> "$GITHUB_ENV"
+
+      - name: Stage pinned CPU sidecars and verified CUDA profile
+        run: |
+          set -euo pipefail
+          mkdir -p "$DOCKER_RELEASE_INPUTS/native-runtime"
+          python scripts/stage_native_runtime_payload.py \
+            --fetch \
+            --output-dir "$DOCKER_RELEASE_INPUTS/native-runtime/payload" \
+            --cuda-profile-pin .github/native-cuda-profile-pin.json \
+            --require-cuda-profile
+
+      - name: Stage exact reviewed Ubuntu libpq runtime closure
+        run: |
+          set -euo pipefail
+          mkdir -p "$DOCKER_RELEASE_INPUTS/postgresql"
+          python scripts/stage_postgresql_runtime.py \
+            --kind runtime \
+            --output-dir "$DOCKER_RELEASE_INPUTS/postgresql" \
+            --cache-dir /var/cache/apt/archives
+          mkdir -p "$DOCKER_RELEASE_INPUTS/postgresql-build-supplement"
+          python scripts/stage_postgresql_runtime.py \
+            --kind build-supplement \
+            --output-dir "$DOCKER_RELEASE_INPUTS/postgresql-build-supplement" \
+            --cache-dir /var/cache/apt/archives
+
+      - name: Validate manual image publication source
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_image }}
+        env:
+          SOURCE_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [[ "$SOURCE_REF" != "refs/heads/master" && ! "$SOURCE_REF" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Manual publication requires master or a vMAJOR.MINOR.PATCH version tag." >&2
+            exit 1
+          fi
+
+      - name: Set up native speech build controller
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.13.5"
+
+      - name: Build and stage reviewed native speech payload
+        run: |
+          set -euo pipefail
+          docker pull nvidia/cuda:12.9.2-devel-ubuntu24.04@sha256:16656a1ef115bca9e1f820c6349876f1486d2b3c9a0e615773799fe402960dc5
+          python scripts/prepare_espeak_native_payload.py \
+            --work-dir "$RUNNER_TEMP/espeak-native" \
+            --fetch-canonical --download-cmake \
+            --python-base-prefix "$(python -c 'import sys; print(sys.base_prefix)')"
+          mkdir "$DOCKER_RELEASE_INPUTS/native-speech"
+          python scripts/stage_espeak_native_payload.py \
+            --payload "$RUNNER_TEMP/espeak-native/out/candidate/payload" \
+            --bundle "$DOCKER_RELEASE_INPUTS/native-speech"
+
+      - name: Upload native speech build evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: docker-native-speech-build-evidence
+          path: |
+            ${{ runner.temp }}/espeak-native/launch-receipt.json
+            ${{ runner.temp }}/espeak-native/prepare-and-build-recipe.md
+            ${{ runner.temp }}/espeak-native/build.log
+
+      - name: Verify runner Docker tools
+        run: |
+          set -euo pipefail
+          docker version
+          docker buildx version
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        if: >-
+          github.event_name != 'workflow_dispatch' ||
+          (inputs.publish_image &&
+          (github.ref == 'refs/heads/master' ||
+          startsWith(github.ref, 'refs/tags/v')))
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      - name: Build and push ${{ matrix.name }} image
-        uses: docker/build-push-action@v6
+      - name: Build ${{ matrix.name }} image (no push yet)
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        env:
+          # Avoid the optional legacy build-record exporter and upload.
+          DOCKER_BUILD_SUMMARY: "false"
+          DOCKER_BUILD_RECORD_UPLOAD: "false"
         with:
           context: .
           file: ./Dockerfile
-          push: true
+          push: false
+          load: true
           platforms: linux/amd64
           tags: ${{ matrix.tags }}
+          build-contexts: |
+            reviewed-inputs=${{ env.DOCKER_RELEASE_INPUTS }}
           build-args: |
-            AIRUNNER_ENABLE_CUDA=0
             AIRUNNER_INSTALL_PROFILES=${{ matrix.profiles }}
+
+      # Exercise the actual daemon and HTTP auth inside a private container
+      # network. No host ports, mounts, GPU, model downloads, or key output.
+      - name: Smoke test the built image
+        run: |
+          set -euo pipefail
+          tag="$(printf '%s' '${{ matrix.tags }}' | head -n 1)"
+          container_name="airunner-release-smoke-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          api_key="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+          echo "::add-mask::$api_key"
+          cleanup() {
+            docker rm -f "$container_name" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          docker run --detach --network none --name "$container_name" \
+            --env AIRUNNER_API_KEY="$api_key" \
+            --env AIRUNNER_INSECURE_NO_AUTH=0 \
+            --env AIRUNNER_NO_PRELOAD=1 \
+            --env AIRUNNER_LLM_ON=0 \
+            --env AIRUNNER_SD_ON=0 \
+            --env AIRUNNER_TTS_ON=0 \
+            --env AIRUNNER_STT_ON=0 \
+            --env AIRUNNER_DATA_DIR=/tmp/airunner-smoke-data \
+            "$tag" --no-preload
+
+          request_probe="$(cat <<'PY'
+          import os, urllib.error, urllib.request
+          base = "http://127.0.0.1:8080"
+          def status(path, token=None):
+              request = urllib.request.Request(base + path)
+              if token:
+                  request.add_header("X-API-Key", token)
+              try:
+                  with urllib.request.urlopen(request, timeout=4) as response:
+                      return response.status
+              except urllib.error.HTTPError as error:
+                  return error.code
+          checks = (("/health", None, 200), ("/api/version", None, 401), ("/api/version", os.environ["AIRUNNER_API_KEY"], 200))
+          for path, token, expected in checks:
+              actual = status(path, token)
+              if actual != expected:
+                  raise SystemExit(1)
+              print(f"{path}: HTTP {actual}")
+          PY
+          )"
+
+          ready=0
+          for _ in $(seq 1 90); do
+            if docker exec --env AIRUNNER_API_KEY="$api_key" \
+              "$container_name" python3.13 -c "$request_probe" >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            if ! docker inspect "$container_name" >/dev/null 2>&1; then
+              echo "Daemon container exited before the API became ready." >&2
+              exit 1
+            fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo "Daemon API did not become ready within 180 seconds." >&2
+            exit 1
+          fi
+
+          docker exec --env AIRUNNER_API_KEY="$api_key" \
+            "$container_name" python3.13 -c "$request_probe"
+          docker stop --time 20 "$container_name" >/dev/null
+          state="$(docker inspect --format '{{.State.Status}} {{.State.ExitCode}}' "$container_name")"
+          if [ "$state" != "exited 0" ]; then
+            echo "Daemon did not exit cleanly: $state" >&2
+            exit 1
+          fi
+          docker rm "$container_name" >/dev/null
+          trap - EXIT
+
+      - name: Push ${{ matrix.name }} image
+        if: >-
+          github.event_name != 'workflow_dispatch' ||
+          (inputs.publish_image &&
+          (github.ref == 'refs/heads/master' ||
+          startsWith(github.ref, 'refs/tags/v')))
+        run: |
+          set -e
+          printf '%s' '${{ matrix.tags }}' | while IFS= read -r tag; do
+            if [ -n "$tag" ]; then
+              docker push "$tag"
+            fi
+          done
+
+      - name: Record final disk capacity
+        if: always()
+        run: |
+          df -B1 --output=source,size,used,avail,pcent,target \
+            "$RUNNER_TEMP" "$GITHUB_WORKSPACE"
+          timeout 20s docker system df || true

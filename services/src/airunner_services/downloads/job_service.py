@@ -123,6 +123,7 @@ class DownloadJobService:
     ) -> str:
         """Create and start one single-file HuggingFace download job."""
         require_provider_allowed("huggingface")
+        safe_name = _safe_filename(filename)
         normalized_output_dir = normalize_local_path(
             output_dir,
             label="Download output directory",
@@ -130,13 +131,13 @@ class DownloadJobService:
         metadata = {
             "provider": "huggingface",
             "repo_id": repo_id,
-            "filename": filename,
+            "filename": safe_name,
         }
         return await self._start_job(
             metadata,
             self._run_huggingface_file_job,
             repo_id,
-            filename,
+            safe_name,
             normalized_output_dir,
         )
 
@@ -412,7 +413,18 @@ class DownloadJobService:
         filename: str,
         output_dir: str,
     ) -> None:
-        """Run one single-file HuggingFace download inside a background thread."""
+        """Run one single-file HuggingFace download inside a background thread.
+
+        The filename is re-validated inside the worker thread as defense
+        in depth; a job that fails validation is failed instead of
+        writing any file.
+        """
+        try:
+            filename = _safe_filename(filename)
+        except (ValueError, PathPolicyError) as exc:
+            self._fail_job(job_id, str(exc))
+            self._forget_job(job_id)
+            return
         self._update_job(job_id, 0.0, JobStatus.RUNNING)
         self._record_log_message(job_id, f"Starting download: {filename}")
         last_progress = -1.0
@@ -491,6 +503,12 @@ class DownloadJobService:
             downloaded_paths = []
             for file_info in files_to_download:
                 file_total = max(0, int(file_info.get("size") or 0))
+                safe_name = _safe_filename(
+                    str(file_info.get("filename") or "")
+                )
+                output_path = _assert_output_path_contained(
+                    model_path / safe_name
+                )
                 progress = _civitai_progress_reporter(
                     job_id,
                     self._tracker,
@@ -499,7 +517,7 @@ class DownloadJobService:
                 )
                 completed = download_civitai_file(
                     file_info["url"],
-                    model_path / file_info["filename"],
+                    output_path,
                     file_total,
                     api_key=api_key,
                     progress_callback=progress,
@@ -509,9 +527,7 @@ class DownloadJobService:
                     self._cancel_job(job_id)
                     return
                 downloaded_size += file_total
-                downloaded_paths.append(
-                    str(model_path / file_info["filename"])
-                )
+                downloaded_paths.append(str(output_path))
             if not files_to_download:
                 downloaded_paths.append(str(model_path))
             self._complete_job(

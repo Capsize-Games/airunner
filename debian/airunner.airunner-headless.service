@@ -1,7 +1,7 @@
 # FHS-rendered variant of deployment/systemd/airunner-headless.service for
 # the services-only apt package (issue #2237). The template placeholders
-# are resolved to fixed Debian paths: console script in /usr/bin (installed
-# by pybuild from SERVICE_CONSOLE_SCRIPTS), config in /etc/airunner,
+# are resolved to fixed Debian paths: frozen console alias in /usr/bin,
+# config in /etc/airunner,
 # writable state in /var/lib/airunner, logs in /var/log/airunner.
 # Loopback-only bind defaults are kept: daemon 127.0.0.1:8188 (see
 # DaemonConfig._default_config), HTTP 127.0.0.1:8080.
@@ -27,6 +27,10 @@ Environment="AIRUNNER_MODEL_DIR=/var/lib/airunner/models"
 Environment="AIRUNNER_DAEMON_CONFIG=/etc/airunner/daemon.yaml"
 Environment="AIRUNNER_RUNTIME_BIND_HOST=127.0.0.1"
 Environment="AIRUNNER_HTTP_HOST=127.0.0.1"
+# Fixed default; override with `systemctl edit airunner-headless`
+# (an Environment= drop-in), not by editing this shipped unit.
+# The daemon control-plane port is separate: 127.0.0.1:8188 from
+# /etc/airunner/daemon.yaml. See README.Debian's port matrix.
 Environment="AIRUNNER_HTTP_PORT=8080"
 Environment="AIRUNNER_LLM_ON=1"
 Environment="QT_QPA_PLATFORM=offscreen"

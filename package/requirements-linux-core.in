@@ -1,0 +1,30 @@
+# CORE input graph candidate, not activatable while
+# package/core-input-readiness.json reports incomplete dependency source/policy review.
+# Base services/setup.py requirements, the reviewed common wheel, and the
+# exact frozen builder/backend versions only. No services extras are selected.
+airunner-common @ https://github.com/Capsize-Games/airunner-common/releases/download/v6.1.8/airunner_common-6.1.8-py3-none-any.whl \
+    --hash=sha256:ac2110ecbcd965c9a773405494bcecb3d1c6c5f127d22fde81d37478b94088fd
+numpy==2.2.5
+packaging==26.3
+pillow==13.0.0
+pydantic>=2.7,<3.0
+nltk>=3.9.1
+certifi>=2026.10.23
+alembic==1.13.2
+sqlalchemy>=2.0.38,<2.1
+jinja2==3.1.6
+pyyaml==6.0.2
+python-dotenv==1.2.2
+fastapi==0.141.1
+starlette==1.6.0
+anyio>=4.14.2
+python-multipart>=0.0.27
+uvicorn[standard]==0.34.0
+psutil>=5.9.0
+pandas>=2.0.0
+pygments>=2.17.0
+requests>=2.31.0
+markdown>=3.5.0
+pyinstaller==6.12.0
+setuptools==84.2.1
+wheel==0.48.0

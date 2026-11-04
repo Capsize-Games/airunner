@@ -1,0 +1,46 @@
+{
+  "distribution": "sentencepiece",
+  "version": "0.2.1",
+  "exact_pin": "sentencepiece==0.2.1",
+  "license_source": "hash-verified PyPI source distribution; texts copied byte-for-byte",
+  "source_distribution": {
+    "filename": "sentencepiece-0.2.1.tar.gz",
+    "sha256": "8138cec27c2f2282f4a34d9a016e3374cd40e5c6e9cb335063db66a0a3b71fad"
+  },
+  "selected_wheel": {
+    "filename": "sentencepiece-0.2.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "sha256": "c7f0fd2f2693309e6628aeeb2e2faf6edd221134dfccac3308ca0de01f8dab47"
+  },
+  "files": [
+    {
+      "path": "packaging/licenses/sentencepiece-0.2.1-supplement/sentencepiece--LICENSE",
+      "source_archive_path": "sentencepiece-0.2.1/sentencepiece/LICENSE",
+      "size_bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "packaging/licenses/sentencepiece-0.2.1-supplement/sentencepiece--third_party--absl--LICENSE",
+      "source_archive_path": "sentencepiece-0.2.1/sentencepiece/third_party/absl/LICENSE",
+      "size_bytes": 11365,
+      "sha256": "d3e2f59e1d71176dfdb555ece6a41f7a5aa0f52ff21211010ace314f57695f6b"
+    },
+    {
+      "path": "packaging/licenses/sentencepiece-0.2.1-supplement/sentencepiece--third_party--darts_clone--LICENSE",
+      "source_archive_path": "sentencepiece-0.2.1/sentencepiece/third_party/darts_clone/LICENSE",
+      "size_bytes": 1481,
+      "sha256": "155f59997298ee336602c49f9c1110f268ac394ca2197eb02647a3555935ad52"
+    },
+    {
+      "path": "packaging/licenses/sentencepiece-0.2.1-supplement/sentencepiece--third_party--esaxx--LICENSE",
+      "source_archive_path": "sentencepiece-0.2.1/sentencepiece/third_party/esaxx/LICENSE",
+      "size_bytes": 1112,
+      "sha256": "7c28553d1d3312d65fe309f76a22ebaf33a3d76c8c1e3b98a88ee4654ecb53db"
+    },
+    {
+      "path": "packaging/licenses/sentencepiece-0.2.1-supplement/sentencepiece--third_party--protobuf-lite--LICENSE",
+      "source_archive_path": "sentencepiece-0.2.1/sentencepiece/third_party/protobuf-lite/LICENSE",
+      "size_bytes": 1732,
+      "sha256": "6e5e117324afd944dcf67f36cf329843bc1a92229a8cd9bb573d7a83130fea7d"
+    }
+  ]
+}

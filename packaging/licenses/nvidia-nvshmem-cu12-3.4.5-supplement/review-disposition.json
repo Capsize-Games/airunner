@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "distribution": "nvidia-nvshmem-cu12",
+  "version": "3.4.5+capsize.1",
+  "selected_wheel_sha256": "f2297cd80f097e40e0544672186c020d2ae12ddfa438f50626053e2de72c94ea",
+  "selected_wheel_metadata_license": {
+    "expression": "LicenseRef-NVIDIA-Proprietary",
+    "wheel_sha256": "f2297cd80f097e40e0544672186c020d2ae12ddfa438f50626053e2de72c94ea",
+    "scope": "NVIDIA distribution metadata for the selected subset candidate."
+  },
+  "selected_wheel_embedded_notice": {
+    "member": "nvidia_nvshmem_cu12-3.4.5+capsize.1.dist-info/licenses/License.txt",
+    "sha256": "ad6f5853fba0ca0d159d0f58d49ae49830c2f8c93f7a92648b9ce90adb4c6ccd",
+    "size_bytes": 59262,
+    "scope": "The selected wheel contains the NVIDIA CUDA SDK EULA text also preserved as NVIDIA-CUDA-12.9-License.txt in the TorchVision supplement; it is a distinct text from the NVSHMEM-specific source License.txt below."
+  },
+  "source_license_distribution_scope": {
+    "source_revision": "131da55f643ac87c810ba0bc51d359258bf433a1",
+    "document_path": "packaging/licenses/nvidia-nvshmem-cu12-3.4.5-supplement/NVSHMEM-3.4.5-License.txt",
+    "document_sha256": "1f5b7ada702926bc73327e6eb02dc2d41facc844cc4512ac900451bda06a459e",
+    "text": "NVSHMEM supplement Section 2 explicitly identifies any portion of the SDK as distributable under the Agreement. The base distribution requirements apply: the app must have material additional functionality, SDK portions are accessed only through the app, and app terms must be consistent with the Agreement and protect user privacy/security/legal rights. The source license also restricts the NVSHMEM SDK to developing applications for systems with NVIDIA GPUs. This is an exact-scope summary; no legal conflict is inferred."
+  },
+  "scope_reconciliation": "The selected wheel metadata describes NVIDIA-distributed binary terms; its embedded License.txt is a general CUDA SDK EULA. The exact NVSHMEM source License.txt contains the NVSHMEM-specific supplement and additional third-party notices. These are distinct, complementary documents, not contradictory license texts. The source supplement expressly covers distribution of any SDK portion subject to its listed conditions."
+}

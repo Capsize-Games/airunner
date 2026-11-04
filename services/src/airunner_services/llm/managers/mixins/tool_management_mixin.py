@@ -9,6 +9,14 @@ from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 
+#: Hard caps on the model-facing compact tool list. A hostile or
+#: misconfigured tool record (megabyte docstring, hundreds of params)
+#: must not be able to blow up the prompt or the context window.
+MAX_COMPACT_TOOL_COUNT = 50
+MAX_TOOL_DESCRIPTION_CHARS = 300
+MAX_TOOL_PARAMETER_COUNT = 20
+
+
 class ToolManagementMixin:
     """Manages tool binding and compact schema generation for workflows."""
 
@@ -190,7 +198,8 @@ class ToolManagementMixin:
             "",
         ]
 
-        for tool in self._tools:
+        listed = list(self._tools)[:MAX_COMPACT_TOOL_COUNT]
+        for tool in listed:
             tool_name = self._get_tool_name(tool)
             tool_desc = self._get_tool_description(tool, tool_name)
             param_str = self._get_tool_parameters(tool)
@@ -198,6 +207,15 @@ class ToolManagementMixin:
 
             # Format: - tool_name(arg1, arg2) - Short description
             descriptions.append(f"- {tool_name}({param_str}) - {short_desc}")
+
+        omitted = len(self._tools) - len(listed)
+        if omitted > 0:
+            descriptions.append(f"- ... ({omitted} more tool(s) omitted)")
+            self.logger.warning(
+                "Compact tool list capped at %d tools; %d omitted",
+                MAX_COMPACT_TOOL_COUNT,
+                omitted,
+            )
 
         descriptions.append("")
         return descriptions
@@ -248,10 +266,11 @@ class ToolManagementMixin:
             tool: Tool callable
 
         Returns:
-            Comma-separated parameter string
+            Comma-separated parameter string (capped parameter count)
         """
         import inspect
 
+        params: list[str] = []
         if hasattr(tool, "func"):
             sig = inspect.signature(tool.func)
             params = [
@@ -259,7 +278,6 @@ class ToolManagementMixin:
                 for p in sig.parameters.keys()
                 if p not in ["api", "agent", "self"]
             ]
-            return ", ".join(params)
         elif hasattr(tool, "__name__"):
             # Try to get signature from the tool itself if it's a function
             try:
@@ -269,23 +287,28 @@ class ToolManagementMixin:
                     for p in sig.parameters.keys()
                     if p not in ["api", "agent", "self"]
                 ]
-                return ", ".join(params)
             except (ValueError, TypeError):
                 return "..."
         else:
             return "..."
+        if len(params) > MAX_TOOL_PARAMETER_COUNT:
+            params = params[:MAX_TOOL_PARAMETER_COUNT] + ["..."]
+        return ", ".join(params)
 
     def _shorten_description(self, description: str) -> str:
-        """Shorten description to first sentence.
+        """Shorten description to first sentence, capped in length.
 
         Args:
             description: Full description string
 
         Returns:
-            First sentence or "No description"
+            First sentence (capped) or "No description"
         """
         if description:
-            return description.split(".")[0]
+            short = description.split(".")[0].strip()
+            if len(short) > MAX_TOOL_DESCRIPTION_CHARS:
+                short = short[:MAX_TOOL_DESCRIPTION_CHARS].rstrip() + "..."
+            return short or "No description"
         return "No description"
 
     def _get_mode_instructions(self) -> str:

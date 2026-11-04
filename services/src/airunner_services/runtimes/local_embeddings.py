@@ -1,11 +1,10 @@
 """Local-only embedding runtime adapter (release B04).
 
-Adapts the selected local embedding runtime — Intfloat E5 Large
+Adapts an injected local embedding runtime — currently Intfloat E5 Large
 (``intfloat/e5-large``) constructed with ``local_files_only`` by the
 existing RAG stack (``llm/managers/agent/mixins/rag_properties_mixin.py``)
-— to the B01 ``CompanionEmbeddingClient`` contract, so companion
-memory search (B05) embeds through the same local model the rest of
-Desktop already uses instead of growing a second embedding path.
+— to the shared embedding identity contract. Companion memory search and
+other consumers can use the same local model without adding a second path.
 
 The adapter never loads a model, never downloads, and never dials a
 remote endpoint: it wraps an already-constructed embedder
@@ -17,28 +16,33 @@ width against it. A remote embedder (the opt-in
 one) is refused at construction — this client is local-only by
 construction, not by configuration.
 
-No torch/langchain import here: the embedder arrives injected, so
-this module (and its companion contract import) stays free of the
-heavy ML runtime.
+No torch/langchain or companion import here: the embedder arrives injected,
+and the identity/error contracts are defined in the neutral runtime layer.
 """
 
 from __future__ import annotations
 
+import math
+from pathlib import Path
 from typing import Any, List
 
-from airunner_services.llm.companion.contracts import (
+from airunner_services.runtimes.embedding_contracts import (
     ERROR_EMBEDDING_SPACE_MISMATCH,
-    CompanionError,
-    CompanionErrorCode,
+    EmbeddingModelIdentity,
+    ServiceError,
+    ServiceErrorCode,
 )
-from airunner_services.llm.companion.embeddings import EmbeddingModelIdentity
+from airunner_services.runtimes.e5_model_identity import (
+    E5ModelIdentity,
+    canonical_e5_space_fingerprint,
+)
 
 #: Selected local embedding model (R02 manifest, hardware-models.md §2;
 #: default catalog entry in ``bootstrap/model_bootstrap_data.py``).
 E5_LARGE_MODEL_ID = "intfloat/e5-large"
 
 #: Pinned branch for the selected model (same sources as above).
-E5_LARGE_REVISION = "main"
+E5_LARGE_REVISION = "4dc6d853a804b9c8886ede6dda8a073b7dc08a81"
 
 #: Attribute only a remote-endpoint embedder carries
 #: (``langchain_ollama.OllamaEmbeddings.base_url``).
@@ -46,6 +50,16 @@ _REMOTE_ATTRIBUTES = ("base_url", "api_base", "api_key")
 
 #: Class-name markers of remote/provider embedders, lowercased.
 _REMOTE_CLASS_MARKERS = ("ollama", "openai", "openrouter", "remote")
+
+#: Largest single text embedded in one call; oversized input is rejected
+#: instead of being tokenized and encoded unbounded.
+MAX_EMBED_TEXT_CHARS = 8 * 1024
+
+#: Largest batch embedded in one embed_documents call.
+MAX_EMBED_BATCH_SIZE = 256
+E5_LARGE_RELATIVE_PATH = Path(
+    "text/models/llm/embedding/intfloat/e5-large"
+)
 
 
 class LocalEmbeddingClient:
@@ -70,35 +84,105 @@ class LocalEmbeddingClient:
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """Embed texts; rejects an off-width vector fail-closed."""
-        vectors = self._embedder.embed_documents(list(texts))
+        bounded = [self._checked_text(text) for text in list(texts)]
+        if len(bounded) > MAX_EMBED_BATCH_SIZE:
+            raise ValueError(
+                f"embed batch of {len(bounded)} exceeds "
+                f"{MAX_EMBED_BATCH_SIZE}"
+            )
+        vectors = self._embedder.embed_documents(bounded)
         return [self._checked(vector) for vector in vectors]
 
     def embed_query(self, text: str) -> List[float]:
         """Embed one query; rejects an off-width vector fail-closed."""
-        return self._checked(self._embedder.embed_query(text))
+        return self._checked(
+            self._embedder.embed_query(self._checked_text(text))
+        )
+
+    @staticmethod
+    def _checked_text(text: str) -> str:
+        """Reject one oversized embedding input before tokenization."""
+        if not isinstance(text, str):
+            raise TypeError("embedding input must be a string")
+        if len(text) > MAX_EMBED_TEXT_CHARS:
+            raise ValueError(
+                f"embedding input of {len(text)} chars exceeds "
+                f"{MAX_EMBED_TEXT_CHARS}"
+            )
+        return text
 
     def _checked(self, vector: List[float]) -> List[float]:
         if len(vector) != int(self._identity.dimension):
-            raise CompanionError(
-                CompanionErrorCode(
+            raise ServiceError(
+                ServiceErrorCode(
                     code=ERROR_EMBEDDING_SPACE_MISMATCH,
                     detail=f"expected dim={self._identity.dimension}, "
                     f"found dim={len(vector)}",
                 )
             )
-        return [float(value) for value in vector]
+        values = [float(value) for value in vector]
+        if any(not math.isfinite(value) for value in values):
+            raise ValueError("embedding vector contains a non-finite value")
+        return values
+
+
+def verified_e5_client_for_manager(model_manager: Any) -> LocalEmbeddingClient:
+    """Return the configured RAG manager's already-verified E5 client.
+
+    Accessing ``model_manager.embedding`` deliberately uses the existing lazy
+    RAG loader and cache. The API calls this on the owning LLM worker so model
+    initialization and inference stay ordered with generation and lifecycle
+    messages.
+    """
+    path_settings = getattr(model_manager, "path_settings", None)
+    base_path = getattr(path_settings, "base_path", None)
+    embedder = getattr(model_manager, "embedding", None)
+    if not base_path or embedder is None:
+        raise ValueError("configured local E5 model is unavailable")
+
+    model_name = getattr(embedder, "model_name", None)
+    verified_identity = getattr(embedder, "verified_identity", None)
+    if not model_name or not isinstance(verified_identity, E5ModelIdentity):
+        raise ValueError("configured local E5 model identity is unavailable")
+
+    expected_path = (Path(base_path).expanduser() / E5_LARGE_RELATIVE_PATH).resolve()
+    actual_path = Path(model_name).expanduser().resolve()
+    if actual_path != expected_path:
+        raise ValueError("configured embedding model is not E5 Large")
+
+    expected_identity = EmbeddingModelIdentity(
+        model_id=E5_LARGE_MODEL_ID,
+        revision=E5_LARGE_REVISION,
+        dimension=1024,
+        space_fingerprint=canonical_e5_space_fingerprint(),
+    )
+    identity = verified_identity.to_embedding_model_identity()
+    if identity != expected_identity:
+        raise ValueError("configured E5 model identity does not match")
+    return LocalEmbeddingClient(embedder, identity)
+
+
+def _type_has_attribute(embedder_type: type, attribute: str) -> bool:
+    """Return True when one attribute is defined on the embedder type.
+
+    Inspects the type MRO instead of the instance so evaluating the
+    probe never executes arbitrary descriptor or __getattr__ code on a
+    hostile embedder object.
+    """
+    return any(attribute in klass.__dict__ for klass in embedder_type.__mro__)
 
 
 def _require_local_embedder(embedder: Any) -> None:
     """Refuse remote-endpoint embedders (explicit remote stays opt-in
     elsewhere; this client never dials out)."""
+    embedder_type = type(embedder)
     for attribute in _REMOTE_ATTRIBUTES:
-        if hasattr(embedder, attribute):
+        if _type_has_attribute(embedder_type, attribute):
             raise ValueError(
                 "refusing remote embedding endpoint "
-                f"(found {attribute!r} on {type(embedder).__name__})"
+                f"(found {attribute!r} on {embedder_type.__name__})"
             )
-    class_name = type(embedder).__name__.lower()
+    class_name = embedder_type.__name__.lower()
     if any(marker in class_name for marker in _REMOTE_CLASS_MARKERS):
         raise ValueError(f"refusing remote embedding endpoint ({class_name})")
 
@@ -116,4 +200,5 @@ __all__ = [
     "E5_LARGE_MODEL_ID",
     "E5_LARGE_REVISION",
     "LocalEmbeddingClient",
+    "verified_e5_client_for_manager",
 ]

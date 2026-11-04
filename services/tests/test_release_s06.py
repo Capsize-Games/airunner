@@ -17,8 +17,10 @@ import contextlib
 import hashlib
 import io
 import json
+import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 from collections.abc import Iterator
@@ -48,6 +50,7 @@ from airunner_services.content_safety import (  # noqa: E402
 from airunner_services.content_safety.policy_signature import (  # noqa: E402
     ED25519_PUBLIC_KEY_BYTES,
     SIGNATURE_FORMAT_ID,
+    TRUST_STORE_FILENAME,
 )
 
 _KEY_ID_A = "test-only-release-1"
@@ -144,13 +147,14 @@ def _secret_strings(store: dict[str, bytes], digest: str) -> list[str]:
 def test_release_stage_success_stages_exact_bytes(
     work_dir: Path,
 ) -> None:
-    """A verified artifact stages byte-identically with counts only."""
+    """Stage exact bytes, sidecar, and only the verified public key."""
     private, public = _keypair()
-    store = {_KEY_ID_A: public}
+    _, other_public = _keypair()
+    store = {_KEY_ID_A: public, _KEY_ID_B: other_public}
     artifact = _write_signed(work_dir, _valid_text(), private, _KEY_ID_A)
     store_path = _write_trust_store(work_dir, store)
     digest = _digest(artifact)
-    out = work_dir / "staged.dat"
+    out = work_dir / "staged" / "policy_terms.dat"
 
     stdout, stderr = io.StringIO(), io.StringIO()
     with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(
@@ -160,6 +164,13 @@ def test_release_stage_success_stages_exact_bytes(
 
     assert rc == 0
     assert out.read_bytes() == artifact.read_bytes()
+    assert Path(str(out) + ".sig").read_bytes() == Path(
+        str(artifact) + ".sig"
+    ).read_bytes()
+    staged_store = json.loads(
+        (out.parent / TRUST_STORE_FILENAME).read_text(encoding="utf-8")
+    )
+    assert staged_store == {_KEY_ID_A: public.hex()}
     printed = stdout.getvalue()
     assert "hashes staged: 2" in printed
     assert f"key id: {_KEY_ID_A}" in printed
@@ -417,6 +428,139 @@ def test_stage_release_artifact_returns_key_and_count(
     assert count == len(_TERMS)
 
 
+def _copy_packaged_runtime(
+    package_root: Path, staged_artifact: Path
+) -> Path:
+    """Copy source package and stage outputs as packaged resources."""
+    source = _PROJECT_ROOT / "services" / "src" / "airunner_services"
+    package = package_root / "airunner_services"
+    shutil.copytree(source, package)
+    data_dir = package / "content_safety" / "data"
+    shutil.copy2(staged_artifact, data_dir / "policy_terms.dat")
+    shutil.copy2(
+        Path(str(staged_artifact) + ".sig"),
+        data_dir / "policy_terms.dat.sig",
+    )
+    shutil.copy2(
+        staged_artifact.parent / TRUST_STORE_FILENAME,
+        data_dir / TRUST_STORE_FILENAME,
+    )
+    return package_root
+
+
+def _run_packaged_policy(
+    package_root: Path,
+    *,
+    env_policy: Path,
+    expect_valid: bool,
+) -> subprocess.CompletedProcess[str]:
+    """Load package resources in a fresh process using default trust keys."""
+    code = """
+import sys
+sys.frozen = True
+from airunner_services.content_safety.matcher import hash_token
+from airunner_services.content_safety.policy_data import is_available, load_policy_hashes
+from airunner_services.content_safety.policy_signature import TRUSTED_KEYS
+hashes = load_policy_hashes(refresh=True)
+expected = frozenset({hash_token('zorrb'), hash_token('quixnor')})
+if EXPECT_VALID:
+    assert hashes == expected
+    assert tuple(TRUSTED_KEYS) == ('test-only-release-1',)
+    assert is_available()
+    print('verified')
+else:
+    assert hashes == frozenset()
+    assert not is_available()
+    print('closed')
+""".replace("EXPECT_VALID", repr(expect_valid))
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(package_root)
+    env["AIRUNNER_CONTENT_SAFETY_DATA"] = str(env_policy)
+    # These cases exercise packaged signature verification, which is an
+    # explicit application opt-in under the default-disabled policy mode.
+    env["AIRUNNER_CONTENT_POLICY_MODE"] = "enforce"
+    env["AIRUNNER_CONTENT_SAFETY_ENFORCE_SIGNED"] = "1"
+    return subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=package_root,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+
+
+def _stage_synthetic_runtime_package(
+    work_dir: Path,
+) -> tuple[Path, Path, bytes]:
+    """Create a staged package using a throwaway signer and extra key."""
+    private, public = _keypair()
+    _, other_public = _keypair()
+    artifact = _write_signed(work_dir, _valid_text(), private, _KEY_ID_A)
+    trust_store = _write_trust_store(
+        work_dir, {_KEY_ID_A: public, _KEY_ID_B: other_public}
+    )
+    staged = work_dir / "staged" / "policy_terms.dat"
+    assert main(_stage_args(artifact, trust_store, _digest(artifact), staged)) == 0
+
+    # This alternate signed data proves packaged mode ignores the dev path.
+    env_policy = _write_signed(
+        work_dir, render_artifact({hash_token("neutral alternate")}),
+        private, _KEY_ID_A, name="dev-override.dat",
+    )
+    package_root = _copy_packaged_runtime(work_dir / "runtime", staged)
+    return package_root, env_policy, public
+
+
+def test_staged_trust_resource_verifies_in_packaged_runtime(
+    work_dir: Path,
+) -> None:
+    """Stage-to-runtime verification uses packaged keys with no injection."""
+    package_root, env_policy, public = _stage_synthetic_runtime_package(work_dir)
+    staged_store = json.loads(
+        (
+            package_root / "airunner_services" / "content_safety" / "data"
+            / TRUST_STORE_FILENAME
+        ).read_text(encoding="utf-8")
+    )
+    assert staged_store == {_KEY_ID_A: public.hex()}
+
+    result = _run_packaged_policy(
+        package_root, env_policy=env_policy, expect_valid=True
+    )
+    assert result.returncode == 0, result.stderr
+    assert "verified" in result.stdout
+
+
+@pytest.mark.parametrize("store_state", ["missing", "malformed", "untrusted"])
+def test_packaged_runtime_trust_store_failures_deny(
+    work_dir: Path, store_state: str
+) -> None:
+    """Missing, malformed, and non-matching stores deny without env fallback."""
+    package_root, env_policy, other_public = _stage_synthetic_runtime_package(
+        work_dir
+    )
+    store_path = (
+        package_root / "airunner_services" / "content_safety" / "data"
+        / TRUST_STORE_FILENAME
+    )
+    if store_state == "missing":
+        store_path.unlink()
+    elif store_state == "malformed":
+        store_path.write_text("{not json", encoding="utf-8")
+    else:
+        store_path.write_text(
+            json.dumps({_KEY_ID_B: other_public.hex()}), encoding="utf-8"
+        )
+
+    result = _run_packaged_policy(
+        package_root, env_policy=env_policy, expect_valid=False
+    )
+    assert result.returncode == 0, result.stderr
+    assert "closed" in result.stdout
+
+
 # ---------------------------------------------------------------------------
 # Trusted workflow wiring (static checks over pypi-dispatch.yml)
 # ---------------------------------------------------------------------------
@@ -443,88 +587,31 @@ def _run_blocks(job: dict) -> list[str]:
     return [step["run"] for step in job.get("steps", []) if "run" in step]
 
 
-def test_workflow_trusted_job_is_release_only() -> None:
-    """Provisioning needs the release event plus the protected env."""
+def test_standard_workflow_does_not_provision_private_policy() -> None:
+    """Standard service releases have no private corpus or key dependency."""
     workflow = _workflow()
     # NOTE: YAML 1.1 parses the `on` key as boolean True.
     assert "pull_request" not in workflow[True]
-    job = workflow["jobs"]["provision-policy"]
-    assert job["if"] == "github.event_name == 'release'"
-    assert job["environment"] == "release-policy"
-    assert job["permissions"] == {"contents": "read"}
-    checkout = job["steps"][0]
-    assert checkout["with"]["ref"] == ("${{ github.event.release.tag_name }}")
-    assert checkout["with"]["persist-credentials"] is False
-
-
-def test_workflow_trusted_actions_are_pinned() -> None:
-    """Secret-adjacent steps use immutable action SHAs, not tags."""
-    workflow = _workflow()
     jobs = workflow["jobs"]
-    entries = _uses_entries(jobs["provision-policy"])
-    entries.extend(
-        uses
-        for uses in _uses_entries(jobs["build-python-package"])
-        if "download-artifact" in uses
-    )
-    assert entries
-    for uses in entries:
-        assert _PINNED_USES_RE.match(uses), f"unpinned action: {uses}"
+    assert "provision-policy" not in jobs
+    assert "provision-policy-fixture" not in jobs
+    text = yaml.safe_dump(workflow)
+    for marker in (
+        "release-policy", "POLICY_ARTIFACT_URL", "POLICY_ARTIFACT_TOKEN",
+        "POLICY_ARTIFACT_SHA256", "POLICY_TRUST_STORE_JSON",
+        "policy-bundle-fragment", "policy-staged/",
+    ):
+        assert marker not in text
 
 
-def test_workflow_trusted_job_hides_secrets() -> None:
-    """No shell tracing, env dumps, or general artifact uploads."""
-    workflow = _workflow()
-    job = workflow["jobs"]["provision-policy"]
-    runs = "\n".join(_run_blocks(job))
-    assert "set -x" not in runs
-    assert "printenv" not in runs
-    assert "echo" not in runs
-    uploads = [
-        step
-        for step in job["steps"]
-        if "upload-artifact" in step.get("uses", "")
-    ]
-    assert len(uploads) == 1
-    assert uploads[0]["with"]["name"] == "policy-bundle-fragment"
-    assert uploads[0]["with"]["retention-days"] == 1
-    assert uploads[0]["with"]["if-no-files-found"] == "error"
-
-
-def test_workflow_fixture_job_is_secret_free() -> None:
-    """The fixture job validates wiring without env or secrets."""
-    workflow = _workflow()
-    job = workflow["jobs"]["provision-policy-fixture"]
-    assert "environment" not in job
-    text = _job_text(job)
-    assert "secrets." not in text
-    assert "services/tests/test_release_s06.py" in text
-
-
-def test_workflow_build_consumes_verified_fragment() -> None:
-    """Releases build on the staged fragment; dispatches skip it."""
+def test_workflow_build_and_candidate_omit_policy_by_default() -> None:
+    """Default release artifacts do not depend on policy staging."""
     workflow = _workflow()
     job = workflow["jobs"]["build-python-package"]
-    assert "provision-policy" in job["needs"]
-    assert "needs.provision-policy.result == 'success'" in job["if"]
-    assert "needs.provision-policy.result == 'skipped'" in job["if"]
-    guarded = [
-        step
-        for step in job["steps"]
-        if step.get("if") == "needs.provision-policy.result == 'success'"
-    ]
-    assert len(guarded) == 2
-    assert "policy-bundle-fragment" in _job_text(guarded[0])
-    assert "content_safety/data/policy_terms.dat" in _job_text(guarded[1])
-
-
-def test_packaging_ships_the_detached_sidecar() -> None:
-    """The staged .sig rides the sdist -> wheel path with the .dat."""
-    setup_text = (_PROJECT_ROOT / "services" / "setup.py").read_text(
-        encoding="utf-8"
-    )
-    manifest_text = (_PROJECT_ROOT / "services" / "MANIFEST.in").read_text(
-        encoding="utf-8"
-    )
-    assert '"data/*.dat.sig"' in setup_text
-    assert "data/*.dat.sig" in manifest_text
+    assert job["needs"] == ["candidate-gate"]
+    assert "policy" not in _job_text(job).lower()
+    candidate = workflow["jobs"]["linux-candidate"]
+    candidate_text = _job_text(candidate)
+    assert "policy-bundle-fragment" not in candidate_text
+    assert "--policy-trust-store" not in candidate_text
+    assert "provision-policy" not in candidate_text

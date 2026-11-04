@@ -32,7 +32,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
 
 import numpy as np
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
 
 from .contracts import (
     ERROR_EMBEDDING_SPACE_MISMATCH,
@@ -46,35 +46,11 @@ from .scheduler import (
     CompanionJobType,
     CompanionScheduler,
 )
+from airunner_services.runtimes.embedding_contracts import EmbeddingModelIdentity
 
 EMBEDDING_INDEX_SCHEMA_VERSION = 1
 INDEX_MANIFEST_FILE = "companion_index.json"
 INDEX_EMBEDDINGS_FILE = "embeddings.npy"
-
-
-class EmbeddingModelIdentity(BaseModel):
-    """Which embedding space an index or client belongs to.
-
-    ``model_id`` is the upstream repo id (``intfloat/e5-large``);
-    ``revision`` the model branch/commit it was loaded from;
-    ``dimension`` the vector width it produces. All three must match
-    for an index read to be valid — same model at a new revision, or
-    same model at a new width, is a different embedding space.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    model_id: str
-    revision: str = "main"
-    dimension: int = Field(gt=0)
-
-    def matches(self, other: "EmbeddingModelIdentity") -> bool:
-        """Return whether two identities describe one space."""
-        return (
-            self.model_id == other.model_id
-            and self.revision == other.revision
-            and self.dimension == other.dimension
-        )
 
 
 @runtime_checkable
@@ -122,8 +98,12 @@ class CompanionEmbeddingIndex:
     ) -> None:
         self._identity = identity
         self._texts = list(texts or [])
-        self._metadatas = list(metadatas or [])
+        self._metadatas = list(metadatas) if metadatas is not None else [{} for _ in self._texts]
         self._embeddings = _as_matrix(embeddings)
+        if len(self._texts) != len(self._metadatas) or len(self._texts) != self._embeddings.shape[0]:
+            raise ValueError("embedding index rows are misaligned")
+        if any(not isinstance(metadata, dict) for metadata in self._metadatas):
+            raise ValueError("embedding metadata must contain dictionaries")
         if self._embeddings.size and self._embeddings.shape[1] != int(
             identity.dimension
         ):
@@ -144,6 +124,11 @@ class CompanionEmbeddingIndex:
     ) -> None:
         """Embed and append texts; rejects a foreign-space client."""
         self._require_identity(client)
+        metadata_rows = list(metadatas) if metadatas is not None else [{} for _ in texts]
+        if len(metadata_rows) != len(texts) or any(
+            not isinstance(metadata, dict) for metadata in metadata_rows
+        ):
+            raise ValueError("embedding metadata must match the input texts")
         if not texts:
             return
         vectors = [
@@ -153,13 +138,11 @@ class CompanionEmbeddingIndex:
             raise CompanionError(
                 CompanionErrorCode(code=ERROR_EMBEDDING_SPACE_MISMATCH)
             )
-        self._texts.extend(texts)
-        self._metadatas.extend(metadatas or [{} for _ in texts])
         matrix = _normalize_rows(np.asarray(vectors, dtype=np.float32))
-        if self._embeddings.size == 0:
-            self._embeddings = matrix
-        else:
-            self._embeddings = np.vstack((self._embeddings, matrix))
+        updated = matrix if self._embeddings.size == 0 else np.vstack((self._embeddings, matrix))
+        self._texts.extend(texts)
+        self._metadatas.extend(metadata_rows)
+        self._embeddings = updated
 
     def search(
         self,

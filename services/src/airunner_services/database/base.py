@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Any
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import declarative_base
 from typing import Type
@@ -94,7 +95,7 @@ class BaseModel(Base):
     # Lazy manager (populated on first access)
     # ------------------------------------------------------------------
     @classproperty
-    def objects(cls):
+    def objects(cls) -> Any:
         """Return the manager instance for this model class."""
         if cls._objects is None:
             cls._objects = _get_objects_factory()(cls)
@@ -105,7 +106,7 @@ class BaseModel(Base):
     # ------------------------------------------------------------------
     @classmethod
     @lru_cache(maxsize=None)
-    def get_dataclass(cls):
+    def get_dataclass(cls) -> type[Any]:
         """Get or generate the dataclass for one ORM model class."""
         from airunner_services.database.model_to_dataclass import (  # noqa: PLC0415
             model_to_dataclass,
@@ -116,11 +117,11 @@ class BaseModel(Base):
     # ------------------------------------------------------------------
     # Persistence helpers (work with real ORM and bridge alike)
     # ------------------------------------------------------------------
-    def save(self):
+    def save(self) -> None:
         """Persist one model instance."""
         self.objects.save(self)
 
-    def delete(self):
+    def delete(self) -> bool:
         """Delete one model instance and return success."""
         return self.objects.delete_instance(self)
 
@@ -132,7 +133,7 @@ class BaseModel(Base):
         dataclass_cls = self.get_dataclass()
         return dataclass_cls(**self.to_dict())
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         """Convert one ORM instance to a dict of mapped columns."""
         return {
             column.key: getattr(self, column.key)

@@ -1,0 +1,688 @@
+{
+  "lock_sha256": "1ec91599b40ab9dccd826aeed33928a20eeb0319b90f4f57a6b4bff33d2b16cf",
+  "next_origin_reviews": [],
+  "next_source_intakes": [],
+  "origin_pending_exception_count": 0,
+  "origin_pending_review_count": 0,
+  "origin_policy_state_definitions": {
+    "owner-controlled": "The exact input is owner-controlled source.",
+    "owner-exception-recorded": "A concrete exact-input flag has a recorded owner exception.",
+    "pending-owner-exception": "A concrete exact-input flag awaits its recorded disposition.",
+    "pending-review": "The exact input has not completed origin-policy review.",
+    "reviewed-no-flag": "The exact input was reviewed and no policy flag was observed; this does not assert a particular country of origin."
+  },
+  "origin_ready_count": 51,
+  "packages": [
+    {
+      "lock_reference": "https://github.com/Capsize-Games/airunner-common/releases/download/v6.1.8/airunner_common-6.1.8-py3-none-any.whl",
+      "name": "airunner-common",
+      "origin_policy_status": "owner-controlled",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-linux-reviewed-inputs.md",
+        "scope_id": "reviewed-source-release",
+        "sha256": "8980cbff8fb28ffcbbf4b7affbb9ab4968527bc650bfeae7912759d33c42741e"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "6.1.8"
+    },
+    {
+      "lock_reference": "1.13.2",
+      "name": "alembic",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-frameworks-utilities-review.md",
+        "scope_id": "alembic-1.13.2-exact-linux-source-artifact-review",
+        "sha256": "4779c9fa211bf8e1ecf3eb0baab732c94f3d59b0688e8218fda2278244ac9969"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "1.13.2"
+    },
+    {
+      "lock_reference": "0.17.5",
+      "name": "altgraph",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-python-primitives-review.md",
+        "scope_id": "altgraph-0.17.5-selected-linux-wheel",
+        "sha256": "894b707c8f8c85622229ca38f83df0c42a5cd5a106006553f9ea59283020adc7"
+      },
+      "role": "builder-transitive",
+      "source_review_status": "reviewed",
+      "version": "0.17.5"
+    },
+    {
+      "lock_reference": "0.0.5",
+      "name": "annotated-doc",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-python-primitives-review.md",
+        "scope_id": "annotated-doc-0.0.5-selected-linux-wheel",
+        "sha256": "894b707c8f8c85622229ca38f83df0c42a5cd5a106006553f9ea59283020adc7"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "0.0.5"
+    },
+    {
+      "lock_reference": "0.8.0",
+      "name": "annotated-types",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-python-primitives-review.md",
+        "scope_id": "annotated-types-0.8.0-selected-linux-wheel",
+        "sha256": "894b707c8f8c85622229ca38f83df0c42a5cd5a106006553f9ea59283020adc7"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "0.8.0"
+    },
+    {
+      "lock_reference": "4.16.0",
+      "name": "anyio",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-http-source-review.md",
+        "scope_id": "anyio-4.16.0-selected-linux-wheel",
+        "sha256": "494e4f777b867e904b8c24e35f577c5ad4e0422d6f2b86f9ab725bb4f6716e41"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "4.16.0"
+    },
+    {
+      "lock_reference": "2026.10.23",
+      "name": "certifi",
+      "origin_policy_status": "reviewed-no-flag",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-clients-templates-review.md",
+        "scope_id": "certifi-2026.10.23-selected-linux-wheel",
+        "sha256": "8a2c60c29dd4f37a00e572c061b160a1d42371a3d9eac78db71db482c0b8e44f"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "2026.10.23"
+    },
+    {
+      "lock_reference": "3.5.2",
+      "name": "charset-normalizer",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-clients-templates-review.md",
+        "scope_id": "charset-normalizer-3.5.2-selected-linux-wheel",
+        "sha256": "8a2c60c29dd4f37a00e572c061b160a1d42371a3d9eac78db71db482c0b8e44f"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "3.5.2"
+    },
+    {
+      "lock_reference": "8.5.0",
+      "name": "click",
+      "origin_policy_status": "reviewed-no-flag",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-clients-templates-review.md",
+        "scope_id": "click-8.5.0-selected-linux-wheel",
+        "sha256": "8a2c60c29dd4f37a00e572c061b160a1d42371a3d9eac78db71db482c0b8e44f"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "8.5.0"
+    },
+    {
+      "lock_reference": "3.1.2",
+      "name": "cloudpickle",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-frameworks-utilities-review.md",
+        "scope_id": "cloudpickle-3.1.2-exact-linux-source-artifact-review",
+        "sha256": "4779c9fa211bf8e1ecf3eb0baab732c94f3d59b0688e8218fda2278244ac9969"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "3.1.2"
+    },
+    {
+      "lock_reference": "0.7.1",
+      "name": "defusedxml",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-python-primitives-review.md",
+        "scope_id": "defusedxml-0.7.1-selected-linux-wheel",
+        "sha256": "894b707c8f8c85622229ca38f83df0c42a5cd5a106006553f9ea59283020adc7"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "0.7.1"
+    },
+    {
+      "lock_reference": "0.141.1",
+      "name": "fastapi",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-frameworks-utilities-review.md",
+        "scope_id": "fastapi-0.141.1-exact-linux-source-artifact-review",
+        "sha256": "4779c9fa211bf8e1ecf3eb0baab732c94f3d59b0688e8218fda2278244ac9969"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "0.141.1"
+    },
+    {
+      "lock_reference": "3.5.6",
+      "name": "greenlet",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-frameworks-utilities-review.md",
+        "scope_id": "greenlet-3.5.6-exact-linux-source-artifact-review",
+        "sha256": "4779c9fa211bf8e1ecf3eb0baab732c94f3d59b0688e8218fda2278244ac9969"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "3.5.6"
+    },
+    {
+      "lock_reference": "0.16.0",
+      "name": "h11",
+      "origin_policy_status": "reviewed-no-flag",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-http-source-review.md",
+        "scope_id": "h11-0.16.0-selected-linux-wheel",
+        "sha256": "494e4f777b867e904b8c24e35f577c5ad4e0422d6f2b86f9ab725bb4f6716e41"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "0.16.0"
+    },
+    {
+      "lock_reference": "0.9.0",
+      "name": "httptools",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-http-source-review.md",
+        "scope_id": "httptools-0.9.0-selected-linux-wheel",
+        "sha256": "494e4f777b867e904b8c24e35f577c5ad4e0422d6f2b86f9ab725bb4f6716e41"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "0.9.0"
+    },
+    {
+      "lock_reference": "3.20",
+      "name": "idna",
+      "origin_policy_status": "reviewed-no-flag",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-python-primitives-review.md",
+        "scope_id": "idna-3.20-selected-linux-wheel",
+        "sha256": "894b707c8f8c85622229ca38f83df0c42a5cd5a106006553f9ea59283020adc7"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "3.20"
+    },
+    {
+      "lock_reference": "3.1.6",
+      "name": "jinja2",
+      "origin_policy_status": "reviewed-no-flag",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-clients-templates-review.md",
+        "scope_id": "jinja2-3.1.6-selected-linux-wheel",
+        "sha256": "8a2c60c29dd4f37a00e572c061b160a1d42371a3d9eac78db71db482c0b8e44f"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "3.1.6"
+    },
+    {
+      "lock_reference": "1.6.0",
+      "name": "joblib",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-frameworks-utilities-review.md",
+        "scope_id": "joblib-1.6.0-exact-linux-source-artifact-review",
+        "sha256": "4779c9fa211bf8e1ecf3eb0baab732c94f3d59b0688e8218fda2278244ac9969"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "1.6.0"
+    },
+    {
+      "lock_reference": "1.4.3",
+      "name": "mako",
+      "origin_policy_status": "reviewed-no-flag",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-clients-templates-review.md",
+        "scope_id": "mako-1.4.3-selected-linux-wheel",
+        "sha256": "8a2c60c29dd4f37a00e572c061b160a1d42371a3d9eac78db71db482c0b8e44f"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "1.4.3"
+    },
+    {
+      "lock_reference": "3.11.2",
+      "name": "markdown",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-frameworks-utilities-review.md",
+        "scope_id": "markdown-3.11.2-exact-linux-source-artifact-review",
+        "sha256": "4779c9fa211bf8e1ecf3eb0baab732c94f3d59b0688e8218fda2278244ac9969"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "3.11.2"
+    },
+    {
+      "lock_reference": "3.0.4",
+      "name": "markupsafe",
+      "origin_policy_status": "reviewed-no-flag",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-clients-templates-review.md",
+        "scope_id": "markupsafe-3.0.4-selected-linux-wheel",
+        "sha256": "8a2c60c29dd4f37a00e572c061b160a1d42371a3d9eac78db71db482c0b8e44f"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "3.0.4"
+    },
+    {
+      "lock_reference": "3.10.4",
+      "name": "nltk",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-frameworks-utilities-review.md",
+        "scope_id": "nltk-3.10.4-exact-linux-source-artifact-review",
+        "sha256": "4779c9fa211bf8e1ecf3eb0baab732c94f3d59b0688e8218fda2278244ac9969"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "3.10.4"
+    },
+    {
+      "lock_reference": "2.2.5",
+      "name": "numpy",
+      "origin_policy_status": "reviewed-no-flag",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-numeric-native-review.md",
+        "scope_id": "numpy-2.2.5-exact-linux-source-artifact-review",
+        "sha256": "b1fb940962eaf62151fac57c99bf6c283134f541196bb00cb7cf6424f4f5edf1"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "2.2.5"
+    },
+    {
+      "lock_reference": "26.3",
+      "name": "packaging",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-linux-reviewed-inputs.md",
+        "scope_id": "reviewed-packaging-source-origin-pending",
+        "sha256": "8980cbff8fb28ffcbbf4b7affbb9ab4968527bc650bfeae7912759d33c42741e"
+      },
+      "role": "runtime-and-builder-direct",
+      "source_review_status": "reviewed",
+      "version": "26.3"
+    },
+    {
+      "lock_reference": "3.1.0",
+      "name": "pandas",
+      "origin_policy_status": "reviewed-no-flag",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-numeric-native-review.md",
+        "scope_id": "pandas-3.1.0-exact-linux-source-artifact-review",
+        "sha256": "b1fb940962eaf62151fac57c99bf6c283134f541196bb00cb7cf6424f4f5edf1"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "3.1.0"
+    },
+    {
+      "lock_reference": "13.0.0",
+      "name": "pillow",
+      "origin_policy_status": "reviewed-no-flag",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-numeric-native-review.md",
+        "scope_id": "pillow-13.0.0-exact-linux-source-artifact-review",
+        "sha256": "b1fb940962eaf62151fac57c99bf6c283134f541196bb00cb7cf6424f4f5edf1"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "13.0.0"
+    },
+    {
+      "lock_reference": "7.2.2",
+      "name": "psutil",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-numeric-native-review.md",
+        "scope_id": "psutil-7.2.2-exact-linux-source-artifact-review",
+        "sha256": "b1fb940962eaf62151fac57c99bf6c283134f541196bb00cb7cf6424f4f5edf1"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "7.2.2"
+    },
+    {
+      "lock_reference": "2.14.2",
+      "name": "pydantic",
+      "origin_policy_status": "reviewed-no-flag",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-numeric-native-review.md",
+        "scope_id": "pydantic-2.14.2-exact-linux-source-artifact-review",
+        "sha256": "b1fb940962eaf62151fac57c99bf6c283134f541196bb00cb7cf6424f4f5edf1"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "2.14.2"
+    },
+    {
+      "lock_reference": "2.50.2",
+      "name": "pydantic-core",
+      "origin_policy_status": "reviewed-no-flag",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-numeric-native-review.md",
+        "scope_id": "pydantic-core-2.50.2-exact-linux-source-artifact-review",
+        "sha256": "b1fb940962eaf62151fac57c99bf6c283134f541196bb00cb7cf6424f4f5edf1"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "2.50.2"
+    },
+    {
+      "lock_reference": "2.21.0",
+      "name": "pygments",
+      "origin_policy_status": "reviewed-no-flag",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-numeric-native-review.md",
+        "scope_id": "pygments-2.21.0-exact-linux-source-artifact-review",
+        "sha256": "b1fb940962eaf62151fac57c99bf6c283134f541196bb00cb7cf6424f4f5edf1"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "2.21.0"
+    },
+    {
+      "lock_reference": "6.12.0",
+      "name": "pyinstaller",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-linux-reviewed-inputs.md",
+        "scope_id": "reviewed-builder-source",
+        "sha256": "8980cbff8fb28ffcbbf4b7affbb9ab4968527bc650bfeae7912759d33c42741e"
+      },
+      "role": "builder-direct",
+      "source_review_status": "reviewed",
+      "version": "6.12.0"
+    },
+    {
+      "lock_reference": "2026.9",
+      "name": "pyinstaller-hooks-contrib",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-linux-reviewed-inputs.md",
+        "scope_id": "reviewed-hook-source",
+        "sha256": "8980cbff8fb28ffcbbf4b7affbb9ab4968527bc650bfeae7912759d33c42741e"
+      },
+      "role": "builder-transitive",
+      "source_review_status": "reviewed",
+      "version": "2026.9"
+    },
+    {
+      "lock_reference": "4.0.0",
+      "name": "python-dateutil",
+      "origin_policy_status": "reviewed-no-flag",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-python-primitives-review.md",
+        "scope_id": "python-dateutil-4.0.0-selected-linux-wheel",
+        "sha256": "894b707c8f8c85622229ca38f83df0c42a5cd5a106006553f9ea59283020adc7"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "4.0.0"
+    },
+    {
+      "lock_reference": "1.2.2",
+      "name": "python-dotenv",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-linux-reviewed-inputs.md",
+        "scope_id": "reviewed-source-wheel",
+        "sha256": "8980cbff8fb28ffcbbf4b7affbb9ab4968527bc650bfeae7912759d33c42741e"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "1.2.2"
+    },
+    {
+      "lock_reference": "0.0.33",
+      "name": "python-multipart",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-frameworks-utilities-review.md",
+        "scope_id": "python-multipart-0.0.33-exact-linux-source-artifact-review",
+        "sha256": "4779c9fa211bf8e1ecf3eb0baab732c94f3d59b0688e8218fda2278244ac9969"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "0.0.33"
+    },
+    {
+      "lock_reference": "6.0.2",
+      "name": "pyyaml",
+      "origin_policy_status": "reviewed-no-flag",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-numeric-native-review.md",
+        "scope_id": "pyyaml-6.0.2-exact-linux-source-artifact-review",
+        "sha256": "b1fb940962eaf62151fac57c99bf6c283134f541196bb00cb7cf6424f4f5edf1"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "6.0.2"
+    },
+    {
+      "lock_reference": "2026.9.29",
+      "name": "regex",
+      "origin_policy_status": "reviewed-no-flag",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-numeric-native-review.md",
+        "scope_id": "regex-2026.9.29-exact-linux-source-artifact-review",
+        "sha256": "b1fb940962eaf62151fac57c99bf6c283134f541196bb00cb7cf6424f4f5edf1"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "2026.9.29"
+    },
+    {
+      "lock_reference": "2.34.2",
+      "name": "requests",
+      "origin_policy_status": "reviewed-no-flag",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-clients-templates-review.md",
+        "scope_id": "requests-2.34.2-selected-linux-wheel",
+        "sha256": "8a2c60c29dd4f37a00e572c061b160a1d42371a3d9eac78db71db482c0b8e44f"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "2.34.2"
+    },
+    {
+      "lock_reference": "84.2.1",
+      "name": "setuptools",
+      "origin_policy_status": "reviewed-no-flag",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-linux-reviewed-inputs.md",
+        "scope_id": "reviewed-build-source-origin-pending",
+        "sha256": "8980cbff8fb28ffcbbf4b7affbb9ab4968527bc650bfeae7912759d33c42741e"
+      },
+      "role": "builder-direct",
+      "source_review_status": "reviewed",
+      "version": "84.2.1"
+    },
+    {
+      "lock_reference": "2.0.55",
+      "name": "sqlalchemy",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-frameworks-utilities-review.md",
+        "scope_id": "sqlalchemy-2.0.55-exact-linux-source-artifact-review",
+        "sha256": "4779c9fa211bf8e1ecf3eb0baab732c94f3d59b0688e8218fda2278244ac9969"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "2.0.55"
+    },
+    {
+      "lock_reference": "1.6.0",
+      "name": "starlette",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-http-source-review.md",
+        "scope_id": "starlette-1.6.0-selected-linux-wheel",
+        "sha256": "494e4f777b867e904b8c24e35f577c5ad4e0422d6f2b86f9ab725bb4f6716e41"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "1.6.0"
+    },
+    {
+      "lock_reference": "4.70.1",
+      "name": "tqdm",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-frameworks-utilities-review.md",
+        "scope_id": "tqdm-4.70.1-exact-linux-source-artifact-review",
+        "sha256": "4779c9fa211bf8e1ecf3eb0baab732c94f3d59b0688e8218fda2278244ac9969"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "4.70.1"
+    },
+    {
+      "lock_reference": "4.16.0",
+      "name": "typing-extensions",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-python-primitives-review.md",
+        "scope_id": "typing-extensions-4.16.0-selected-linux-wheel",
+        "sha256": "894b707c8f8c85622229ca38f83df0c42a5cd5a106006553f9ea59283020adc7"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "4.16.0"
+    },
+    {
+      "lock_reference": "0.4.4",
+      "name": "typing-inspection",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-python-primitives-review.md",
+        "scope_id": "typing-inspection-0.4.4-selected-linux-wheel",
+        "sha256": "894b707c8f8c85622229ca38f83df0c42a5cd5a106006553f9ea59283020adc7"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "0.4.4"
+    },
+    {
+      "lock_reference": "2026.6",
+      "name": "tzdata",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-frameworks-utilities-review.md",
+        "scope_id": "tzdata-2026.6-exact-linux-source-artifact-review",
+        "sha256": "4779c9fa211bf8e1ecf3eb0baab732c94f3d59b0688e8218fda2278244ac9969"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "2026.6"
+    },
+    {
+      "lock_reference": "2.8.0",
+      "name": "urllib3",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-clients-templates-review.md",
+        "scope_id": "urllib3-2.8.0-selected-linux-wheel",
+        "sha256": "8a2c60c29dd4f37a00e572c061b160a1d42371a3d9eac78db71db482c0b8e44f"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "2.8.0"
+    },
+    {
+      "lock_reference": "0.34.0",
+      "name": "uvicorn",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-http-source-review.md",
+        "scope_id": "uvicorn-0.34.0-selected-linux-wheel",
+        "sha256": "494e4f777b867e904b8c24e35f577c5ad4e0422d6f2b86f9ab725bb4f6716e41"
+      },
+      "role": "runtime-direct",
+      "source_review_status": "reviewed",
+      "version": "0.34.0"
+    },
+    {
+      "lock_reference": "0.23.0",
+      "name": "uvloop",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-http-source-review.md",
+        "scope_id": "uvloop-0.23.0-selected-linux-wheel",
+        "sha256": "494e4f777b867e904b8c24e35f577c5ad4e0422d6f2b86f9ab725bb4f6716e41"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "0.23.0"
+    },
+    {
+      "lock_reference": "1.3.0",
+      "name": "watchfiles",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-http-source-review.md",
+        "scope_id": "watchfiles-1.3.0-selected-linux-wheel",
+        "sha256": "494e4f777b867e904b8c24e35f577c5ad4e0422d6f2b86f9ab725bb4f6716e41"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "1.3.0"
+    },
+    {
+      "lock_reference": "17.4",
+      "name": "websockets",
+      "origin_policy_status": "reviewed-no-flag",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-http-source-review.md",
+        "scope_id": "websockets-17.4-selected-linux-wheel",
+        "sha256": "494e4f777b867e904b8c24e35f577c5ad4e0422d6f2b86f9ab725bb4f6716e41"
+      },
+      "role": "runtime-transitive",
+      "source_review_status": "reviewed",
+      "version": "17.4"
+    },
+    {
+      "lock_reference": "0.48.0",
+      "name": "wheel",
+      "origin_policy_status": "owner-exception-recorded",
+      "review_evidence": {
+        "record": "release-planning/services/input-reviews/core-linux-reviewed-inputs.md",
+        "scope_id": "reviewed-wheel-source-origin-pending",
+        "sha256": "8980cbff8fb28ffcbbf4b7affbb9ab4968527bc650bfeae7912759d33c42741e"
+      },
+      "role": "builder-direct",
+      "source_review_status": "reviewed",
+      "version": "0.48.0"
+    }
+  ],
+  "platform": "linux-x86_64",
+  "profile": "linux-services-core",
+  "python": "3.13.5",
+  "requirements_sha256": "e05b93209931f945ee66686d33ac76173279dcdc8ca3f9c8ade83e55d494cc66",
+  "schema_version": 1,
+  "source_pending_count": 0,
+  "source_reviewed_count": 51,
+  "status": "complete"
+}

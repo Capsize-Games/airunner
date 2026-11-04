@@ -1,0 +1,186 @@
+# Minimal frozen CORE service runtime for the Debian package.
+# It inherits common data, legal files, exclusions and feature coverage from
+# the audited P05 spec, while replacing its full-ML dependency profile.
+
+extends = "services-bundle-spec.toml"
+
+[native_speech]
+required = false
+
+[warn_allowlist]
+# CORE has no full-profile ML importers. Its own TOC/warning gates still apply.
+source_evidence = ""
+
+[bundle]
+name = "airunner-services-core"
+executable = "airunner-core"
+entry_module = "airunner_services.bundle_console_dispatch"
+entry_function = "main"
+entry = "airunner_services.bundle_console_dispatch:main"
+constraints = "package/constraints-linux-core.txt"
+
+# CORE stays SQLite-only and does not include PostgreSQL support.
+[postgresql_runtime]
+mode = "disabled"
+
+[profile]
+services_extra = "core-only"
+aggregates = []
+extra_paths = ["debian/vendor"]
+excludes = ["airunner-tts-vendor", "facehuggershield", "torch", "llama-cpp-python"]
+
+[code]
+hidden_imports = [
+    # Alembic executes these modules from packaged migration data. Keep every
+    # service import in that data in the frozen module graph and TOC gate.
+    "airunner_services.database.base",
+    "airunner_services.database.db",
+    "airunner_services.database.db.column",
+    "airunner_services.database.db.engine",
+    "airunner_services.database.db.table",
+    "airunner_services.database.migration_metadata",
+    "airunner_services.database.models",
+    "airunner_services.database.models.agent_config",
+    "airunner_services.database.models.airunner_settings",
+    "airunner_services.database.models.application_settings",
+    "airunner_services.database.models.canvas_layer",
+    "airunner_services.database.models.chatbot",
+    "airunner_services.database.models.companion_fact",
+    "airunner_services.database.models.companion_job",
+    "airunner_services.database.models.companion_narrative",
+    "airunner_services.database.models.companion_session",
+    "airunner_services.database.models.companion_turn",
+    "airunner_services.database.models.conversation",
+    "airunner_services.database.models.document",
+    "airunner_services.database.models.generator_settings",
+    "airunner_services.database.models.image_to_image_settings",
+    "airunner_services.database.models.language_settings",
+    "airunner_services.database.models.llm_generator_settings",
+    "airunner_services.database.models.llm_tool",
+    "airunner_services.database.models.memory_settings",
+    "airunner_services.database.models.openvoice_settings",
+    "airunner_services.database.models.outpaint_settings",
+    "airunner_services.database.models.path_settings",
+    "airunner_services.database.models.project_state",
+    "airunner_services.database.models.rag_settings",
+    "airunner_services.database.models.sound_settings",
+    "airunner_services.database.models.voice_settings",
+    "airunner_services.database.models.zimfile",
+    "airunner_services.database.secret_store",
+    "airunner_services.llm.companion.migration_ledger",
+
+    "airunner_services.daemon",
+    "airunner_services.bin.airunner_headless",
+    "airunner_services.bin.airunner_service",
+    "airunner_services.bin.generate_migration",
+    "airunner_services.bin.airunner_hf_download",
+    "airunner_services.bin.airunner_civitai_download",
+    "airunner_services.bin.cleanup_llm_models",
+    "airunner_services.bin.docker_build",
+    "airunner_services.bin.docker_wrapper",
+    "airunner_services.bin.generate_cert",
+]
+extension_modules = []
+collect_submodules = []
+collect_data = []
+copy_metadata = ["airunner-services"]
+collect_binaries = []
+runtime_hooks = []
+additional_hooks_dirs = []
+frozen_source_markers = []
+exclude_modules = [
+    "airunner",
+    "PySide6",
+    "shiboken6",
+    "torch",
+    "torchvision",
+    "torchaudio",
+    "llama_cpp",
+    "gguf",
+    "airunner_tts_vendor",
+    "facehuggershield",
+    "transformers",
+    "diffusers",
+    "safetensors",
+    "accelerate",
+    "bitsandbytes",
+    # These optional backend, development, platform and customization modules
+    # are outside the CORE lock. Full ML checks remain in the parent profile;
+    # the CORE startup/install smoke must still catch unguarded base imports.
+    "DeepCache",
+    "OpenSSL",
+    "_pytest",
+    "aiohttp",
+    "brotli",
+    "bs4",
+    "chardet",
+    "colorama",
+    "compel",
+    "ddgs",
+    "fsspec",
+    "h2",
+    "huggingface_hub",
+    "importlib_resources",
+    "inflect",
+    "langchain_core",
+    "langchain_huggingface",
+    "langchain_ollama",
+    "langchain_text_splitters",
+    "langgraph",
+    "lxml",
+    "mobi",
+    "mypy",
+    "networkx",
+    "openmeteo_requests",
+    "openmeteo_sdk",
+    "psycopg",
+    "pycrfsuite",
+    "pydantic_extra_types",
+    "pypdf",
+    "pytest",
+    "pyttsx3",
+    "requests_cache",
+    "retry_requests",
+    "rich",
+    "scrapy",
+    "sitecustomize",
+    "sniffio",
+    "soundfile",
+    "sumy",
+    "threadpoolctl",
+    "tomesd",
+    "tornado",
+    "trafilatura",
+    "twisted",
+]
+
+# Product features that need a separately provisioned model/native runtime do
+# not become package contents merely because they share the services source.
+# Keep GUI and base-core classifications from the inherited matrix, but label
+# runtime-backed capabilities as optional for this Debian CORE profile.
+# `optional:` means separately provisioned; `deferred:` names a feature
+# intentionally omitted from this package profile.
+[r01_coverage]
+ART-01 = "optional:art-runtime"
+ART-03 = "optional:art-runtime"
+ART-07 = "optional:art-runtime"
+ART-08 = "optional:art-runtime"
+ART-09 = "optional:art-runtime"
+ART-10 = "optional:art-runtime"
+ART-11 = "optional:art-runtime"
+ART-13 = "optional:art-runtime"
+CHAT-03 = "optional:llm-runtime"
+CHAT-05 = "optional:llm-runtime"
+CHAT-10 = "optional:llm-runtime"
+VOICE-02 = "optional:stt-runtime"
+VOICE-03 = "optional:tts-runtime"
+VOICE-04 = "deferred:openvoice"
+VOICE-06 = "optional:llm-runtime,optional:stt-runtime,optional:tts-runtime"
+RAG-04 = "optional:llm-runtime"
+RAG-05 = "optional:llm-runtime"
+TOOL-01 = "optional:llm-runtime"
+TOOL-03 = "optional:search-runtime"
+TOOL-04 = "optional:search-runtime"
+TOOL-05 = "optional:search-runtime"
+TOOL-06 = "optional:llm-runtime"
+TOOL-07 = "optional:llm-runtime,optional:weather-runtime"

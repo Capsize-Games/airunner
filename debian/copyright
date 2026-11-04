@@ -13,8 +13,63 @@ License: GPL-3.0-only
 Files: debian/vendor/*
 Copyright: 2022-2025 Capsize LLC
 License: GPL-3.0-only
- Verbatim airunner-common 6.1.7 sources; see debian/vendor/README.source.
+ Verbatim airunner-common 6.1.8 sources; see debian/vendor/README.source.
 
 Files: debian/*
 Copyright: 2026 Capsize LLC
+License: GPL-3.0-only
+
+Files: packaging/licenses/libuv-LICENSE
+Copyright: 2015-present libuv project contributors
+Comment: The original notice is shipped as legal/libuv-LICENSE.
+License: Expat
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to
+ deal in the Software without restriction, including without limitation the
+ rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ sell copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+ .
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ IN THE SOFTWARE.
+
+Files: packaging/licenses/watchfiles-rust-crates/*--*
+Copyright: See the corresponding original per-crate notice file.
+Comment: Original license and copyright texts for the selected watchfiles 1.3.0 wheel and its 26 compiled Cargo crates.
+ The adjacent watchfiles-rust-crates.source.json records each crate version,
+ registry checksum, manifest license expression, original notice path,
+ copied notice SHA-256, and size.
+License: see-included-original-notice
+ The complete original license and copyright text is retained in the
+ corresponding file in packaging/licenses/watchfiles-rust-crates/.
+ The source JSON maps each copied file to the exact crate archive and source
+ path reviewed. The included texts cover the package's MIT license and the
+ crate notices identified as MIT, Apache-2.0, ISC, Unicode-DFS-2016, Unlicense,
+ Apache-2.0 WITH LLVM-exception, and CC0-1.0 in that metadata.
+
+Files: packaging/licenses/watchfiles-rust-crates/*.source.json
+Copyright: 2026 Capsize LLC
+Comment: Source identity and checksum index for the included original notices.
+License: GPL-3.0-only
+
+Files: packaging/licenses/pydantic-core-rust-crates/*--*
+Copyright: See the corresponding original per-crate notice file.
+Comment: Notice superset for the 101 registry crates in pydantic-core 2.50.2 Cargo.lock.
+ The adjacent source JSON records exact source and copied notice checksums.
+ This does not establish the subset compiled into the selected wheel.
+License: see-included-pydantic-core-notice
+ The complete original license and copyright texts are retained in the
+ corresponding files in packaging/licenses/pydantic-core-rust-crates/.
+
+Files: packaging/licenses/pydantic-core-rust-crates/*.source.json
+Copyright: 2026 Capsize LLC
+Comment: Source identity and checksum index for included original notices.
 License: GPL-3.0-only

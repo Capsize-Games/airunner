@@ -16,6 +16,12 @@ from airunner_services.application_exceptions import (
 from airunner_services.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
+from airunner_services.art.managers.stablediffusion.image_request import (
+    MAX_BATCHES_PER_REQUEST,
+    MAX_N_SAMPLES,
+    MIN_N_SAMPLES,
+    clamp_int,
+)
 from airunner_services.art.runtime_enums import (
     HandlerState,
     EngineResponseCode,
@@ -321,8 +327,22 @@ class SDImageGenerationMixin:
         with torch.no_grad(), torch.amp.autocast(
             "cuda", dtype=self.data_type, enabled=True
         ):
+            requested = clamp_int(
+                self.image_request.n_samples,
+                MIN_N_SAMPLES,
+                MAX_N_SAMPLES,
+                1,
+            )
+            # Infinite mode still requires an explicit opt-in flag and is
+            # capped: batches stop after MAX_BATCHES_PER_REQUEST so one
+            # request can never loop forever.
+            budgeted = (
+                MAX_BATCHES_PER_REQUEST
+                if self.image_request.generate_infinite_images
+                else min(requested, MAX_BATCHES_PER_REQUEST)
+            )
             total = 0
-            while total < self.image_request.n_samples:
+            while total < budgeted:
                 if self.do_interrupt_image_generation:
                     raise InterruptedException()
                 results = self._pipe(**data)
@@ -356,8 +376,7 @@ class SDImageGenerationMixin:
                         )
 
                 yield results
-                if not self.image_request.generate_infinite_images:
-                    total += 1
+                total += 1
 
     def _callback(self, _pipe, _i, _t, callback_kwargs):
         """

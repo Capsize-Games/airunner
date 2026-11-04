@@ -14,14 +14,13 @@ needs an owner/counsel decision before release.
 
 ## 1. Scope and method
 
-This inventory covers the Linux v1 services bundle
-(`packaging/linux/services-bundle-spec.toml`), the desktop aggregate
-it freezes (`services[desktop]` plus `airunner[nvidia]`, locked in
-`package/constraints-linux-nvidia-cu129.txt`), vendored and
-attributed code, native sidecar binaries, downloaded models,
-detector/policy data, and redistributed assets. Each row records
-version/revision, license, attribution or source obligations, and
-whether the artifact is bundled or downloaded post-install.
+This historical inventory covers the former Linux v1 desktop aggregate
+(`services[desktop]`) and its pinned distribution set, retained in
+`package/constraints-linux-nvidia-cu129-historical-desktop.txt`. The current
+candidate profile is `services[linux-release]`, which defers OpenVoice/Melo
+and excludes `airunner-tts-vendor`; its active hash lock is pending generation.
+The dated inventory below is not a license clearance or a verified inventory
+of the deferred release candidate.
 
 This inventory makes no blanket permission claim: it does not state
 that commercial use of any listed artifact is permitted, nor that
@@ -55,22 +54,23 @@ the vehicle, not the offer itself.
 
 ## 3. Dependency inventory
 
-Authoritative pin set (release issue P02):
+Historical pin set (previous release issue P02):
 
-- Constraint lock: package/constraints-linux-nvidia-cu129.txt
+- Historical constraint lock:
+  package/constraints-linux-nvidia-cu129-historical-desktop.txt
 - Constraint lock sha256:
-  76e7ddd0af39de0b2131ba3f723299b51c8126dacc172c17af32d097ca844594
-- Constraint pins: 352
-- Profile roots: `./[nvidia]`, `./services[desktop]`,
-  `./native` (installed from the local tree, not pinned in the
-  lock). Verified consumption and regeneration are documented in
-  the lock file header.
+- 97d03b6dedfcbd4b0fa58decfde6dfc15fe712f742a088f5e9d5cfc8446ac7d8
+- Constraint pins: 332 (historical)
+- Historical profile roots: `./services[desktop]`, `./native`
+  (installed from the local tree, not pinned in the
+  lock). Its historical generation and old verification notes are
+  documented in the lock header; they do not validate linux-release.
 
 `services/tests/test_release_p11.py` recomputes the sha256 and
 pin count, so any regeneration without updating this section
 fails the suite.
 
-### 3.1 Selected direct dependencies (verified 2026-10-09)
+### 3.1 Historical direct dependencies (verified 2026-10-09)
 
 Bundled means frozen into the PyInstaller directory bundle;
 downloaded means fetched at install or first use.
@@ -85,12 +85,12 @@ downloaded means fetched at install or first use.
 | bitsandbytes 0.46.1 | MIT | Upstream `TimDettmers/bitsandbytes` license endpoint | Bundled |
 | pyttsx3 2.91 | MPL-2.0 (upstream `nateshmbhat/pyttsx3`); GPL-3.0 compatibility of the combined work needs the Exhibit B / secondary-license check (BLOCKER B-6) | Upstream license endpoint; no PyPI metadata | Bundled |
 | airunner-common ~= 6.1.7 (Capsize) | GPL-3.0-only | Upstream `Capsize-Games/airunner-common` license endpoint; `.deb` embeds wheel 6.1.7 verbatim, sha256 `a7d975b7...c970` (`debian/vendor/README.source`) | Bundled |
-| airunner-tts-vendor ~= 0.1 (Capsize) | MIT declared in its `pyproject.toml`; `melo/` and `openvoice/` carry their own upstream MIT LICENSE files; no top-level LICENSE by design (its README). Exact upstream commit never recorded (BLOCKER B-5) | Upstream repo (GitHub license endpoint: no file detected), `THIRD_PARTY_NOTICES.md` | Bundled |
+| airunner-tts-vendor ~= 0.1 (Capsize) | Historical desktop-profile metadata only; source/license review remains pending | Not included in `services[linux-release]`; exact source is quarantined by `release-inputs.json` | Deferred; not bundled |
 | facehuggershield == 1.0.0 (Capsize) | GPL-3.0 | PyPI metadata (author Capsize LLC) | Bundled |
 
 ### 3.2 Long tail
 
-The remaining pins in the 352-entry lock are inventoried by
+The remaining pins in the 332-entry lock are inventoried by
 name, exact version, and per-file hashes in the lock itself.
 Per-package license confirmation for the full set is PENDING a
 machine-readable license scan of the frozen bundle in release
@@ -222,7 +222,7 @@ corresponding-source offer itself is PENDING (BLOCKER B-8).
 - BLOCKER B-6: pyttsx3 MPL-2.0 secondary-license check.
   Confirm the combined GPL-3.0 work satisfies MPL-2.0 §3.3
   (no "Incompatible With Secondary Licenses" exhibit).
-- BLOCKER B-7: Full-tree license scan. The 352-pin lock
+- BLOCKER B-7: Full-tree license scan. The 332-pin lock
   beyond §3.1 needs a machine-readable scan of the frozen
   bundle in release CI before any clearance statement.
 - BLOCKER B-8: Written corresponding-source offer text needs
@@ -248,7 +248,7 @@ corresponding-source offer itself is PENDING (BLOCKER B-8).
 
 - [ ] Every selected bundle/model artifact has a
   license/provenance row: §3-§8 tabulate the bundle spec
-  payloads, the 352-pin lock, both sidecars, and every
+  payloads, the 332-pin lock, both sidecars, and every
   bootstrap model; gaps stay as explicit PENDING/BLOCKER
   rows, never silent omissions.
 - [ ] Required notices/source-offer material is present;
@@ -282,7 +282,7 @@ In-checkout: `LICENSE`, `NOTICE`, `RELICENSING.md`,
 `debian/vendor/README.source`,
 `packaging/linux/services-bundle-spec.toml`,
 `packaging/linux/stage-sidecars.sh`,
-`package/constraints-linux-nvidia-cu129.txt`,
+`package/constraints-linux-nvidia-cu129-historical-desktop.txt`,
 `services/setup.py`, root `setup.py`,
 `services/src/airunner_services/bootstrap/model_bootstrap_data.py`,
 `services/src/airunner_services/downloads/huggingface_download_worker.py`,

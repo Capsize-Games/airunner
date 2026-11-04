@@ -5,8 +5,9 @@ Proves:
   only a reference.
 - Serialized records have the secret injected back for backward-compatible
   GUI reads.
-- The plaintext database fallback works and logs a warning when no keyring
-  backend is available.
+- The plaintext database fallback requires explicit opt-in
+  (AIRUNNER_ALLOW_PLAINTEXT_SECRETS=1) and raises otherwise when no
+  keyring backend is available.
 - The SQLite database file is chmod 0600 as defense in depth.
 - A migration moves existing plaintext keys into the keyring.
 """
@@ -98,10 +99,22 @@ def test_roundtrip_through_persistence_layer(fake_keyring) -> None:
     assert payload["civit_ai_api_key"] == "roundtrip-key"
 
 
-def test_plaintext_fallback_when_keyring_missing(monkeypatch) -> None:
+def test_plaintext_fallback_requires_explicit_opt_in(monkeypatch) -> None:
     monkeypatch.setattr(secret_store, "_KEYRING_AVAILABLE", False)
+    monkeypatch.delenv("AIRUNNER_ALLOW_PLAINTEXT_SECRETS", raising=False)
+    # Without a keyring and without opt-in, persisting must fail loudly
+    # instead of silently writing plaintext to the database.
+    with pytest.raises(RuntimeError, match="AIRUNNER_ALLOW_PLAINTEXT_SECRETS"):
+        secret_store.store_secret("civit_ai_api_key", "plain-key")
+    # Reading back previously stored plaintext keeps working (with warning).
+    assert secret_store.retrieve_secret("civit_ai_api_key", "plain-key") == "plain-key"
+
+
+def test_plaintext_fallback_with_opt_in(monkeypatch) -> None:
+    monkeypatch.setattr(secret_store, "_KEYRING_AVAILABLE", False)
+    monkeypatch.setenv("AIRUNNER_ALLOW_PLAINTEXT_SECRETS", "1")
     reference = secret_store.store_secret("civit_ai_api_key", "plain-key")
-    # Without a keyring the plaintext stays in the DB (documented fallback).
+    # With explicit opt-in the plaintext stays in the DB.
     assert reference == "plain-key"
     assert secret_store.retrieve_secret("civit_ai_api_key", "plain-key") == "plain-key"
 

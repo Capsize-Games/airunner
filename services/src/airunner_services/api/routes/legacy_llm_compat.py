@@ -40,17 +40,19 @@ def _lifecycle_service(req: Request) -> Optional[Any]:
     return getattr(req.app.state, "lifecycle_service", None)
 
 
-def _loaded_from_lifecycle(lifecycle: Optional[Any]) -> bool:
-    """Return True when the lifecycle service reports a loaded LLM."""
+def _loaded_from_lifecycle(lifecycle: Optional[Any]) -> Optional[bool]:
+    """Return authoritative lifecycle state, or None when it is unavailable."""
     if lifecycle is None:
-        return False
+        return None
     status_getter = getattr(lifecycle, "current_llm_model_status", None)
     if not callable(status_getter):
-        return False
+        return None
     try:
         current = status_getter()
     except Exception:
-        return False
+        return None
+    if current is None:
+        return None
     return current in (ModelStatus.LOADED, ModelStatus.READY)
 
 
@@ -68,39 +70,52 @@ def _loaded_from_balancer(app: Any) -> bool:
     return ModelType.LLM in loaded_models
 
 
-def _loaded_from_worker(app: Any) -> bool:
-    """Return True when the local worker already has an LLM ready."""
+def _loaded_from_worker(app: Any) -> Optional[bool]:
+    """Return authoritative worker state, or None when it is unavailable."""
     worker_manager = getattr(app, "_worker_manager", None)
     if not worker_manager:
-        return False
+        return None
 
     worker = getattr(worker_manager, "_llm_generate_worker", None)
     if worker is None:
         worker = getattr(worker_manager, "llm_generate_worker", None)
     if worker is None:
-        return False
+        return None
 
     status_getter = getattr(worker, "current_model_status", None)
     if callable(status_getter):
         try:
-            if status_getter() in (ModelStatus.LOADED, ModelStatus.READY):
-                return True
+            current = status_getter()
         except Exception:
-            pass
+            current = None
+        if current is not None:
+            # A known lifecycle state supersedes cached pointers and the
+            # balancer's model inventory. Those can lag after explicit unload.
+            return current in (ModelStatus.LOADED, ModelStatus.READY)
 
-    manager = getattr(worker, "_model_manager", None)
-    return bool(
-        manager is not None and getattr(manager, "_chat_model", None) is not None
-    )
+    # A backend object reference alone is not lifecycle state: it may be stale
+    # after unload, or belong to an inactive provider. Leave the result
+    # unknown so a real balancer can supply the compatibility fallback.
+    return None
 
 
 def is_llm_model_loaded(
     app: Any, lifecycle: Optional[Any] = None
 ) -> bool:
-    """Return True when any runtime state reports a loaded local LLM."""
-    return _loaded_from_lifecycle(lifecycle) or _loaded_from_balancer(
-        app
-    ) or _loaded_from_worker(app)
+    """Return whether the local LLM is resident according to its lifecycle.
+
+    Explicit lifecycle or worker states take precedence over model inventory
+    and backend references, which can remain cached after physical unload.
+    """
+    lifecycle_loaded = _loaded_from_lifecycle(lifecycle)
+    if lifecycle_loaded is not None:
+        return lifecycle_loaded
+
+    worker_loaded = _loaded_from_worker(app)
+    if worker_loaded is not None:
+        return worker_loaded
+
+    return _loaded_from_balancer(app)
 
 
 def _validate_model_available() -> Tuple[bool, str]:
@@ -113,13 +128,12 @@ def _validate_model_available() -> Tuple[bool, str]:
 
     if not model_path:
         return False, (
-            "No model path configured. Please run 'airunner' (GUI) first "
-            "to download and select a model."
+            "No model path configured. Configure a local model "
+            "before requesting inference."
         )
     if not os.path.exists(model_path):
         return False, (
-            f"Model not found at '{model_path}'. The model needs to be "
-            "downloaded."
+            "The configured model path was not found."
         )
     return True, model_path
 

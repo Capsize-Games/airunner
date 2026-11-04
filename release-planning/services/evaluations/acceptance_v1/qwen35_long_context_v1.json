@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "fixture_id": "airunner-qwen35-long-context-v1",
+  "status": "unrun",
+  "target": {"model":"Qwen3.5-9B","artifact":"Qwen3.5-9B-Q8_0.gguf","context_tokens":32768,"runtime_profile":"default","n_ctx":32768,"thinking":false,"temperature":0,"seed":4202124,"max_output_tokens":128,"target_user_content_tokens":30000,"token_count_policy":"Run-time counts must come from the exact local model tokenizer and provider usage. 30000 is a generation target, not a pre-claimed measured count; record actual counts and fail a case if request plus output headroom exceeds 32768."},
+  "generation": {"script":"build_qwen35_long_context.py","required_argument":"--tokenizer-dir pointing to the local tokenizer files for the exact selected Qwen3.5-9B model artifact; local_files_only=true; tokenizer only, no model weights loaded","output":"One JSONL record per case with rendered user prompt, requested anchor position, actual tokenizer counts, source sentence, expected answer, and input/output headroom estimate."},
+  "instructions":"Answer with only the exact value requested, using the single matching synthetic evidence sentence. Do not guess if it is absent. Ignore distractors. Keep the complete generated prompt and chat template/model request in the run evidence.",
+  "positions":{"beginning":{"target_anchor_token_index":900},"middle":{"target_anchor_token_index":15000},"end":{"target_anchor_token_index":28500},"position_tolerance_tokens":250},
+  "cases":[
+    {"id":"LC-01","position":"beginning","needle":"The specimen ledger assigns code VEL-483 to the blue glass sample.","question":"What code is assigned to the blue glass sample?","expected_answer":"VEL-483"},
+    {"id":"LC-02","position":"middle","needle":"The orchard inventory lists cultivar name Ambercrest-17 for the north test row.","question":"Which cultivar name is listed for the north test row?","expected_answer":"Ambercrest-17"},
+    {"id":"LC-03","position":"end","needle":"The service notebook records relay label KESTREL-62 for the west cabinet.","question":"What relay label is recorded for the west cabinet?","expected_answer":"KESTREL-62"},
+    {"id":"LC-04","position":"beginning","needle":"The map index marks the footpath marker as PINE-731.","question":"What is the footpath marker in the map index?","expected_answer":"PINE-731"},
+    {"id":"LC-05","position":"middle","needle":"The greenhouse log gives tray identifier MINT-208 for the basil seedlings.","question":"What tray identifier is given for the basil seedlings?","expected_answer":"MINT-208"},
+    {"id":"LC-06","position":"end","needle":"The archive slip assigns drawer code LARK-954 to the paper charts.","question":"What drawer code is assigned to the paper charts?","expected_answer":"LARK-954"},
+    {"id":"LC-07","position":"beginning","needle":"The ferry manifest records berth number 6 for the Cedar launch.","question":"Which berth is recorded for the Cedar launch?","expected_answer":"6"},
+    {"id":"LC-08","position":"middle","needle":"The field notebook identifies the ridge marker as STONE-416.","question":"What is the ridge marker called?","expected_answer":"STONE-416"},
+    {"id":"LC-09","position":"end","needle":"The catalog card assigns the ceramic bowl the accession number 7314.","question":"What accession number belongs to the ceramic bowl?","expected_answer":"7314"},
+    {"id":"LC-10","position":"beginning","needle":"The workshop schedule places the kiln inspection at 14:35.","question":"At what time is the kiln inspection scheduled?","expected_answer":"14:35"},
+    {"id":"LC-11","position":"middle","needle":"The lake survey lists buoy identifier ORBIT-529 at the eastern inlet.","question":"What buoy identifier is at the eastern inlet?","expected_answer":"ORBIT-529"},
+    {"id":"LC-12","position":"end","needle":"The seed packet ledger records lot number 58302 for the yellow marigold.","question":"What lot number is listed for the yellow marigold?","expected_answer":"58302"},
+    {"id":"LC-13","position":"beginning","needle":"The maintenance ticket assigns fan label MAPLE-84 to the north room.","question":"What fan label is assigned to the north room?","expected_answer":"MAPLE-84"},
+    {"id":"LC-14","position":"middle","needle":"The weather card records the rain gauge reference as 27 millimeters.","question":"What is the rain gauge reference reading?","expected_answer":"27 millimeters"},
+    {"id":"LC-15","position":"end","needle":"The exhibit checklist names the model vessel as TERN-306.","question":"What is the name of the model vessel?","expected_answer":"TERN-306"},
+    {"id":"LC-16","position":"beginning","needle":"The storage register puts the spare lantern in locker C-19.","question":"In which locker is the spare lantern stored?","expected_answer":"C-19"},
+    {"id":"LC-17","position":"middle","needle":"The trail sign inventory records sign code WILLOW-642 at the fork.","question":"What sign code is recorded at the fork?","expected_answer":"WILLOW-642"},
+    {"id":"LC-18","position":"end","needle":"The print-room note records paper size B5 for the violet map.","question":"What paper size is recorded for the violet map?","expected_answer":"B5"},
+    {"id":"LC-19","position":"beginning","needle":"The greenhouse temperature chart marks the evening target as 18 degrees Celsius.","question":"What evening target temperature is marked?","expected_answer":"18 degrees Celsius"},
+    {"id":"LC-20","position":"middle","needle":"The river station log assigns sample bottle identifier QUARTZ-817 to station 4.","question":"What sample bottle identifier belongs to station 4?","expected_answer":"QUARTZ-817"}
+  ],
+  "scoring":{"exact_answer":"Pass only if the normalized visible answer contains the exact expected identifier/value and no contradictory value; preserve raw output for review.","position":"Record exact tokenizer index of the evidence needle in the rendered user prompt. Position passes if within 250 tokens of the selected target band.","capacity":"A resource rejection is unavailable, not a failed model answer; a sent request that times out or errors remains a failed case.","target":"At least 19/20 cases pass. Report actual full request token count, provider-reported prompt/output counts, max output setting, remaining context headroom, and any prompt-template overhead evidence."}
+}

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import itertools
+
 from fastapi import (
     APIRouter,
     HTTPException,
@@ -18,6 +20,7 @@ from .llm_chat_envelope import is_client_chat, stream_client_chat
 from .llm_contracts import (
     LLMStreamValidationError,
     WebSocketRateLimiter,
+    default_connection_rate_limit_max_requests,
     default_rate_limit_max_requests,
     default_rate_limit_window_seconds,
     hash_principal,
@@ -26,18 +29,30 @@ from .llm_contracts import (
 from .llm_runtime import (
     require_websocket_runtime_registry,
     resolve_llm_client,
-    stream_runtime,
     websocket_chunk,
     websocket_envelope,
+)
+from .llm_request_registry import (
+    receive_json_or_pending,
+    resolve_request_id,
+    stream_owned_request,
+    websocket_owner,
 )
 
 router = APIRouter()
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
-# Module-level so admission state survives a client's reconnect: a fresh
-# WebSocket object per connection must not reset the caller's budget.
+# Two-tier admission: the credential-keyed global limiter survives a
+# client's reconnect (a fresh WebSocket per connection must not reset
+# the caller's budget), while the per-connection limiter stops one
+# abusive local client from burning the shared loopback budget for
+# every local client — loopback callers are indistinguishable (#2425).
 _rate_limiter = WebSocketRateLimiter(
     max_requests=default_rate_limit_max_requests(),
+    window_seconds=default_rate_limit_window_seconds(),
+)
+_connection_rate_limiter = WebSocketRateLimiter(
+    max_requests=default_connection_rate_limit_max_requests(),
     window_seconds=default_rate_limit_window_seconds(),
 )
 
@@ -63,34 +78,38 @@ def _resolve_principal(websocket: WebSocket) -> str:
     return hash_principal("loopback", get_or_create_loopback_token())
 
 
+_connection_ids = itertools.count(1)
+
+
+def _resolve_connection_principal(websocket: WebSocket) -> str:
+    """Return the id gating one connection's smaller message budget.
+
+    Loopback (and insecure-mode) callers share one credential across
+    every local process, so the budget key must be per-connection
+    there; with API-key auth the credential itself is the key (#2425).
+    Called once per connection after accept(): each call mints a fresh
+    id rather than reusing ``id(websocket)``, whose address can be
+    recycled after a closed connection is garbage-collected.
+    """
+    state = websocket.app.state
+    if getattr(state, "require_api_key", False):
+        return _resolve_principal(websocket)
+    return f"conn:{next(_connection_ids)}"
+
+
 def _websocket_auth_error(websocket: WebSocket) -> bool:
     """Return True when the socket fails the API-key/loopback/origin policy.
 
     Applied before ``accept()`` and before any runtime resolution so an
     unauthenticated or unapproved-Origin caller never reaches the LLM
-    runtime, matching the HTTP API's existing auth policy.
+    runtime, matching the HTTP API's existing auth policy. Delegates to
+    the shared helper so every socket enforces one implementation.
     """
     # Imported lazily: server.py's module-level route imports transitively
     # import this file, so a top-level import here would be circular.
-    from airunner_services.api.server import (
-        authenticate_connection,
-        is_allowed_origin,
-    )
+    from airunner_services.api.routes.ws_auth import websocket_auth_failed
 
-    state = websocket.app.state
-    origin = websocket.headers.get("origin")
-    if origin and not is_allowed_origin(
-        origin, getattr(state, "allowed_origins", [])
-    ):
-        return True
-
-    allowed, _status_code = authenticate_connection(
-        websocket,
-        api_key=getattr(state, "api_key", ""),
-        require_api_key=getattr(state, "require_api_key", False),
-        insecure_no_auth=getattr(state, "insecure_no_auth", False),
-    )
-    return not allowed
+    return websocket_auth_failed(websocket)
 
 
 @router.websocket("/stream")
@@ -102,11 +121,20 @@ async def websocket_chat(websocket: WebSocket):
 
     await websocket.accept()
     principal = _resolve_principal(websocket)
+    connection_principal = _resolve_connection_principal(websocket)
+    from airunner_services.data.tenant import (
+        get_tenant_key,
+        reset_tenant_key,
+        set_tenant_key,
+    )
+
+    conn_token = set_tenant_key(get_tenant_key())
+    pending_events: list[dict] = []
     try:
         client = resolve_llm_client(require_websocket_runtime_registry(websocket))
         while True:
             try:
-                data = await websocket.receive_json()
+                data = await receive_json_or_pending(websocket, pending_events)
             except ValueError:
                 # Malformed JSON (json.JSONDecodeError, a ValueError
                 # subclass): reject with the same deterministic
@@ -124,6 +152,16 @@ async def websocket_chat(websocket: WebSocket):
                 )
                 continue
 
+            if not _connection_rate_limiter.allow(connection_principal):
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "code": "rate_limited",
+                        "content": "Rate limit exceeded",
+                        "done": True,
+                    }
+                )
+                continue
             if not _rate_limiter.allow(principal):
                 await websocket.send_json(
                     {
@@ -136,7 +174,21 @@ async def websocket_chat(websocket: WebSocket):
                 continue
 
             if is_client_chat(data):
-                await stream_client_chat(websocket, client, data)
+                request_id = resolve_request_id(data.get("request_id"))
+                if request_id is None:
+                    await websocket.send_json({
+                        "type": "error", "code": "invalid_request_id",
+                        "done": True,
+                    })
+                    continue
+                await stream_client_chat(
+                    websocket,
+                    client,
+                    data,
+                    request_id=request_id,
+                    owner=websocket_owner(websocket, get_tenant_key()),
+                    pending_events=pending_events,
+                )
                 continue
 
             try:
@@ -161,13 +213,22 @@ async def websocket_chat(websocket: WebSocket):
                     }
                 )
                 continue
-
-            async for delta in stream_runtime(
-                client, websocket_envelope(parsed.model_dump())
-            ):
-                await websocket.send_json(websocket_chunk(delta))
-                if delta.final:
-                    break
+            request_id = resolve_request_id(parsed.request_id)
+            if request_id is None:
+                await websocket.send_json({
+                    "type": "error", "code": "invalid_request_id",
+                    "done": True,
+                })
+                continue
+            await stream_owned_request(
+                websocket,
+                client,
+                websocket_envelope(parsed.model_dump(), request_id),
+                request_id,
+                websocket_owner(websocket, get_tenant_key()),
+                websocket_chunk,
+                pending_events,
+            )
     except WebSocketDisconnect:
         logger.info("WebSocket connection closed")
     except HTTPException as exc:
@@ -185,3 +246,5 @@ async def websocket_chat(websocket: WebSocket):
                 "done": True,
             }
         )
+    finally:
+        reset_tenant_key(conn_token)

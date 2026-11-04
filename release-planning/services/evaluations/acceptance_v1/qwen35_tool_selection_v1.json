@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "fixture_id": "airunner-qwen35-tool-selection-v1",
+  "status": "unrun",
+  "target": {"model":"Qwen3.5-9B","artifact":"Qwen3.5-9B-Q8_0.gguf","context_tokens":32768,"thinking":false,"temperature":0,"seed":4202123,"max_output_tokens":256},
+  "route": "authenticated POST /v1/chat/completions (OpenAI-compatible); caller tools are described in the prompt and parsed from the model response, then returned unexecuted",
+  "execution_policy": "Never execute these mock tools. Score only selected function name and arguments. Keep all data synthetic; no network or user-data access.",
+  "tools": [
+    {"type":"function","function":{"name":"lookup_train","description":"Read the supplied fictional train timetable by route and service date. No network access.","parameters":{"type":"object","properties":{"route":{"type":"string"},"service_date":{"type":"string","description":"ISO date"}},"required":["route","service_date"],"additionalProperties":false}}},
+    {"type":"function","function":{"name":"search_catalog","description":"Search a supplied fictional library catalog by title or subject. Read-only; returns at most five records.","parameters":{"type":"object","properties":{"query":{"type":"string"},"limit":{"type":"integer","minimum":1,"maximum":5}},"required":["query"],"additionalProperties":false}}},
+    {"type":"function","function":{"name":"lookup_stock","description":"Read fictional stock counts for one named item from the supplied test inventory.","parameters":{"type":"object","properties":{"item":{"type":"string"}},"required":["item"],"additionalProperties":false}}},
+    {"type":"function","function":{"name":"convert_units","description":"Convert a stated length or mass using exact metric/imperial conversion factors; no external data.","parameters":{"type":"object","properties":{"value":{"type":"number"},"from_unit":{"type":"string","enum":["km","mi","m","ft","kg","lb"]},"to_unit":{"type":"string","enum":["km","mi","m","ft","kg","lb"]}},"required":["value","from_unit","to_unit"],"additionalProperties":false}}},
+    {"type":"function","function":{"name":"calculate","description":"Evaluate a basic arithmetic expression containing only numbers and + - * / parentheses; no code execution.","parameters":{"type":"object","properties":{"expression":{"type":"string"}},"required":["expression"],"additionalProperties":false}}}
+  ],
+  "cases": [
+    {"id":"TOOL-01","prompt":"For the fictional timetable, find the next service on route R7 for 2031-04-12.","expected_tool":"lookup_train","expected_arguments":{"route":"R7","service_date":"2031-04-12"}},
+    {"id":"TOOL-02","prompt":"Find up to three catalog records about lichen illustrations.","expected_tool":"search_catalog","expected_arguments":{"query":"lichen illustrations","limit":3}},
+    {"id":"TOOL-03","prompt":"Look up the stock count for item blue binder clips in the test inventory.","expected_tool":"lookup_stock","expected_arguments":{"item":"blue binder clips"}},
+    {"id":"TOOL-04","prompt":"Convert 12.5 miles to kilometers.","expected_tool":"convert_units","expected_arguments":{"value":12.5,"from_unit":"mi","to_unit":"km"}},
+    {"id":"TOOL-05","prompt":"Calculate (18 + 6) * 7.","expected_tool":"calculate","expected_arguments":{"expression":"(18 + 6) * 7"}},
+    {"id":"TOOL-06","prompt":"According to the supplied table in this message, route R2 has 4 stops and route R3 has 6. How many stops total? Do not look anything up.","expected_tool":null,"expected_arguments":null},
+    {"id":"TOOL-07","prompt":"What is 9 times 8? Answer directly; no tool is needed.","expected_tool":null,"expected_arguments":null},
+    {"id":"TOOL-08","prompt":"In this message, the test shelf holds 11 notebooks. How many are on the shelf?","expected_tool":null,"expected_arguments":null},
+    {"id":"TOOL-09","prompt":"Explain in one sentence what a timetable is. No lookup is needed.","expected_tool":null,"expected_arguments":null},
+    {"id":"TOOL-10","prompt":"Convert 2 kilometers to meters mentally; use no tool.","expected_tool":null,"expected_arguments":null},
+    {"id":"TOOL-11","prompt":"Look up route C4 on the fictional timetable for 2031-05-02.","expected_tool":"lookup_train","expected_arguments":{"route":"C4","service_date":"2031-05-02"}},
+    {"id":"TOOL-12","prompt":"Search the fictional catalog for books about basalt gardens, returning at most five.","expected_tool":"search_catalog","expected_arguments":{"query":"basalt gardens","limit":5}},
+    {"id":"TOOL-13","prompt":"Check the supplied test inventory for item copper wire spool.","expected_tool":"lookup_stock","expected_arguments":{"item":"copper wire spool"}},
+    {"id":"TOOL-14","prompt":"Convert 3.2 kilograms to pounds.","expected_tool":"convert_units","expected_arguments":{"value":3.2,"from_unit":"kg","to_unit":"lb"}},
+    {"id":"TOOL-15","prompt":"Use basic arithmetic to evaluate 144 / (9 * 2).","expected_tool":"calculate","expected_arguments":{"expression":"144 / (9 * 2)"}},
+    {"id":"TOOL-16","prompt":"The supplied note says the archive room is on level 2. Which level is it on?","expected_tool":null,"expected_arguments":null},
+    {"id":"TOOL-17","prompt":"What is the capital letter after A in the English alphabet? Answer without a tool.","expected_tool":null,"expected_arguments":null},
+    {"id":"TOOL-18","prompt":"Please define the word 'shelter' briefly. Do not search a catalog.","expected_tool":null,"expected_arguments":null},
+    {"id":"TOOL-19","prompt":"There are 17 cards in a box and 5 are removed. How many remain? Do not use a calculator.","expected_tool":null,"expected_arguments":null},
+    {"id":"TOOL-20","prompt":"Look up route N9 in the fictional timetable for 2031-06-18.","expected_tool":"lookup_train","expected_arguments":{"route":"N9","service_date":"2031-06-18"}}
+  ],
+  "scoring": {"selection":"A case passes if the selected tool exactly matches expected_tool, including no tool when expected_tool is null.","arguments":"For selected tools, parse returned arguments as JSON and compare required values to expected_arguments. Ignore only harmless whitespace and numeric JSON representation differences; do not accept missing or extra semantic arguments.","tool_calls":"Count duplicate, unsupported, malformed, or multiple calls when one is expected as a failure. No model output triggers tool execution.","target":"At least 19/20 cases pass; retain all failures and actual usage counts in the denominator."}
+}

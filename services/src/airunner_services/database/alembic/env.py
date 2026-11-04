@@ -6,7 +6,7 @@ from pathlib import Path
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import pool
 
 logger = logging.getLogger("alembic.env")
 
@@ -36,6 +36,16 @@ def _bootstrap_checkout_imports() -> None:
 
 
 _bootstrap_checkout_imports()
+
+
+def _migration_context_options() -> dict[str, object]:
+    """Load shared metadata after checkout import paths are available."""
+    from airunner_services.database.migration_metadata import (
+        migration_context_options,
+    )
+
+    return migration_context_options()
+
 
 def _default_db_url() -> str:
     """Return the default database URL for Alembic commands."""
@@ -69,9 +79,8 @@ try:
 except Exception:
     pass
 
-# We don't use autogenerate in this repo's runtime flow; avoid heavy imports.
-target_metadata = None
-# ... etc.
+# Autogeneration uses the same complete service model registry for online
+# and offline contexts, with type and server-default drift comparison enabled.
 
 
 def run_migrations_offline():
@@ -86,11 +95,9 @@ def run_migrations_offline():
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
-        target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        compare_type=False,
-        compare_server_default=False,
+        **_migration_context_options(),
     )
 
     with context.begin_transaction():
@@ -102,18 +109,19 @@ def run_migrations_online():
     In this scenario we need to create an Engine
     and associate a connection with the context.
     """
-    connectable = engine_from_config(
+    from airunner_services.database.db.engine import create_configured_engine_from_config
+
+    connectable = create_configured_engine_from_config(
         config.get_section(config.config_ini_section),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args=dict(config.attributes.get("connect_args") or {}),
     )
 
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
-            target_metadata=target_metadata,
-            compare_type=False,
-            compare_server_default=False,
+            **_migration_context_options(),
         )
 
         with context.begin_transaction():

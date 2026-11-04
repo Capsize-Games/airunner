@@ -73,6 +73,50 @@ def _remove_cache_dir(path: Path) -> None:
     shutil.rmtree(path, ignore_errors=True)
 
 
+#: Orphan temp dirs older than this are swept on startup (see
+#: ``sweep_stale_tmp_dirs``). A crashed save leaves ``tmp*`` dirs behind.
+STALE_TMP_MAX_AGE_SECONDS = 24 * 3600
+
+
+def sweep_stale_tmp_dirs(
+    cache_root: Optional[Path] = None,
+    max_age_seconds: float = STALE_TMP_MAX_AGE_SECONDS,
+) -> int:
+    """Remove stale ``tmp*`` dirs under the quantized cache root.
+
+    Only directories whose names start with ``tmp`` and whose mtime is
+    older than ``max_age_seconds`` are removed, so an in-progress save
+    from this process is never touched.
+
+    Returns:
+        Number of directories removed.
+    """
+    import time  # noqa: PLC0415
+
+    root = cache_root or _quantized_cache_root()
+    if not root.is_dir():
+        return 0
+    cutoff = time.time() - max_age_seconds
+    removed = 0
+    for entry in root.iterdir():
+        try:
+            if not entry.is_dir() or not entry.name.startswith("tmp"):
+                continue
+            if entry.stat().st_mtime > cutoff:
+                continue
+        except OSError:
+            continue
+        _remove_cache_dir(entry)
+        removed += 1
+    if removed:
+        logger.info(
+            "Swept %d stale quantized-cache tmp dir(s) under %s",
+            removed,
+            root,
+        )
+    return removed
+
+
 def _resolve_transformers_weights_override(model_path: str) -> Optional[str]:
     """Prefer the sharded index when a merged safetensors file is nonstandard."""
     if not os.path.isdir(model_path):
@@ -116,6 +160,7 @@ class ZImageTextEncoderLoaderHelper:
     def load_model(self, model_path: str):
         """Load the text encoder model and tokenizer."""
         try:
+            sweep_stale_tmp_dirs()
             load_path = model_path
             cache_path = self.quantized_cache_path(model_path)
             use_quantized_cache = self.should_use_quantized_cache()
@@ -175,7 +220,9 @@ class ZImageTextEncoderLoaderHelper:
             return
         cache_root = cache_path.parent
         cache_root.mkdir(parents=True, exist_ok=True)
-        temp_dir = Path(tempfile.mkdtemp(dir=cache_root))
+        temp_dir = Path(
+            tempfile.mkdtemp(prefix="tmp-quant-", dir=cache_root)
+        )
         try:
             self._owner.model.save_pretrained(temp_dir)
             _remove_cache_dir(cache_path)

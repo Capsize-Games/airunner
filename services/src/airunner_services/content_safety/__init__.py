@@ -16,6 +16,15 @@ surfaced.
 
 from __future__ import annotations
 
+from .config import (
+    CONTENT_POLICY_DISABLED,
+    CONTENT_POLICY_ENFORCE,
+    CONTENT_POLICY_MODE_ENV_VAR,
+    ContentPolicyConfigurationError,
+    ContentPolicyMode,
+    content_policy_is_enforced,
+    resolve_content_policy_mode,
+)
 from .matcher import (
     NORMALIZATION_VERSION,
     REASON_ALLOWED,
@@ -54,7 +63,12 @@ from .semantic import (
 )
 
 __all__ = [
+    "CONTENT_POLICY_DISABLED",
+    "CONTENT_POLICY_ENFORCE",
+    "CONTENT_POLICY_MODE_ENV_VAR",
+    "ContentPolicyConfigurationError",
     "ContentSafetyResult",
+    "ContentPolicyMode",
     "NORMALIZATION_VERSION",
     "POLICY_DATA_ENV_VAR",
     "POLICY_DATA_FILENAME",
@@ -70,6 +84,7 @@ __all__ = [
     "SEMANTIC_TIMEOUT_SECONDS",
     "SemanticVerdict",
     "build_judge_instruction",
+    "content_policy_is_enforced",
     "candidate_hashes",
     "check_prompt_fields",
     "check_text",
@@ -82,6 +97,7 @@ __all__ = [
     "normalize_tokens",
     "parse_judge_response",
     "reset_cache",
+    "resolve_content_policy_mode",
     "semantic_enabled",
     "set_judge",
 ]

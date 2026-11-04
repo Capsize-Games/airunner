@@ -84,8 +84,8 @@ TTS has these components in `src/airunner`:
 
 ### Steps
 1. **Move vendor code**: `vendor/melo/` + `vendor/openvoice/` → `services/src/airunner_services/vendor/`
-2. **Move managers**: `components/tts/managers/` → `services/src/airunner_services/tts/managers/`
-3. **Move tests**: `components/tts/tests/` → `services/tests/tts/`
+2. **Move managers**: `components/tts/managers/` → `services/src/airunner_services/tts/managers/` (never created — TTS inference now lives in `services/src/airunner_services/{api/services,api/routes,runtimes,workers}`)
+3. **Move tests**: `components/tts/tests/` → `services/tests/tts/` (never created — see above)
 4. **Keep vocalizer**: `components/tts/workers/tts_vocalizer_worker.py` stays (playback only)
 5. **Update imports**: All vendor/manager references updated to services paths
 
@@ -125,6 +125,6 @@ flowchart LR
 | `src/airunner/services/` | Delete (redundant) | ~3 |
 | `src/airunner/vendor/melo/` | `services/src/airunner_services/vendor/melo/` | ~40 |
 | `src/airunner/vendor/openvoice/` | `services/src/airunner_services/vendor/openvoice/` | ~15 |
-| `src/airunner/components/tts/managers/` | `services/src/airunner_services/tts/managers/` | ~2 |
-| `src/airunner/components/tts/tests/` | `services/tests/tts/` | ~9 |
+| `src/airunner/components/tts/managers/` | `services/src/airunner_services/tts/managers/` (never created) | ~2 |
+| `src/airunner/components/tts/tests/` | `services/tests/tts/` (never created) | ~9 |
 | `src/airunner/ipc/messages.py` | Update import only | 0 |

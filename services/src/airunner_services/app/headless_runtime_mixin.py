@@ -7,7 +7,8 @@ import signal
 import subprocess
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Optional
+from types import FrameType
+from typing import TYPE_CHECKING, Callable, Dict, Optional
 
 from airunner_services.knowledge import get_knowledge_base
 from airunner_services.database.models.application_settings import (
@@ -67,10 +68,43 @@ class HeadlessRuntimeMixin:
     def _init_headless_mode(self) -> None:
         """Initialize headless mode."""
         self.logger.info("Running in headless mode (no GUI)")
-        signal.signal(signal.SIGINT, self.signal_handler)
-        signal.signal(signal.SIGTERM, self.signal_handler)
+        self._install_signal_handlers()
         self._init_headless_services()
         self.is_running = True
+
+    def _install_signal_handlers(self) -> None:
+        """Install cleanup handlers without dropping a prior owner.
+
+        An embedder (the daemon) may have installed handlers
+        before constructing this app; chain that handler ahead
+        of this app's cleanup handler instead of overwriting it.
+        """
+        cleanup = self.signal_handler
+        for signum in (signal.SIGINT, signal.SIGTERM):
+            previous = signal.getsignal(signum)
+            if callable(previous) and previous != cleanup:
+                chained = self._chained_handler(previous, cleanup)
+                signal.signal(signum, chained)
+            else:
+                signal.signal(signum, cleanup)
+
+    @staticmethod
+    def _chained_handler(
+        previous: Callable[[int, Optional[FrameType]], object],
+        cleanup: Callable[[int, Optional[FrameType]], object],
+    ) -> Callable[[int, Optional[FrameType]], None]:
+        """Return a handler running the prior owner, then cleanup."""
+
+        def _handler(
+            signum: int, frame: Optional[FrameType]
+        ) -> None:
+            try:
+                previous(signum, frame)
+            except Exception:
+                pass
+            cleanup(signum, frame)
+
+        return _handler
 
     def _kill_via_lsof(self, port: int) -> bool:
         """Try to kill a process using lsof."""

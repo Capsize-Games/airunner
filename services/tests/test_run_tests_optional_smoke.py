@@ -85,4 +85,3 @@ def test_dynamic_conftest_collection_hook_falls_back_to_pytest(
         encoding="utf-8",
     )
     assert run_tests._has_pytest_marker(tmp_path, "stt_runtime_smoke")
-

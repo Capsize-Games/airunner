@@ -14,6 +14,7 @@ from airunner_common.contract_enums import AvailableLanguage
 from airunner_common.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application.get_logger import get_logger
 from airunner_services.runtimes.openvoice_exceptions import FileMissing
+from airunner_services.runtimes.openvoice_exceptions import OpenVoiceError
 from airunner_tts_vendor.melo.api import TTS
 from airunner_tts_vendor.openvoice import se_extractor
 from airunner_tts_vendor.openvoice.api import (
@@ -23,6 +24,11 @@ from airunner_tts_vendor.openvoice.api import (
 from airunner_tts_vendor.openvoice.mel_processing import spectrogram_torch
 
 logger = get_logger("AI Runner", AIRUNNER_LOG_LEVEL)
+
+#: Longest reference-speaker clip decoded in one load. Reference audio
+#: is a few seconds by construction; anything longer is rejected
+#: instead of being decoded fully into memory.
+MAX_REFERENCE_SPEAKER_SECONDS = 60.0
 
 _DEFAULT_REFERENCE_SPEAKER = (
     Path(__file__).resolve().parents[1]
@@ -63,9 +69,15 @@ class StreamingToneColorConverter(ToneColorConverter):
         hps = self.hps
         try:
             audio, sample_rate = librosa.load(
-                audio_src_path, sr=hps.data.sampling_rate
+                audio_src_path,
+                sr=hps.data.sampling_rate,
+                mono=True,
+                duration=MAX_REFERENCE_SPEAKER_SECONDS,
             )
-        except ValueError as error:
+        except (ValueError, RuntimeError, FileNotFoundError) as error:
+            self.logger.error("Error: %s", error)
+            return None
+        except Exception as error:
             self.logger.error("Error: %s", error)
             return None
 
@@ -133,7 +145,19 @@ def build_tone_color_converter(
     checkpoint_converter_path: str,
     device: Optional[str] = None,
 ) -> StreamingToneColorConverter:
-    """Create one tone-color converter and load its checkpoint."""
+    """Create one tone-color converter and load its checkpoint.
+
+    Raises:
+        OpenVoiceError: When the config or checkpoint file is missing,
+            instead of leaking a bare FileNotFoundError.
+    """
+    config_path = os.path.join(checkpoint_converter_path, "config.json")
+    checkpoint_path = os.path.join(checkpoint_converter_path, "checkpoint.pth")
+    for required in (config_path, checkpoint_path):
+        if not os.path.isfile(required):
+            raise OpenVoiceError(
+                f"Tone color converter file is missing: {required}"
+            )
     resolved_device = device or default_openvoice_device()
     converter = StreamingToneColorConverter(
         os.path.join(checkpoint_converter_path, "config.json"),
@@ -182,24 +206,3 @@ def warm_melo_tts(tts_model: TTS, language: AvailableLanguage) -> None:
     _ = language_module.bert_tokenizer
     _ = language_module.bert_model
     tts_model.get_text_for_tts_infer("Warm up.", tts_model.hps)
-
-
-def precompute_reference_speaker(
-    reference_speaker_path: str,
-    tts_model_path: str,
-) -> bool:
-    """Best-effort precompute of one reference speaker embedding."""
-    speaker_path = expand_reference_speaker_path(reference_speaker_path)
-    if speaker_path is None:
-        return False
-
-    checkpoint_path = os.path.join(
-        tts_model_path,
-        "openvoice/checkpoints_v2/converter",
-    )
-    converter = build_tone_color_converter(checkpoint_path)
-    target_se, _audio_name = ensure_reference_speaker_embedding(
-        speaker_path,
-        converter,
-    )
-    return target_se is not None

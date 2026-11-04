@@ -14,6 +14,7 @@ from .domain_resource_store import (
     get_layer_record,
     get_singleton,
     query_records,
+    records_to_delete,
     update_record,
 )
 
@@ -121,6 +122,10 @@ def build_domain_router(domain: str) -> APIRouter:
         resource: str,
         record_id: int,
     ) -> Dict[str, Any]:
+        if domain == "library" and resource == "Document":
+            from .llm_rag_routes import delete_documents_via_worker
+
+            return await delete_documents_via_worker([record_id])
         return delete_record(domain, resource, record_id)
 
     @router.post("/resources/{resource}/delete")
@@ -128,6 +133,11 @@ def build_domain_router(domain: str) -> APIRouter:
         resource: str,
         body: DeleteRequest,
     ) -> Dict[str, Any]:
+        if domain == "library" and resource == "Document":
+            from .llm_rag_routes import delete_documents_via_worker
+
+            document_ids = records_to_delete(domain, resource, body.filters)
+            return await delete_documents_via_worker(document_ids)
         return delete_records(domain, resource, body)
 
     return router

@@ -99,16 +99,11 @@ def test_zimage_turbo_is_the_default_art_model() -> None:
 def test_removed_modules_stay_deleted() -> None:
     """The stripped SDXL/ControlNet/LoRA modules do not resolve."""
     for name in _REMOVED_MODULES:
-        assert importlib.util.find_spec(name) is None, name
-
-
-def test_desktop_version_enum_has_no_sdxl_members() -> None:
-    """StableDiffusionVersion carries no SDXL name or value."""
-    from airunner.enums import StableDiffusionVersion
-
-    for member in StableDiffusionVersion:
-        assert _SDXL_PATTERN.search(member.name) is None, member.name
-        assert _SDXL_PATTERN.search(member.value) is None, member.value
+        try:
+            spec = importlib.util.find_spec(name)
+        except ModuleNotFoundError:
+            continue  # parent package is gone entirely: also deleted
+        assert spec is None, name
 
 
 def _scanned_files() -> list[Path]:

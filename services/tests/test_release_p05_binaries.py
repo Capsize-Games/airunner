@@ -1,9 +1,9 @@
-"""P05 native-binary and module-hook tests.
+"""P05 native-binary and PyInstaller-hook tests.
 
 Proves the spec's collect_binaries and additional_hooks_dirs keys
 reach the freeze command, a missing hooks dir fails the recipe, the
-hook files collect the path-loaded .so payloads plus triton-jit
-sources, and the inspector fails bundles lacking them. CPU-only.
+llama_cpp hook collects its versioned path-loaded libraries, and the
+inspector fails bundles lacking required native libraries. CPU-only.
 """
 
 from __future__ import annotations
@@ -29,8 +29,11 @@ from test_release_p05_support import (
 
 __all__ = ["assemble_mod", "inspect_mod", "spec"]
 
-NATIVE_PACKAGES = frozenset({"mslk", "llama_cpp", "torchcodec"})
-FP8_MARKER = "_internal/mslk/quantize/triton/fp8_quantize.py"
+NATIVE_PACKAGES = frozenset({"llama_cpp", "torchcodec"})
+FROZEN_SOURCE_MARKERS = (
+    "_internal/transformers/models/__init__.py",
+    "_internal/transformers/models/auto/__init__.py",
+)
 
 _recorded: list[tuple[str, Any]] = []
 
@@ -103,11 +106,6 @@ def test_spec_collect_binaries_pins_native_packages(
     )
 
 
-def test_spec_declares_fp8_source_marker(spec: dict[str, Any]) -> None:
-    """The triton-jit source marker is a frozen precondition."""
-    assert FP8_MARKER in spec["code"].get("frozen_source_markers", [])
-
-
 def test_hooks_dirs_exist_on_disk(spec: dict[str, Any]) -> None:
     """Every declared hooks dir resolves to a checkout directory."""
     entries = spec["code"].get("additional_hooks_dirs", [])
@@ -116,26 +114,10 @@ def test_hooks_dirs_exist_on_disk(spec: dict[str, Any]) -> None:
         assert (REPO_ROOT / str(entry)).is_dir(), entry
 
 
-def test_hook_files_exist(spec: dict[str, Any]) -> None:
-    """The mslk and llama_cpp hooks ship in the hooks dir."""
+def test_llama_hook_file_exists(spec: dict[str, Any]) -> None:
+    """The llama_cpp hook ships in the declared hooks dir."""
     hooks = _hooks_dir(spec)
-    assert (hooks / "hook-mslk.py").is_file()
     assert (hooks / "hook-llama_cpp.py").is_file()
-
-
-def test_hook_mslk_collects_native_library(
-    spec: dict[str, Any],
-) -> None:
-    """hook-mslk collects the bare mslk.so the default misses."""
-    _exec_hook(_hooks_dir(spec) / "hook-mslk.py")
-    assert ("mslk", ["*.so"]) in _recorded
-
-
-def test_hook_mslk_sets_fp8_py_mode(spec: dict[str, Any]) -> None:
-    """hook-mslk keeps the triton-jit module as importable source."""
-    namespace = _exec_hook(_hooks_dir(spec) / "hook-mslk.py")
-    modes = namespace.get("module_collection_mode", {})
-    assert modes.get("mslk.quantize.triton.fp8_quantize") == "py"
 
 
 def test_hook_llama_collects_versioned_libs(
@@ -199,35 +181,42 @@ def test_dry_run_emits_binary_and_hook_flags(tmp_path: Path) -> None:
     assert "pyi-hooks" in stdout
 
 
+@pytest.mark.parametrize("package", sorted(NATIVE_PACKAGES))
 def test_inspect_requires_collected_binaries(
     tmp_path: Path,
     inspect_mod: types.ModuleType,
     assemble_mod: types.ModuleType,
     spec: dict[str, Any],
+    package: str,
 ) -> None:
     """A package dir without any .so fails with a clean manifest."""
     bundle = make_bundle(tmp_path, spec, assemble_mod)
-    for path in (bundle / "_internal" / "mslk").glob("*.so"):
+    for path in (bundle / "_internal" / package).glob("*.so"):
         path.unlink()
     assemble_mod.write_manifest(bundle, spec, "testrev")
     result = inspect_mod.inspect_bundle(bundle, spec)
     assert any(
-        "collected binaries for mslk" in problem
+        f"collected binaries for {package}" in problem
         for problem in result.problems
     )
 
 
-def test_inspect_requires_fp8_source(
+@pytest.mark.parametrize("marker_path", FROZEN_SOURCE_MARKERS)
+def test_inspect_requires_transformers_source_marker(
     tmp_path: Path,
     inspect_mod: types.ModuleType,
     assemble_mod: types.ModuleType,
     spec: dict[str, Any],
+    marker_path: str,
 ) -> None:
-    """A dropped triton-jit source fails with a clean manifest."""
+    """A missing Transformers source marker fails inspection."""
     bundle = make_bundle(tmp_path, spec, assemble_mod)
-    marker = bundle / FP8_MARKER
+    marker = bundle / marker_path
     assert marker.is_file()
     marker.unlink()
     assemble_mod.write_manifest(bundle, spec, "testrev")
     result = inspect_mod.inspect_bundle(bundle, spec)
-    assert any("import-scan source" in p for p in result.problems)
+    assert any(
+        f"import-scan source {marker_path}" in problem
+        for problem in result.problems
+    )

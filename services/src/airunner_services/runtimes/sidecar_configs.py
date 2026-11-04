@@ -27,6 +27,12 @@ PROC = Path("/proc")
 def live_config_paths() -> Optional[set[str]]:
     """Return config paths named on a running process's command line.
 
+    Platform limit: liveness is determined by scanning ``/proc``, so
+    this only works on Linux. On Windows and macOS (and in containers
+    without a readable ``/proc``) this returns None and :func:`sweep`
+    deliberately deletes nothing, which means stale configs
+    re-accumulate there until they are removed by hand.
+
     Returns:
         Every ``.yaml`` path appearing in any process's argv, or None
         when ``/proc`` cannot be read. None means "unknown", and a

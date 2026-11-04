@@ -33,6 +33,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from airunner_services.ipc.messages import EnvelopeStatus
 from airunner_services.runtimes.contracts import ChatMessage
+from airunner_services.runtimes.embedding_contracts import (
+    ERROR_EMBEDDING_SPACE_MISMATCH,
+    ServiceError as CompanionError,
+    ServiceErrorCode as CompanionErrorCode,
+)
 
 # ---------------------------------------------------------------------------
 # Stable IDs
@@ -54,34 +59,9 @@ CallChainId = NewType("CallChainId", str)
 # ---------------------------------------------------------------------------
 # Errors
 # ---------------------------------------------------------------------------
-class CompanionErrorCode(BaseModel):
-    """A closed, deterministic error code — never a raw exception message.
-
-    Mirrors the release-wide pattern already established for the LLM
-    WebSocket (release S02: ``rate_limited``, ``invalid_request``, ...):
-    callers key behavior off ``code``, and ``detail`` is safe to show a
-    user but must never embed prompt/turn content.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    code: str
-    detail: str = ""
-    retryable: bool = False
-
-
-class CompanionError(Exception):
-    """Raised by any companion component for a caller-visible failure."""
-
-    def __init__(self, error: CompanionErrorCode) -> None:
-        self.error = error
-        super().__init__(error.code)
-
-
 # Known, stable codes. Additive only — do not repurpose an existing code
 # for a new meaning once B02+ ships against it.
 ERROR_UNKNOWN_CHATBOT = "unknown_chatbot"
-ERROR_EMBEDDING_SPACE_MISMATCH = "embedding_space_mismatch"
 ERROR_SESSION_EXPIRED = "session_expired"
 ERROR_CONTEXT_BUDGET_EXCEEDED = "context_budget_exceeded"
 ERROR_TOOL_DISPATCH_FAILED = "tool_dispatch_failed"

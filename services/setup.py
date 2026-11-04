@@ -15,7 +15,7 @@ from pathlib import Path
 
 from setuptools import find_packages, setup
 
-_RELEASE_VERSION = "6.1.4"
+_RELEASE_VERSION = "6.1.9"
 VERSION = os.environ.get("AIRUNNER_BUILD_VERSION", _RELEASE_VERSION)
 
 # The project is GPL-3.0-only (issue #2058): the repo-root LICENSE file, every
@@ -25,18 +25,8 @@ LICENSE_CLASSIFIERS = [
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
 ]
 
-# Supply-chain hardening (issue #2036). This was a hash-pinned GitHub archive
-# URL, but PyPI rejects any distribution carrying a PEP 440 direct reference
-# ("400 Can't have direct dependency"), so no such package can ever be
-# published. facehuggershield 1.0.0 is on PyPI, so depend on it by version.
-#
-# This does not weaken the original intent. That pin existed so "a tampered or
-# moved tag cannot be substituted" -- but a git tag *can* be moved, which is
-# exactly why it needed a digest. A PyPI release cannot: a version is immutable
-# once uploaded and can only be yanked, never replaced. Installs also verify
-# PyPI's own hashes over TLS. For a fully hash-locked install, pin digests in a
-# requirements file at deploy time, which is where hash-locking belongs --
-# install_requires cannot express it for consumers anyway.
+# Optional compatibility pin for consumers that explicitly request the
+# legacy-shield extra. Service runtime startup does not activate it.
 FACEHUGGERSHIELD_REQUIREMENT = "facehuggershield==1.0.0"
 
 # Per-package README used as long_description (mirrors native/). The
@@ -53,7 +43,10 @@ DEVELOPMENT_REQUIREMENTS = [
     "responses>=0.25.0",
     # starlette/fastapi TestClient (services HTTP-surface tests) needs httpx;
     # it is otherwise only pulled in transitively by the llm-native extra.
+    # starlette 1.x TestClient prefers httpx2; without it, it emits the
+    # httpx deprecation warning.
     "httpx>=0.27",
+    "httpx2>=2.0.0",
     "coverage==7.8.0",
     "black==26.3.1",
     "pyinstaller==6.12.0",
@@ -78,18 +71,21 @@ CORE_REQUIREMENTS = [
     # Compatible-release bound (not ==): dh_python3 turns == into a
     # distro upper bound that rejects newer compatible dist-packages
     # (e.g. Debian trixie ships 2.0.40). The release-exact pin with
-    # hashes stays in package/constraints-linux-nvidia-cu129.txt (P02).
+    # hashes stay in the P02 linux-release lock once generated.
     "sqlalchemy>=2.0.38,<2.1",
     "jinja2==3.1.6",
     "pyyaml==6.0.2",
     "python-dotenv==1.2.2",
-    "fastapi==0.115.0",
+    "fastapi==0.141.1",
     # Direct base-startup import (api/server.py imports HTTPConnection
     # from starlette.requests at module scope on the daemon path), not
-    # just a transitive fastapi dependency (release issue P02). The
-    # bound mirrors fastapi 0.115.0's own starlette requirement so the
-    # two can never disagree.
-    "starlette<0.39.0,>=0.37.2",
+    # just a transitive fastapi dependency (release issue P02). The pin
+    # satisfies fastapi 0.141.1's own starlette>=0.46.0 requirement so
+    # the two can never disagree.
+    "starlette==1.6.0",
+    # starlette 1.6.0 requires anyio<5,>=3.6.2; declare the proven
+    # floor directly instead of relying on the transitive pin.
+    "anyio>=4.14.2",
     "python-multipart>=0.0.27",
     "uvicorn[standard]==0.34.0",
     # Runtime deps declared in issue #2040 (previously undeclared).
@@ -114,14 +110,14 @@ CORE_REQUIREMENTS = [
 # There is intentionally no CPU fallback documented here: CPU support is
 # not a Linux v1 release target (release issue P02). The fully resolved,
 # hash-pinned wheel set for the release profile lives in
-# package/constraints-linux-nvidia-cu129.txt.
+# package/constraints-linux-nvidia-cu129-linux-release.txt once generated.
 ML_RUNTIME_REQUIREMENTS = [
     "torch==2.13.0+cu129",
-    "torchvision==0.28.0+cu129",
-    "torchaudio==2.11.0+cu129",
-    "accelerate==1.14.0",
+    "torchvision==0.28.0+cu129.capsize.1",
+    "torchaudio==2.11.0+cu129.capsize.1",
+    "accelerate==1.14.0+capsize.1",
     "huggingface-hub>=1.5.0,<2.0",
-    "tokenizers==0.22.2",
+    "tokenizers==0.23.1+capsize.1",
     "optimum==1.25.1",
 ]
 
@@ -135,9 +131,9 @@ HUGGINGFACE_REQUIREMENTS = [
     "safetensors==0.8.0",
     "kornia",
     "timm",
-    "compel==2.4.0",
-    "transformers==5.8.1",
-    "datasets==4.0.0",
+    "compel==2.4.0+capsize.1",
+    "transformers==5.22.0",
+    "datasets==5.0.1",
 ]
 
 ART_REQUIREMENTS = [
@@ -161,35 +157,30 @@ ART_REQUIREMENTS = [
 #   - langchain-core: shared by the whole langgraph tool-calling stack.
 RAG_REQUIREMENTS = [
     "sentence_transformers==5.6.1",
-    "libzim==3.7.0",
+    "libzim==3.7.0+capsize.2",
     "langchain-huggingface==1.2.2",
     "langchain-text-splitters==1.1.2",
     "EbookLib==0.19",
     "mobi==0.4.1",
-    "pypdf>=5.6.0",
+    "pypdf>=6.21.4",
 ]
 
 LLM_NATIVE_REQUIREMENTS = [
-    "llama-cpp-python==0.3.21",
+    "llama-cpp-python==0.3.21+capsize.3",
     "bitsandbytes==0.46.1",
-    "cryptography==46.0.7",
+    "cryptography==50.0.2",
     "sumy==0.11.0",
     "sentencepiece==0.2.1",
-    "lingua-language-detector==2.1.0",
-    "markdown==3.8.1",
+    "lingua-language-detector==2.1.0+capsize.1",
+    "markdown==3.11.2",
     "mistral_common>=1.8.5",
     "rank-bm25>=0.2.2",
     "llama-cloud==0.1.23",
-    "langchain-core==1.3.3",
-    # langgraph-prebuilt >=1.0.8 imports ExecutionInfo/ServerInfo from
-    # langgraph.runtime, which only exists in langgraph core >=1.2. Against
-    # 1.0.x core that import crashes the tool-calling path ("cannot import
-    # name 'ExecutionInfo'"). langgraph 1.0.9/1.0.10 require prebuilt>=1.0.8,
-    # so the only self-consistent 1.0.x set is core 1.0.8 + prebuilt 1.0.7
-    # (1.0.8 still allows prebuilt>=1.0.7). Pinning core 1.0.10 + prebuilt
-    # 1.0.5 satisfied neither pip's resolver nor the runtime.
-    "langgraph==1.0.8",
-    "langgraph-prebuilt==1.0.7",
+    "langchain-core==1.4.7",
+    # Keep graph core, prebuilt, checkpoint, and SDK coordinated by the
+    # reviewed Linux release lock; mixed generations fail tool dispatch.
+    "langgraph==1.2.14",
+    "langgraph-prebuilt==1.1.0",
     "langsmith>=0.8.0",
     "langchain-ollama==1.0.0",
     # Runtime dep declared in issue #2040 (previously undeclared):
@@ -214,8 +205,12 @@ TTS_REQUIREMENTS = [
     "inflect==7.5.0",
     "pycountry==24.6.1",
     "librosa==0.11.0",
-    # Bound torchcodec to the pinned torch 2.13.x line (issue #2041).
-    "torchcodec>=0.8.0,<0.10",
+    # Imported directly by the TTS generation worker; librosa currently
+    # supplies it transitively, but service metadata must declare the import.
+    "soundfile==0.14.0",
+    # TorchCodec 0.12-0.17 documents torch >=2.11 compatibility. The
+    # Linux release lock selects the exact reviewed CUDA build.
+    "torchcodec>=0.12.0,<0.18",
 ]
 
 # The MeloTTS/OpenVoice fork moved to its own published package,
@@ -246,19 +241,41 @@ SEARCH_REQUIREMENTS = [
     "ddgs>=9.0.0",
     "aiohttp>=3.13.4",
     "google-api-python-client>=2.170.0",
-    "wikipedia>=1.4.0",
-    "scrapy==2.14.2",
+    "scrapy==2.17.0",
+    # The web content extractor imports Twisted directly; Scrapy's
+    # dependency is not a substitute for this package's direct declaration.
+    "Twisted==26.10.0",
     "trafilatura==2.0.0",
 ]
 
+# No module under services/src or native/src imports these (verified
+# by test: grep for pyautogui/pygetwindow/pyscreeze finds nothing), so
+# they stay Linux-gated AND out of the desktop release aggregate until
+# a feature actually needs them (release issue #2439).
 COMPUTER_USE_REQUIREMENTS = [
-    "pyautogui>=0.9.54",
-    "pyscreeze>=1.0.1",
+    "pyautogui>=0.9.54;platform_system=='Linux'",
+    "pyscreeze>=1.0.1;platform_system=='Linux'",
     "python-xlib>=0.33;platform_system=='Linux'",
-    "pygetwindow>=0.0.9",
+    "pygetwindow>=0.0.9;platform_system=='Linux'",
 ]
 
 SYSTEM_DEP_EXTRAS = {"openvoice_jp", "openvoice_kr"}
+
+# The Linux release bundle keeps the verified local runtime/TTS base
+# dependencies without activating the paused OpenVoice/Melo vendor package.
+# The historical tts-python, headless, desktop, and explicit OpenVoice/Melo
+# extras below remain available as package metadata but are not release roots.
+LINUX_RELEASE_EXTRAS = (
+    "llm-native",
+    "stt-native",
+    "art-python",
+    "tts-python-core",
+    "llm_weather",
+    "search",
+    "nvidia",
+    "linux",
+    "postgresql",
+)
 
 SERVICE_CONSOLE_SCRIPTS = [
     "airunner-daemon=airunner_services.daemon:main",
@@ -269,6 +286,10 @@ SERVICE_CONSOLE_SCRIPTS = [
     "airunner-hf-download=airunner_services.bin.airunner_hf_download:main",
     "airunner-civitai-download="
     "airunner_services.bin.airunner_civitai_download:main",
+    "airunner-cleanup-llm-models=airunner_services.bin.cleanup_llm_models:main",
+    "airunner-docker-build=airunner_services.bin.docker_build:main",
+    "airunner-docker-wrapper=airunner_services.bin.docker_wrapper:main",
+    "airunner-generate-cert=airunner_services.bin.generate_cert:main",
 ]
 
 
@@ -284,8 +305,12 @@ def _base_extras_require() -> dict[str, list[str]]:
     """Return the non-aggregate service extras."""
     return {
         "core": [],
+        "legacy-shield": [FACEHUGGERSHIELD_REQUIREMENT],
         "nvidia": NVIDIA_REQUIREMENTS,
+        # PostgreSQL is supported only by the full Linux release profile;
+        # CORE Debian remains SQLite-only.
         "linux": [],
+        "postgresql": ["psycopg==3.3.7"],
         "development": DEVELOPMENT_REQUIREMENTS,
         "dev": DEVELOPMENT_REQUIREMENTS,
         "art": ART_REQUIREMENTS,
@@ -322,6 +347,10 @@ def _base_extras_require() -> dict[str, list[str]]:
             OPENVOICE_TW_REQUIREMENTS,
             GRUUT_SUPPORT_REQUIREMENTS,
         ),
+        "tts-python-core": unique_requirements(
+            ML_RUNTIME_REQUIREMENTS,
+            TTS_REQUIREMENTS,
+        ),
         "openvoice": OPENVOICE_REQUIREMENTS,
         "melotts": MELOTTS_REQUIREMENTS,
         "openvoice_cn": OPENVOICE_CN_REQUIREMENTS,
@@ -350,13 +379,12 @@ def _aggregate_extras_require(
     extras_require: dict[str, list[str]],
 ) -> dict[str, list[str]]:
     """Return the aggregate service extras."""
-    # The "desktop" aggregate below is the Linux v1 NVIDIA release
-    # profile on the services side (release issue P02): every modality
-    # plus the CUDA runtime wheel, resolved and hash-locked together
-    # with airunner[nvidia] in
-    # package/constraints-linux-nvidia-cu129.txt. It intentionally
-    # carries no Qt/PySide6 payload: the Qt frontend lives in the root
-    # GUI distribution, never in the services dependency profile.
+    # ``desktop`` and ``headless`` preserve historical aggregate behavior,
+    # including the optional OpenVoice/Melo vendor dependencies. The
+    # ``linux-release`` aggregate below is the current P02 profile: it uses
+    # ``tts-python-core`` and excludes the quarantined vendor distribution.
+    # Its active hash lock is being generated; it intentionally has no Qt
+    # payload because this package is the headless service distribution.
     headless = _aggregate_extra(
         extras_require,
         "llm-native",
@@ -370,7 +398,6 @@ def _aggregate_extras_require(
         "headless",
         "llm_weather",
         "search",
-        "computer_use",
         "nvidia",
         "linux",
     )
@@ -383,6 +410,9 @@ def _aggregate_extras_require(
     return {
         "headless": headless,
         "desktop": desktop,
+        "linux-release": _aggregate_extra(
+            aggregate_require, *LINUX_RELEASE_EXTRAS
+        ),
         "all": desktop,
         "all_dev": _aggregate_extra(
             {**aggregate_require, "all": desktop},
@@ -419,13 +449,11 @@ def build_services_setup_kwargs(*, package_source_dir: str) -> dict[str, object]
         # airunner-common is independently versioned in its own repository
         # now (issue #2197, https://github.com/Capsize-Games/airunner-common),
         # so a compatible-release pin per the versioning policy (#2191)
-        # instead of an exact lockstep VERSION pin. Floor is 6.1.7, the
-        # release that added the shared for_action generation table
-        # (issue #2225) on top of 6.1.6's shared LLMRequest (#2221) and
-        # 6.1.5's LLMResponse (#2188) -- this package imports all three
-        # directly and cannot start on an older release.
-        "airunner-common~=6.1.7",
-        FACEHUGGERSHIELD_REQUIREMENT,
+        # instead of an exact lockstep VERSION pin. Floor is 6.1.8, which
+        # removes the unused FacehuggerShield base dependency while retaining
+        # an explicit compatibility extra; it includes the shared contracts
+        # required by this package.
+        "airunner-common~=6.1.8",
         *CORE_REQUIREMENTS,
     ]
     return {
@@ -448,16 +476,24 @@ def build_services_setup_kwargs(*, package_source_dir: str) -> dict[str, object]
             "airunner_services": [
                 "assets/reference_speakers/*.wav",
             ],
-            "airunner_services.bin": ["*.sh"],
-            "airunner_services.content_safety": [
-                "data/*.dat",
-                "data/*.dat.sig",
+            "airunner_services.art": [
+                "data/triton_external_toolchain_runtime.json",
+                "data/triton_external_toolchain_sources.json",
+                "data/triton_external_toolchain_notices/*",
             ],
+            "airunner_services.bin": ["*.sh"],
             "airunner_services.database": [
                 "alembic.ini",
                 "alembic/*.py",
                 "alembic/*.mako",
                 "alembic/versions/*.py",
+            ],
+        },
+        "exclude_package_data": {
+            "airunner_services.content_safety": [
+                "data/*.dat",
+                "data/*.dat.sig",
+                "data/policy_trust_store.json",
             ],
         },
         "include_package_data": True,

@@ -17,6 +17,9 @@ from .persistence_contracts import (
 )
 from .persistence_serialization import serialize_record
 
+_DEFAULT_QUERY_LIMIT = 100
+_MAX_QUERY_LIMIT = 1000
+
 ExpressionBuilder = Callable[[Any, Any], Any]
 EXPRESSION_BUILDERS: dict[str, ExpressionBuilder] = {
     "eq": lambda column, value: column == value,
@@ -53,7 +56,7 @@ def expression_clause(column: Any, expression: QueryCondition) -> Any:
     if builder is None:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported operator: {expression.operator}",
+            detail="unsupported_operator",
         )
     return builder(column, expression.value)
 
@@ -69,7 +72,7 @@ def apply_expressions(
         if column is None:
             raise HTTPException(
                 status_code=400,
-                detail=f"Unknown field: {expression.field}",
+                detail="unknown_field",
             )
         query = query.filter(expression_clause(column, expression))
     return query
@@ -86,7 +89,7 @@ def apply_order_by(
         if column is None:
             raise HTTPException(
                 status_code=400,
-                detail=f"Unknown order field: {clause.field}",
+                detail="unknown_order_field",
             )
         direction = clause.direction.lower()
         query = query.order_by(column.desc() if direction == "desc" else column.asc())
@@ -114,7 +117,15 @@ def query_records(
             return PersistenceResponse(
                 record=serialize_record(result, eager_load=body.eager_load)
             )
-        results = query.all()
+        limit = (
+            _DEFAULT_QUERY_LIMIT if body.limit is None else body.limit
+        )
+        if body.offset < 0 or limit < 1 or limit > _MAX_QUERY_LIMIT:
+            raise HTTPException(
+                status_code=400,
+                detail="invalid_pagination",
+            )
+        results = query.offset(body.offset).limit(limit).all()
         return PersistenceResponse(
             records=[
                 serialize_record(item, eager_load=body.eager_load)

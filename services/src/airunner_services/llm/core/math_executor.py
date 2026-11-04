@@ -102,8 +102,25 @@ class SafePythonExecutor:
         "delattr",
         "vars",
         "dir",
+        "hasattr",
+        # ``str.format``/``format_map`` can walk an object graph from a
+        # format string (``"{0.__class__}".format(obj)``), so both the
+        # builtin and the method forms are forbidden. The ``Call``
+        # check in ``validate_code`` matches method calls by attribute
+        # name, so these entries cover ``x.format(...)`` too.
+        "format",
+        "format_map",
         "__import__",
     }
+
+    #: Dotted imports are rejected: only exact top-level module names
+    #: may be imported, so ``import numpy.linalg`` cannot smuggle a
+    #: submodule with a wider surface than the allow-listed top level.
+    _ALLOWED_DOTTED_IMPORTS = frozenset()
+
+    #: Namespace keys user code may never overwrite or inject. They are
+    #: snapshotted before each run and restored afterwards.
+    _PROTECTED_KEYS = ("__builtins__", "math", "Fraction")
 
     def __init__(self, timeout_seconds: int = 5):
         """Initialize executor.
@@ -111,7 +128,11 @@ class SafePythonExecutor:
         Args:
             timeout_seconds: Maximum execution time
         """
-        self.timeout = timeout_seconds
+        try:
+            timeout = int(timeout_seconds)
+        except (TypeError, ValueError):
+            timeout = 5
+        self.timeout = timeout if timeout > 0 else 5
         self._namespaces: Dict[str, Dict[str, Any]] = {}
         self._namespace_lock = threading.Lock()
 
@@ -140,6 +161,13 @@ class SafePythonExecutor:
             "__import__": self._safe_import,
         }
 
+    @classmethod
+    def _dotted_import_allowed(cls, dotted: str) -> bool:
+        """Return whether one dotted module path may be imported."""
+        if "." not in dotted:
+            return dotted in cls.ALLOWED_IMPORTS
+        return dotted in cls._ALLOWED_DOTTED_IMPORTS
+
     def _safe_import(
         self,
         name: str,
@@ -151,8 +179,8 @@ class SafePythonExecutor:
         if level != 0:
             raise ImportError("Relative imports are not allowed")
 
-        top_level = name.split(".", 1)[0]
-        if top_level not in self.ALLOWED_IMPORTS:
+        if not self._dotted_import_allowed(name):
+            top_level = name.split(".", 1)[0]
             raise ImportError(f"Import not allowed: {top_level}")
 
         return __import__(name, globals, locals, fromlist, level)
@@ -272,55 +300,81 @@ class SafePythonExecutor:
 
             if isinstance(node, ast.Import):
                 for alias in node.names:
-                    top_level = alias.name.split(".", 1)[0]
-                    if top_level not in self.ALLOWED_IMPORTS:
+                    if not self._dotted_import_allowed(alias.name):
+                        top_level = alias.name.split(".", 1)[0]
                         errors.append(f"Import not allowed: {top_level}")
 
             if isinstance(node, ast.ImportFrom):
                 module = node.module or ""
-                top_level = module.split(".", 1)[0]
-                if top_level and top_level not in self.ALLOWED_IMPORTS:
+                if module and not self._dotted_import_allowed(module):
+                    top_level = module.split(".", 1)[0]
                     errors.append(f"Import not allowed: {top_level}")
 
         if errors:
             return False, "\n".join(errors)
         return True, ""
 
-    def _check_dangerous_operations(self, code: str) -> Tuple[bool, str]:
-        """Check for dangerous patterns in code."""
-        dangerous_patterns = [
-            r"\bimport\s+os\b",
-            r"\bimport\s+subprocess\b",
-            r"\bimport\s+sys\b",
-            r"\bexec\b",
-            r"\beval\b",
-            r"\bopen\b",
-            r"\bfile\b",
-            r"\bcompile\b",
-        ]
+    def _snapshot_session(self, session_id: str) -> Dict[str, Any]:
+        """Return a per-run copy of one session namespace.
 
-        for pattern in dangerous_patterns:
-            if re.search(pattern, code):
-                return False, f"Dangerous operation detected: {pattern}"
-        return True, ""
+        Executing against a copy (instead of the live session dict)
+        keeps user code from mutating the stored namespace mid-run;
+        only sanitized bindings are merged back afterwards.
+        """
+        namespace = self._ensure_namespace(session_id)
+        with self._namespace_lock:
+            return dict(namespace)
 
-    def _check_imports(self, code: str) -> Tuple[bool, str]:
-        """Check that all imports are allowed."""
-        import_patterns = [
-            (r"^\s*import\s+(\w+)", "module"),
-            (r"\bfrom\s+(\w+)\s+import", "module"),
-        ]
+    def _merge_back(
+        self, session_id: str, run_namespace: Dict[str, Any]
+    ) -> None:
+        """Merge one run's bindings into its session, minus pollution.
 
-        for pattern, desc in import_patterns:
-            imports = re.findall(pattern, code, re.MULTILINE)
-            for imp in imports:
-                if imp not in self.ALLOWED_IMPORTS:
-                    return False, f"Import not allowed: {imp}"
+        Protected keys (``__builtins__``, ``math``, ``Fraction``) are
+        never overwritten and injected dunder names are dropped, so a
+        previous run cannot poison later runs in the same session.
+        """
+        with self._namespace_lock:
+            stored = self._namespaces.get(session_id)
+            if stored is None:
+                stored = self._create_base_namespace()
+                self._namespaces[session_id] = stored
+            for key, value in run_namespace.items():
+                if key in self._PROTECTED_KEYS:
+                    continue
+                if key.startswith("__") and key.endswith("__"):
+                    continue
+                stored[key] = value
 
-        return True, ""
+    def _run_compiled(
+        self,
+        compiled: Any,
+        session_id: str,
+        stdout_capture: io.StringIO,
+        outcome: Dict[str, Any],
+    ) -> None:
+        """Execute one compiled unit; records result or error."""
+        try:
+            run_namespace = self._snapshot_session(session_id)
+            with contextlib.redirect_stdout(stdout_capture):
+                exec(compiled, run_namespace)
+            self._merge_back(session_id, run_namespace)
+            outcome["result"] = self._extract_result(
+                run_namespace, stdout_capture, None
+            )
+        except Exception as exc:
+            outcome["error"] = f"Execution error: {exc}"
 
     def execute(self, code: str) -> Tuple[bool, Any, str]:
         """Execute Python code and capture output.
+
+        The code is compiled once and executed with ``exec`` only:
+        there is no ``eval`` sink for a trailing expression. Callers
+        (``sympy_compute``/``numpy_compute``/``python_compute``) must
+        store the final value in a ``result`` (or ``answer``) variable
+        or print it. Execution runs on a worker thread bounded by
+        ``self.timeout`` seconds (best-effort: an expired run reports
+        a timeout instead of hanging the caller).
 
         Args:
             code: Python code to execute
@@ -331,54 +385,37 @@ class SafePythonExecutor:
         # Validate code first
         is_safe, error_msg = self.validate_code(code)
         if not is_safe:
-            logger.warning(f"Unsafe code rejected: {error_msg}")
+            logger.warning("Unsafe code rejected: %s", error_msg)
+            return False, None, error_msg
+
+        try:
+            compiled = compile(code, "<math_executor>", "exec")
+        except (SyntaxError, ValueError) as exc:
+            error_msg = f"Syntax error: {exc}"
+            logger.warning("Code rejected: %s", error_msg)
             return False, None, error_msg
 
         session_id = get_executor_session() or "global"
-        namespace = self._ensure_namespace(session_id)
-
-        # Capture stdout
         stdout_capture = io.StringIO()
-
-        # Handle code that might have a final expression to evaluate
-        # Split into statements and potential final expression
-        last_expr_result = None
-        try:
-            # Try to compile and check if last line is an expression
-            lines = [line.strip() for line in code.split(";") if line.strip()]
-            if lines:
-                # Execute all but the last line
-                if len(lines) > 1:
-                    exec_code = "; ".join(lines[:-1])
-                    with contextlib.redirect_stdout(stdout_capture):
-                        exec(exec_code, namespace)
-
-                # Try to eval the last line to capture expression result
-                last_line = lines[-1]
-                try:
-                    with contextlib.redirect_stdout(stdout_capture):
-                        last_expr_result = eval(last_line, namespace)
-                except SyntaxError:
-                    # Last line is a statement, not an expression
-                    with contextlib.redirect_stdout(stdout_capture):
-                        exec(last_line, namespace)
-                except NameError:
-                    # Last line references undefined names, execute normally
-                    with contextlib.redirect_stdout(stdout_capture):
-                        exec(last_line, namespace)
-            else:
-                with contextlib.redirect_stdout(stdout_capture):
-                    exec(code, namespace)
-
-            result = self._extract_result(
-                namespace, stdout_capture, last_expr_result
+        outcome: Dict[str, Any] = {}
+        worker = threading.Thread(
+            target=self._run_compiled,
+            args=(compiled, session_id, stdout_capture, outcome),
+            daemon=True,
+        )
+        worker.start()
+        worker.join(self.timeout)
+        if worker.is_alive():
+            error_msg = (
+                f"Execution timed out after {self.timeout} seconds"
             )
-            return True, result, ""
-
-        except Exception as e:
-            error_msg = f"Execution error: {str(e)}"
             logger.warning(error_msg)
             return False, None, error_msg
+
+        if "error" in outcome:
+            logger.warning(outcome["error"])
+            return False, None, outcome["error"]
+        return True, outcome.get("result"), ""
 
     def _extract_result(
         self,

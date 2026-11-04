@@ -1,13 +1,10 @@
-"""Publication-gated generation stream helpers (S12).
+"""Response streaming with optional whole-output policy enforcement.
 
-Visible assistant text is buffered whole and reviewed with
-:func:`airunner_services.content_safety_gate.evaluate_publication_fields`
-before any stream signal carries it. Thinking/status events still flow
-separately through :func:`create_thinking_callback` while text is held.
-When the complete output is allowed it is flushed in order followed by
-the end-of-message marker; when denied, only the generic denial final
-message is published, which is distinct from model-failure text.
-Cancellation drops buffered text instead of publishing it.
+With application policy disabled, visible tokens are forwarded immediately.
+With enforcement enabled, assistant text is buffered for publication review;
+allowed output is flushed in order, while denied output is replaced by the
+generic denial message. Thinking/status events flow separately. Cancellation
+suppresses later tokens and drops any text still awaiting publication.
 """
 
 from __future__ import annotations
@@ -15,6 +12,7 @@ from __future__ import annotations
 from typing import Any, List, Optional
 
 from airunner_common.llm_response import LLMResponse
+from airunner_services.content_safety.config import content_policy_is_enforced
 from airunner_services.content_safety_gate import (
     GENERIC_PUBLICATION_DENIAL_MESSAGE,
     evaluate_publication_fields,
@@ -31,6 +29,7 @@ from airunner_services.llm.managers.mixins.generation_response_support import (
 from airunner_services.llm.managers.mixins.generation_signal_support import (
     _is_assistant_preamble_only,
     _strip_leading_assistant_preamble,
+    create_streaming_callback as _create_streaming_callback_ungated,
     create_thinking_callback,
     current_assistant_turn_index,
     emit_visible_response as _emit_visible_response_ungated,
@@ -44,7 +43,30 @@ def create_streaming_callback(
     complete_response: List[str],
     sequence_counter: List[int],
 ):
-    """Buffer streaming tokens without publishing visible text."""
+    """Stream tokens immediately unless whole-output enforcement is enabled."""
+
+    policy_enforced = content_policy_is_enforced()
+    _reset_publication_state(owner, policy_enforced)
+
+    if not policy_enforced:
+        # Reuse the established token formatter and metadata, with an explicit
+        # interruption guard because generation can be cancelled mid-stream.
+        forward_token = _create_streaming_callback_ungated(
+            owner,
+            llm_request,
+            complete_response,
+            sequence_counter,
+        )
+
+        def handle_unrestricted_token(token_text: str) -> None:
+            if getattr(owner, "_interrupted", False):
+                return
+            previous_text = complete_response[0]
+            forward_token(token_text)
+            if complete_response[0] != previous_text:
+                owner._publication_flushed = True
+
+        return handle_unrestricted_token
 
     def handle_streaming_token(token_text: str) -> None:
         """Accumulate one token for whole-output review at publish."""
@@ -58,7 +80,6 @@ def create_streaming_callback(
             return
         complete_response[0] += token_text
 
-    _reset_publication_state(owner)
     return handle_streaming_token
 
 
@@ -69,12 +90,21 @@ def emit_visible_response(
     complete_response: List[str],
     sequence_counter: List[int],
 ) -> None:
-    """Emit one visible chunk only after it passes the publication gate."""
+    """Emit one fallback visible chunk when generation streamed no text."""
     if _is_assistant_preamble_only(complete_response[0]):
         complete_response[0] = ""
     if not message or complete_response[0]:
         return
     if getattr(owner, "_interrupted", False):
+        return
+    if not _publication_policy_is_enforced(owner):
+        _publication_flushed_visible_text(
+            owner,
+            llm_request,
+            message,
+            complete_response,
+            sequence_counter,
+        )
         return
     result = evaluate_publication_fields({"message": message})
     if result.allowed:
@@ -103,7 +133,7 @@ def send_end_of_message(
     final_visible_message: Optional[str] = None,
     tool_calls: Optional[list] = None,
 ) -> None:
-    """Publish the end marker after the publication gate allows the text."""
+    """Publish reviewed text in enforce mode, then send the end marker."""
     if getattr(owner, "_interrupted", False):
         _send_end_of_message_ungated(
             owner,
@@ -118,6 +148,22 @@ def send_end_of_message(
         )
         return
     text = final_visible_message or ""
+    if not _publication_policy_is_enforced(owner):
+        if text and not getattr(owner, "_publication_flushed", False):
+            _emit_allowed_visible_text(owner, llm_request, text, sequence_counter)
+            owner._publication_flushed = True
+        _send_end_of_message_ungated(
+            owner,
+            llm_request,
+            sequence_counter,
+            executed_tools,
+            prompt_tokens,
+            completion_tokens,
+            total_tokens,
+            final_visible_message,
+            tool_calls,
+        )
+        return
     denied = bool(getattr(owner, "_publication_denied", False))
     if (
         not denied
@@ -154,11 +200,42 @@ def send_end_of_message(
     )
 
 
-def _reset_publication_state(owner) -> None:
+def _reset_publication_state(owner, policy_enforced: Optional[bool] = None) -> None:
     """Clear per-generation publication review markers."""
     owner._publication_denied = False
     owner._publication_flushed = False
     owner._publication_reviewed_text = None
+    owner._publication_policy_enforced = (
+        content_policy_is_enforced()
+        if policy_enforced is None
+        else policy_enforced
+    )
+
+
+def _publication_policy_is_enforced(owner) -> bool:
+    """Use the mode captured for this response, or resolve it for fallbacks."""
+    mode = getattr(owner, "_publication_policy_enforced", None)
+    if mode is None:
+        return content_policy_is_enforced()
+    return bool(mode)
+
+
+def _publication_flushed_visible_text(
+    owner,
+    llm_request: Optional[Any],
+    message: str,
+    complete_response: List[str],
+    sequence_counter: List[int],
+) -> None:
+    """Emit a final-only response through the same sequence metadata path."""
+    _emit_visible_response_ungated(
+        owner,
+        llm_request,
+        message,
+        complete_response,
+        sequence_counter,
+    )
+    owner._publication_flushed = bool(complete_response[0])
 
 
 def _emit_allowed_visible_text(

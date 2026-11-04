@@ -17,7 +17,7 @@ def _base_stream_chat_kwargs(
     max_tokens: int,
 ) -> dict[str, Any]:
     """Build the common llama.cpp streaming payload."""
-    return {
+    kwargs = {
         "messages": converted_messages,
         "max_tokens": max_tokens,
         "temperature": adapter.temperature,
@@ -27,6 +27,14 @@ def _base_stream_chat_kwargs(
         "repeat_penalty": adapter.repeat_penalty,
         "stream": True,
     }
+    if (
+        getattr(adapter, "sidecar_client", None) is not None
+        and "qwen" in str(adapter.model_path).lower()
+    ):
+        kwargs["chat_template_kwargs"] = {
+            "enable_thinking": bool(adapter.enable_thinking),
+        }
+    return kwargs
 
 
 def _apply_stop_sequences(

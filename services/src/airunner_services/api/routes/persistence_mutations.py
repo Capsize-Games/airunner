@@ -4,11 +4,43 @@ from __future__ import annotations
 
 from typing import Any
 
+from fastapi import HTTPException
+
 from airunner_services.database.session import session_scope
 
 from .persistence_contracts import PersistenceRequest, PersistenceResponse
 from .persistence_query import apply_eager_load
 from .persistence_serialization import normalized_values, serialize_record
+
+_MAX_BULK_ROWS = 500
+
+
+def _require_scoped_filters(body: PersistenceRequest) -> None:
+    """Reject filter-path mutations that would touch every row."""
+    if body.pk is None and not body.filters:
+        raise HTTPException(
+            status_code=400, detail="bulk_mutation_requires_filters"
+        )
+
+
+def _require_nonempty_filters(body: PersistenceRequest) -> None:
+    """Reject bulk updates scoped by an empty filter dict.
+
+    ``update_by`` never consults ``pk``, so a pk cannot scope it: only
+    a non-empty filter set may select rows.
+    """
+    if not body.filters:
+        raise HTTPException(
+            status_code=400, detail="bulk_mutation_requires_filters"
+        )
+
+
+def _check_bulk_row_cap(count: int) -> None:
+    """Reject bulk mutations whose match set exceeds the row cap."""
+    if count > _MAX_BULK_ROWS:
+        raise HTTPException(
+            status_code=400, detail="bulk_row_limit_exceeded"
+        )
 
 
 def _enforce_tool_safety(record: Any) -> None:
@@ -41,7 +73,9 @@ def create_record(
 ) -> PersistenceResponse:
     """Create one service-owned ORM record."""
     with session_scope() as session:
-        result = model_cls(**normalized_values(model_cls, body.values))
+        result = model_cls(
+            **normalized_values(model_cls, body.values, allow_pk=True)
+        )
         _enforce_tool_safety(result)
         session.add(result)
         session.flush()
@@ -62,7 +96,9 @@ def get_or_create_record(
                 record=serialize_record(result, eager_load=body.eager_load),
                 created=False,
             )
-        create_values = normalized_values(model_cls, body.defaults)
+        create_values = normalized_values(
+            model_cls, body.defaults, allow_pk=True
+        )
         create_values.update(body.filters)
         result = model_cls(**create_values)
         session.add(result)
@@ -80,7 +116,13 @@ def merge_record(
 ) -> PersistenceResponse:
     """Merge one detached ORM record into the service session."""
     with session_scope() as session:
-        result = session.merge(model_cls(**normalized_values(model_cls, body.values)))
+        result = session.merge(
+            model_cls(
+                **normalized_values(
+                    model_cls, body.values, allow_pk=True
+                )
+            )
+        )
         _enforce_tool_safety(result)
         session.flush()
         session.refresh(result)
@@ -110,14 +152,13 @@ def update_by(
     body: PersistenceRequest,
 ) -> PersistenceResponse:
     """Bulk-update records matching one filter dict."""
+    _require_nonempty_filters(body)
     with session_scope() as session:
         values = normalized_values(model_cls, body.values)
         _enforce_tool_code_values(model_cls, values)
-        count = (
-            session.query(model_cls)
-            .filter_by(**body.filters)
-            .update(values, synchronize_session=False)
-        )
+        query = session.query(model_cls).filter_by(**body.filters)
+        _check_bulk_row_cap(query.count())
+        count = query.update(values, synchronize_session=False)
         return PersistenceResponse(success=bool(count), count=int(count or 0))
 
 
@@ -134,12 +175,8 @@ def delete_record(
                 return PersistenceResponse(success=False, count=0)
             session.delete(result)
             return PersistenceResponse(success=True, count=1)
-        count = query.filter_by(**body.filters).delete()
+        _require_scoped_filters(body)
+        filtered = query.filter_by(**body.filters)
+        _check_bulk_row_cap(filtered.count())
+        count = filtered.delete()
         return PersistenceResponse(success=bool(count), count=int(count or 0))
-
-
-def delete_all(model_cls: type[Any]) -> PersistenceResponse:
-    """Delete all rows for one model."""
-    with session_scope() as session:
-        count = session.query(model_cls).delete()
-        return PersistenceResponse(success=True, count=int(count or 0))

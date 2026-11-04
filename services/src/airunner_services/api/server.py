@@ -6,8 +6,12 @@ capabilities including LLM, art generation, TTS, and STT.
 """
 from typing import List, Optional, Any, Tuple
 from contextlib import asynccontextmanager
+import asyncio
 import os
 import secrets
+import threading
+import time
+import uuid
 from ipaddress import ip_address
 from urllib.parse import urlsplit
 
@@ -21,6 +25,7 @@ from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.api.routes import (
     art,
+    catalog_bootstrap,
     conversations,
     daemon,
     domain_resources,
@@ -39,9 +44,35 @@ from airunner_services.api.routes import legacy as legacy_routes
 from airunner_services.api.loopback_token import get_or_create_loopback_token
 from airunner_services.data.tenant import reset_tenant_key, set_tenant_key
 from airunner_services.runtimes.bootstrap import build_runtime_registry
+from airunner_services.api.admission_middleware import AdmissionMiddleware
 
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+
+
+async def _close_runtime_registry_clients(runtime_registry: Any) -> None:
+    """Close each registered runtime client once during API shutdown."""
+    if runtime_registry is None:
+        return
+    closed: set[int] = set()
+    for route in runtime_registry.list_routes():
+        try:
+            client = runtime_registry.resolve(
+                route.runtime,
+                route.provider,
+                route.deployment_mode,
+            )
+        except (KeyError, AttributeError):
+            continue
+        close = getattr(client, "close", None)
+        identity = id(client)
+        if not callable(close) or identity in closed:
+            continue
+        closed.add(identity)
+        try:
+            await asyncio.to_thread(close)
+        except Exception:
+            logger.exception("Failed to close runtime client during shutdown")
 
 
 def access_logs_enabled() -> bool:
@@ -88,6 +119,15 @@ def is_loopback_host(host: str) -> bool:
 
 
 def is_loopback_request(conn: HTTPConnection) -> bool:
+    """Return whether one connection arrived over loopback.
+
+    ``client.host`` is the direct TCP peer as seen by this server: there
+    is intentionally no ``X-Forwarded-For`` handling here. Do not put a
+    reverse proxy in front of this port unless the proxy itself enforces
+    the auth policy, because a proxied deployment would see the proxy's
+    address (not the real client's) and fail closed to 401 for every
+    loopback-authenticated caller.
+    """
     client = getattr(conn, "client", None)
     if not client:
         return False
@@ -104,12 +144,34 @@ def _provided_bearer_or_api_key(conn: HTTPConnection, header_name: str) -> str:
     return provided
 
 
+def _is_api_claimed_path(request: Request) -> bool:
+    """Return True when an API route fully claims the request path.
+
+    Anything no API route claims (static mounts, docs) may be fetched
+    by a header-less first navigation much like a browser WebSocket
+    handshake — so the query-string token stays accepted there, and
+    only there, for plain HTTP (issue #2424). Mounts are skipped here
+    because a mount only partially matches by prefix.
+    """
+    from starlette.routing import Match, Mount
+
+    scope = request.scope
+    for route in request.app.routes:
+        if isinstance(route, Mount):
+            continue
+        match, _ = route.matches(scope)
+        if match == Match.FULL:
+            return True
+    return False
+
+
 def authenticate_connection(
     conn: HTTPConnection,
     *,
     api_key: str,
     require_api_key: bool,
     insecure_no_auth: bool,
+    allow_query_token: bool = False,
 ) -> Tuple[bool, int]:
     """Apply the API-key/loopback-token policy to an HTTP or WebSocket conn.
 
@@ -133,9 +195,16 @@ def authenticate_connection(
     expected_token = get_or_create_loopback_token()
     provided_token = _provided_bearer_or_api_key(conn, "x-airunner-token")
     if not provided_token:
-        # WebSocket upgrades cannot set headers, so a browser client
-        # sends the loopback token in the query string instead.
-        provided_token = (conn.query_params.get("token") or "").strip()
+        # Browsers cannot set headers on a WebSocket upgrade, so a
+        # browser client sends the loopback token in the query string
+        # instead. Plain HTTP must always use the header — a query
+        # token would land in access logs, proxies, and shell history
+        # — except the static bundle surface, which cannot carry
+        # headers either (issue #2424).
+        scope = getattr(conn, "scope", None)
+        scope_type = scope.get("type") if isinstance(scope, dict) else None
+        if scope_type == "websocket" or allow_query_token:
+            provided_token = (conn.query_params.get("token") or "").strip()
     if not provided_token or not secrets.compare_digest(
         provided_token, expected_token
     ):
@@ -187,6 +256,12 @@ async def lifespan(app: FastAPI):
     yield
     # Shutdown
     logger.info("FastAPI server shutting down...")
+    from airunner_services.utils.job_tracker import JobTracker
+
+    await JobTracker().shutdown_art_jobs()
+    await _close_runtime_registry_clients(
+        getattr(app.state, "runtime_registry", None)
+    )
 
 
 def create_app(
@@ -217,6 +292,10 @@ def create_app(
 
     app.state.runtime_registry = None
     app.state.lifecycle_service = None
+    from airunner_services.api.routes.llm_request_registry import (
+        ActiveLLMRequestRegistry,
+    )
+    app.state.active_llm_requests = ActiveLLMRequestRegistry()
 
     try:
         app.state.runtime_registry = build_runtime_registry(
@@ -255,6 +334,9 @@ def create_app(
 
     allowed_env = (os.environ.get("AIRUNNER_ALLOWED_TENANT_KEYS") or "").strip()
     allowed_tenants = {t.strip() for t in allowed_env.split(",") if t.strip()}
+
+    # Registered before auth so rejected credentials never consume capacity.
+    app.add_middleware(AdmissionMiddleware)
 
     @app.middleware("http")
     async def tenant_middleware(request: Request, call_next):
@@ -315,6 +397,7 @@ def create_app(
             api_key=api_key,
             require_api_key=require_api_key,
             insecure_no_auth=insecure_no_auth,
+            allow_query_token=not _is_api_claimed_path(request),
         )
         if not allowed:
             return JSONResponse(
@@ -331,6 +414,13 @@ def create_app(
             "http://127.0.0.1:*",
         ]
 
+    if "*" in allowed_origins:
+        raise ValueError(
+            "Refusing wildcard CORS origin with credentials enabled: "
+            "a '*' origin together with allow_credentials=True would "
+            "expose authenticated responses to any site."
+        )
+
     # Stashed on app.state so the LLM WebSocket route (a separate ASGI
     # scope that FastAPI/Starlette HTTP middleware never runs for) can
     # apply the identical auth/origin policy before accepting a socket.
@@ -338,6 +428,10 @@ def create_app(
     app.state.require_api_key = require_api_key
     app.state.insecure_no_auth = insecure_no_auth
     app.state.allowed_origins = allowed_origins
+    # Snapshot of the tenant allowlist shared with the WebSocket tenant
+    # scoping in ws_auth, so HTTP and sockets cannot drift apart when
+    # the environment changes after startup.
+    app.state.allowed_tenants = allowed_tenants
 
     if enable_cors:
         app.add_middleware(
@@ -372,6 +466,13 @@ def create_app(
         domain_resources.settings_router,
         prefix="/api/v1/settings",
         tags=["settings"],
+    )
+    # Bootstrap owns GET /bootstrap; the domain catalog router
+    # owns /resources/* under the same prefix. No path overlap.
+    app.include_router(
+        catalog_bootstrap.router,
+        prefix="/api/v1/catalog",
+        tags=["catalog"],
     )
     app.include_router(
         domain_resources.catalog_router,
@@ -419,18 +520,39 @@ def create_app(
     if mount_client_bundle(app):
         logger.info("Serving the desktop chat client bundle from the daemon")
 
+    @app.middleware("http")
+    async def docs_visibility_middleware(request: Request, call_next):
+        """Hide API docs outside debug mode and loopback clients.
+
+        ``/docs``, ``/redoc``, and ``/openapi.json`` expand the attack
+        surface in production, so they answer 404 unless debug mode is
+        on or the caller arrived over loopback.
+        """
+        if request.url.path in {"/docs", "/redoc", "/openapi.json"}:
+            debug = os.environ.get("AIRUNNER_DEBUG", "0") == "1"
+            if not debug and not is_loopback_request(request):
+                return JSONResponse(
+                    status_code=404, content={"detail": "Not Found"}
+                )
+        return await call_next(request)
+
     # Global exception handler
     @app.exception_handler(Exception)
     async def global_exception_handler(request, exc):
-        logger.error(f"Unhandled exception: {exc}", exc_info=True)
-        debug = os.environ.get("AIRUNNER_DEBUG", "0") == "1"
-        if debug and is_loopback_request(request):
-            return JSONResponse(
-                status_code=500,
-                content={"error": "Internal server error", "detail": str(exc)},
-            )
-
-        return JSONResponse(status_code=500, content={"error": "Internal server error"})
+        correlation_id = uuid.uuid4().hex[:12]
+        logger.error(
+            "Unhandled exception %s: %s",
+            correlation_id,
+            exc,
+            exc_info=True,
+        )
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": "Internal server error",
+                "correlation_id": correlation_id,
+            },
+        )
 
     return app
 
@@ -462,6 +584,8 @@ class APIServer:
         self.app = create_app(allowed_origins, enable_cors, app_instance=app_instance)
 
         self.server = None
+        self.server_thread: Optional[threading.Thread] = None
+        self._started_event = threading.Event()
 
     def start(self):
         """Start the API server (blocking call)."""
@@ -475,11 +599,66 @@ class APIServer:
 
         self.server = uvicorn.Server(config)
         logger.info(f"Starting API server on {self.host}:{self.port}")
-        self.server.run()
+        try:
+            self.server.run()
+        finally:
+            self._started_event.clear()
 
-    def stop(self):
-        """Stop the API server."""
-        if self.server:
-            logger.info("Stopping API server...")
-            self.server.should_exit = True
+    def wait_until_started(self, timeout: float = 15.0) -> bool:
+        """Return True once uvicorn reports a successful bind.
+
+        Polls the serving thread's ``server.started`` flag, which
+        uvicorn sets only after the socket binds. Returns False when
+        the timeout elapses or the server thread dies unbound, so a
+        dead API never idles silently in the daemon loop (#2423).
+        """
+        deadline = time.monotonic() + max(0.0, timeout)
+        while time.monotonic() < deadline:
+            server = self.server
+            if server is not None and getattr(
+                server, "started", False
+            ):
+                self._started_event.set()
+                return True
+            thread = self.server_thread
+            if (
+                thread is not None
+                and thread.ident is not None
+                and not thread.is_alive()
+            ):
+                return False
+            time.sleep(0.05)
+        return False
+
+    def stop(self, timeout: float = 10.0):
+        """Stop the API server and join the serving thread.
+
+        A server that never finished binding is a silent no-op.
+        Otherwise ``should_exit`` is set and the serving thread is
+        joined with a bounded wait, warning when it lingers (#2419).
+        """
+        server = self.server
+        if server is None:
+            return
+        if not self._started_event.is_set() and not getattr(
+            server, "started", False
+        ):
+            logger.warning(
+                "API server never finished binding; skipping stop"
+            )
             self.server = None
+            self.server_thread = None
+            return
+        logger.info("Stopping API server...")
+        server.should_exit = True
+        thread = self.server_thread
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(timeout=timeout)
+            if thread.is_alive():
+                logger.warning(
+                    "API server thread did not stop "
+                    f"within {timeout}s; continuing shutdown"
+                )
+        self.server = None
+        self.server_thread = None
+        self._started_event.clear()

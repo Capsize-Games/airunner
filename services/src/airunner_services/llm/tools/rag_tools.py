@@ -5,17 +5,24 @@ Tools for searching loaded documents (RAG), finding documents in knowledge base,
 and saving new content to the knowledge base.
 """
 
+import errno
 import os
+import re
 from typing import Annotated, Any
+from langchain_core.runnables import RunnableConfig
 
 from airunner_services.llm.core.tool_registry import tool, ToolCategory
 from airunner_services.database.models.document import Document
 from airunner_services.database.models.path_settings import PathSettings
+from airunner_services.database.models.target_files import TargetFiles
 from airunner_services.database.session import session_scope
 from airunner_common.contract_enums import SignalCode
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.utils.application.log_hygiene import summarize_text
+from airunner_services.llm.tools.rag_tools_helpers._knowledge_base_search import (
+    search_knowledge_base_documents_impl,
+)
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
@@ -43,6 +50,7 @@ def rag_search(
         str, "Search query for finding relevant document content"
     ],
     api: Any = None,  # Injected by ToolManager
+    config: RunnableConfig = None,
 ) -> str:
     """Search through LOADED documents in memory for relevant information.
 
@@ -81,7 +89,9 @@ def rag_search(
 
     # Check if documents are loaded by calling the RAG manager's search method
     try:
-        results = rag_manager.search(query, k=3)
+        configurable = (config or {}).get("configurable", {})
+        scope = configurable.get("rag_document_scope")
+        results = rag_manager.search(query, k=3, doc_ids=scope)
         logger.info(
             f"rag_manager.search returned "
             f"{len(results) if results else 0} results"
@@ -126,11 +136,9 @@ def rag_search(
     name="search_knowledge_base_documents",
     category=ToolCategory.SEARCH,
     description=(
-        "Search across ALL knowledge base documents to find the most relevant "
-        "ones. This is a broad search across document titles and paths - like "
-        "a search engine for your entire knowledge base. Use this BEFORE "
-        "rag_search to determine which documents should be loaded. If documents "
-        "aren't indexed, this tool will automatically discover and index them."
+        "Search registered knowledge-base document names and paths. When the "
+        "request provides a document scope, results are limited to those "
+        "documents. This search does not discover or index files."
     ),
     return_direct=False,
     requires_api=True,
@@ -142,17 +150,17 @@ def search_knowledge_base_documents(
     ],
     k: Annotated[int, "Number of document paths to return"] = 10,
     api: Any = None,
+    config: RunnableConfig = None,
 ) -> str:
-    """Search across ALL knowledge base documents to find relevant ones.
+    """Search registered knowledge-base documents by path and filename.
 
     This is a BROAD SEARCH across document titles and paths - like a search
     engine for your entire knowledge base. Use this BEFORE using rag_search
     to determine which documents should be loaded into RAG for detailed
     querying.
 
-    The knowledge base may contain ebooks, PDFs, markdown files, ZIM files,
-    and more. This tool helps you discover which documents are relevant to
-    the user's question so you can load them for deeper analysis.
+    Search only the document registry. Request-scoped calls are restricted to
+    the supplied document IDs. Adding or indexing files is a separate action.
 
     Args:
         query: What topics/documents you're looking for
@@ -164,453 +172,25 @@ def search_knowledge_base_documents(
         search_knowledge_base_documents("health and fitness guides", k=5)
         search_knowledge_base_documents("cooking recipes")
     """
-    try:
-        with session_scope() as session:
-            # Get all active documents
-            docs = session.query(Document).filter_by(active=True).all()
-
-            # Initialize found_files to track discovered files
-            found_files = []
-
-            # If no document records exist yet, attempt to discover files
-            # on disk and add them to the database so the KB tools can work
-            if not docs and api:
-                logger.info(
-                    f"No docs in DB, attempting discovery. api={type(api).__name__}"
-                )
-                try:
-                    # Discover candidate document directories from PathSettings
-                    settings = (
-                        api.path_settings or PathSettings.objects.first()
-                    )
-                    logger.info(f"PathSettings: {settings}")
-                    candidate_dirs = []
-                    if settings:
-                        candidate_dirs.extend(
-                            [
-                                settings.documents_path,
-                                settings.ebook_path,
-                                settings.webpages_path,
-                                os.path.join(
-                                    settings.base_path, "knowledge_base"
-                                ),
-                            ]
-                        )
-
-                    logger.info(
-                        f"Candidate dirs for KB discovery: {candidate_dirs}"
-                    )
-                    for d in candidate_dirs:
-                        if not d:
-                            logger.debug(f"Skipping empty candidate dir")
-                            continue
-                        d = os.path.expanduser(d)
-                        if not os.path.exists(d):
-                            logger.info(f"KB discovery dir not found: {d}")
-                            continue
-                        logger.info(f"Scanning KB dir for documents: {d}")
-                        file_count = 0
-                        for root, _, files in os.walk(d):
-                            for fname in files:
-                                ext = os.path.splitext(fname)[1].lower()
-                                if ext in [
-                                    ".pdf",
-                                    ".epub",
-                                    ".html",
-                                    ".htm",
-                                    ".md",
-                                    ".txt",
-                                    ".zim",
-                                ]:
-                                    file_count += 1
-                                    found_files.append(
-                                        os.path.join(root, fname)
-                                    )
-                        logger.info(f"Found {file_count} files in {d}")
-
-                    # Create Document DB entries for found files
-                    logger.debug(
-                        f"Found {len(found_files)} candidate files during discovery"
-                    )
-                    for fpath in found_files:
-                        exists = Document.objects.filter_by(path=fpath)
-                        if not exists or len(exists) == 0:
-                            logger.info(
-                                f"Creating Document record for: {fpath}"
-                            )
-                            Document.objects.create(
-                                path=fpath, active=True, indexed=False
-                            )
-                            if hasattr(api, "emit_signal"):
-                                api.emit_signal(
-                                    SignalCode.DOCUMENT_COLLECTION_CHANGED,
-                                    {"path": fpath, "action": "discovered"},
-                                )
-                        else:
-                            logger.debug(f"Document already exists: {fpath}")
-
-                    # Re-query after adding files
-                    docs = session.query(Document).filter_by(active=True).all()
-                    logger.info(
-                        f"After discovery, DB now has {len(docs)} active document records"
-                    )
-
-                except Exception as e:
-                    logger.error(f"Disk discovery failed: {e}", exc_info=True)
-            # If no files were found with standard paths, attempt to discover
-            # sample files in the repository (booksite) for dev environments
-            if docs == [] and not found_files:
-                try:
-                    # Walk up the directory tree to find repo root with booksite
-                    repo_root = os.path.abspath(
-                        os.path.join(
-                            os.path.dirname(__file__),
-                            "..",
-                            "..",
-                            "..",
-                            "..",
-                            "..",
-                        )
-                    )
-                    # Climb upwards until we find 'booksite' or reach filesystem root
-                    candidate = repo_root
-                    while True:
-                        if os.path.exists(os.path.join(candidate, "booksite")):
-                            break
-                        parent = os.path.abspath(
-                            os.path.join(candidate, os.pardir)
-                        )
-                        if parent == candidate:
-                            candidate = None
-                            break
-                        candidate = parent
-                    if candidate:
-                        logger.debug(
-                            f"Repo fallback candidate root: {candidate}"
-                        )
-                        # Known sample locations in repo
-                        fallback_dirs = [
-                            os.path.join(
-                                candidate,
-                                "booksite",
-                                "text",
-                                "other",
-                                "documents",
-                            ),
-                            os.path.join(
-                                candidate,
-                                "booksite",
-                                "text",
-                                "other",
-                                "ebooks",
-                            ),
-                            os.path.join(
-                                candidate,
-                                "booksite",
-                                "text",
-                                "other",
-                                "webpages",
-                            ),
-                        ]
-                        for d in fallback_dirs:
-                            if os.path.exists(d):
-                                logger.debug(
-                                    f"Scanning repo fallback dir for KB files: {d}"
-                                )
-                                for root, _, files in os.walk(d):
-                                    for fname in files:
-                                        ext = os.path.splitext(fname)[
-                                            1
-                                        ].lower()
-                                        if ext in [
-                                            ".pdf",
-                                            ".epub",
-                                            ".html",
-                                            ".htm",
-                                            ".md",
-                                            ".txt",
-                                            ".zim",
-                                        ]:
-                                            fpath = os.path.join(root, fname)
-                                            exists = (
-                                                Document.objects.filter_by(
-                                                    path=fpath
-                                                )
-                                            )
-                                            if not exists or len(exists) == 0:
-                                                Document.objects.create(
-                                                    path=fpath,
-                                                    active=True,
-                                                    indexed=False,
-                                                )
-                                                found_files.append(fpath)
-                                                if hasattr(api, "emit_signal"):
-                                                    api.emit_signal(
-                                                        SignalCode.DOCUMENT_COLLECTION_CHANGED,
-                                                        {
-                                                            "path": fpath,
-                                                            "action": "discovered",
-                                                        },
-                                                    )
-                        if found_files:
-                            docs = (
-                                session.query(Document)
-                                .filter_by(active=True)
-                                .all()
-                            )
-                except Exception as e:
-                    logger.warning(f"Fallback repo discovery failed: {e}")
-
-            if not docs:
-                logger.info(
-                    f"[KB SEARCH] No docs found after all discovery attempts. Returning error message."
-                )
-                return (
-                    "No documents found in knowledge base. "
-                    "⚠️ Try search_web() to search the internet instead, "
-                    "then use record_knowledge() to save any useful facts."
-                )
-
-            # If no files were found with standard paths, attempt to discover
-            # sample files in the repository (booksite) for dev environments
-            if docs == [] and not found_files:
-                try:
-                    # Walk up the directory tree to find repo root with booksite
-                    repo_root = os.path.abspath(
-                        os.path.join(
-                            os.path.dirname(__file__),
-                            "..",
-                            "..",
-                            "..",
-                            "..",
-                            "..",
-                        )
-                    )
-                    # Climb upwards until we find 'booksite' or reach filesystem root
-                    candidate = repo_root
-                    while True:
-                        if os.path.exists(os.path.join(candidate, "booksite")):
-                            break
-                        parent = os.path.abspath(
-                            os.path.join(candidate, os.pardir)
-                        )
-                        if parent == candidate:
-                            candidate = None
-                            break
-                        candidate = parent
-                    if candidate:
-                        # Known sample locations in repo
-                        fallback_dirs = [
-                            os.path.join(
-                                candidate,
-                                "booksite",
-                                "text",
-                                "other",
-                                "documents",
-                            ),
-                            os.path.join(
-                                candidate,
-                                "booksite",
-                                "text",
-                                "other",
-                                "ebooks",
-                            ),
-                            os.path.join(
-                                candidate,
-                                "booksite",
-                                "text",
-                                "other",
-                                "webpages",
-                            ),
-                        ]
-                        for d in fallback_dirs:
-                            if os.path.exists(d):
-                                logger.debug(
-                                    f"Scanning repo fallback dir for KB files: {d}"
-                                )
-                                for root, _, files in os.walk(d):
-                                    for fname in files:
-                                        ext = os.path.splitext(fname)[
-                                            1
-                                        ].lower()
-                                        if ext in [
-                                            ".pdf",
-                                            ".epub",
-                                            ".html",
-                                            ".htm",
-                                            ".md",
-                                            ".txt",
-                                            ".zim",
-                                        ]:
-                                            fpath = os.path.join(root, fname)
-                                            exists = (
-                                                Document.objects.filter_by(
-                                                    path=fpath
-                                                )
-                                            )
-                                            if not exists or len(exists) == 0:
-                                                Document.objects.create(
-                                                    path=fpath,
-                                                    active=True,
-                                                    indexed=False,
-                                                )
-                                                found_files.append(fpath)
-                                                if hasattr(api, "emit_signal"):
-                                                    api.emit_signal(
-                                                        SignalCode.DOCUMENT_COLLECTION_CHANGED,
-                                                        {
-                                                            "path": fpath,
-                                                            "action": "discovered",
-                                                        },
-                                                    )
-                        if found_files:
-                            docs = (
-                                session.query(Document)
-                                .filter_by(active=True)
-                                .all()
-                            )
-                except Exception as e:
-                    logger.warning(f"Fallback repo discovery failed: {e}")
-
-            # Simple keyword-based relevance scoring
-            query_lower = query.lower()
-            query_terms = query_lower.split()
-
-            scored_docs = []
-            for doc in docs:
-                path_lower = doc.path.lower()
-                filename = os.path.basename(path_lower)
-
-                # Score based on query term matches in path/filename
-                score = 0
-                for term in query_terms:
-                    if term in filename:
-                        score += 10  # High weight for filename matches
-                    elif term in path_lower:
-                        score += 5  # Medium weight for path matches
-
-                if score > 0:
-                    scored_docs.append((score, doc))
-
-            # Sort by score and take top k
-            scored_docs.sort(reverse=True, key=lambda x: x[0])
-            top_docs = scored_docs[:k]
-
-            if not top_docs:
-                # No file/path matches for query terms. Try to index any unindexed
-                # active documents and retry scoring (useful for content-based
-                # searching where filenames may not include query terms).
-                try:
-                    if api and hasattr(api, "rag_manager"):
-                        rag_manager = api.rag_manager
-                        unindexed = [d.path for d in docs if not d.indexed]
-                        if unindexed and hasattr(
-                            rag_manager, "ensure_indexed_files"
-                        ):
-                            logger.info(
-                                f"No filepath matches for query '{query}'. Attempting to index {len(unindexed)} documents and retry."
-                            )
-                            success = rag_manager.ensure_indexed_files(
-                                unindexed
-                            )
-                            if success:
-                                # Recompute scoring after indexing
-                                docs = (
-                                    session.query(Document)
-                                    .filter_by(active=True)
-                                    .all()
-                                )
-                                scored_docs = []
-                                for doc in docs:
-                                    path_lower = doc.path.lower()
-                                    filename = os.path.basename(path_lower)
-                                    score = 0
-                                    for term in query_terms:
-                                        if term in filename:
-                                            score += 10
-                                        elif term in path_lower:
-                                            score += 5
-                                    if score > 0:
-                                        scored_docs.append((score, doc))
-                                scored_docs.sort(
-                                    reverse=True, key=lambda x: x[0]
-                                )
-                                top_docs = scored_docs[:k]
-                except Exception as e:
-                    logger.warning(f"On-demand indexing and retry failed: {e}")
-
-                if not top_docs:
-                    return (
-                        f"No documents found matching '{query}' in the knowledge base. "
-                        f"⚠️ Try search_web('{query}') to search the internet instead, "
-                        f"then use record_knowledge() to save any useful facts you find."
-                    )
-
-            # Format response
-            result_parts = [
-                f"Found {len(top_docs)} relevant document(s) "
-                f"for '{query}':\n"
-            ]
-            # If we found documents but they are not indexed, attempt to index them
-            to_index_files = [
-                doc.path for _, doc in top_docs if not doc.indexed
-            ]
-            indexed_now_count = 0
-            if to_index_files and api:
-                logger.debug(
-                    f"Attempting to on-demand index {len(to_index_files)} files"
-                )
-                logger.debug(
-                    "search_knowledge_base_documents: attempting to index %s files",
-                    len(to_index_files),
-                )
-                rag_manager = getattr(api, "rag_manager", None)
-                if rag_manager and hasattr(
-                    rag_manager, "ensure_indexed_files"
-                ):
-                    try:
-                        success = rag_manager.ensure_indexed_files(
-                            to_index_files
-                        )
-                        indexed_now_count = (
-                            len(to_index_files) if success else 0
-                        )
-                    except Exception as e:
-                        logger.warning(f"Failed to index files on demand: {e}")
-
-            for i, (score, doc) in enumerate(top_docs, 1):
-                filename = os.path.basename(doc.path)
-                indexed_status = "indexed" if doc.indexed else "not indexed"
-                # If we just indexed them, update display status
-                if doc.path in to_index_files and indexed_now_count > 0:
-                    indexed_status = "indexed"
-                result_parts.append(f"{i}. {filename} ({indexed_status})")
-                result_parts.append(f"   Path: {doc.path}")
-
-            result_parts.append(
-                "\nTip: Use these document paths with rag_search to get "
-                "detailed content."
-            )
-
-            # If we performed indexing, append summary of what happened
-            if indexed_now_count > 0:
-                result_parts.insert(
-                    0,
-                    f"Automatically indexed {indexed_now_count} document(s) and refreshed the KB.\n",
-                )
-            return "\n".join(result_parts)
-    except Exception as e:
-        logger.error(f"Error searching knowledge base: {e}")
-        return f"Error searching knowledge base: {str(e)}"
+    configurable = (config or {}).get("configurable", {})
+    scope = configurable.get("rag_document_scope")
+    return search_knowledge_base_documents_impl(
+        query=query,
+        k=k,
+        api=api,
+        session_scope=session_scope,
+        document_model=Document,
+        logger=logger,
+        document_scope=tuple(scope) if scope is not None else None,
+    )
 
 
 @tool(
     name="save_to_knowledge_base",
     category=ToolCategory.RAG,
     description=(
-        "Save content to the knowledge base for future RAG retrieval. "
-        "This allows the agent to build its own knowledge base over time "
-        "by saving important information for later reference."
+        "Save bounded text in managed knowledge-base storage and register it "
+        "as a document. Existing files are never replaced."
     ),
     return_direct=False,
     requires_api=True,
@@ -622,11 +202,9 @@ def save_to_knowledge_base(
         str, "Category for organization (e.g., 'research', 'documentation')"
     ] = "general",
     api: Any = None,
+    config: RunnableConfig = None,
 ) -> str:
-    """Save content to the knowledge base for future RAG retrieval.
-
-    This tool allows the agent to build its own knowledge base over time
-    by saving important information for later reference.
+    """Save and register a new text document in managed knowledge storage.
 
     Args:
         content: Text content to save
@@ -636,34 +214,262 @@ def save_to_knowledge_base(
 
     """
     try:
-        # Create a document file
-        settings = PathSettings.objects.first()
-        base_path = os.path.expanduser(settings.base_path)
-        kb_path = os.path.join(base_path, "knowledge_base", category)
-        os.makedirs(kb_path, exist_ok=True)
-
-        # Sanitize filename
-        filename = "".join(
-            c for c in title if c.isalnum() or c in (" ", "-", "_")
-        ).strip()
-        filename = filename.replace(" ", "_") + ".txt"
-
-        file_path = os.path.join(kb_path, filename)
-
-        # Write content
-        with open(file_path, "w") as f:
-            f.write(f"Title: {title}\n")
-            f.write(f"Category: {category}\n")
-            f.write("\n---\n\n")
-            f.write(content)
-
-        # Emit signal to reload RAG if API available
-        if api and hasattr(api, "emit_signal"):
-            api.emit_signal(
-                SignalCode.RAG_DOCUMENT_ADDED,
-                {"file_path": file_path, "title": title},
-            )
-
-        return f"Content saved to knowledge base: {title}"
+        validated = _validate_knowledge_save(content, title, category, config)
+        if isinstance(validated, str):
+            return validated
+        filename, chatbot_id = validated
+        base_path = _knowledge_base_base_path()
+        file_path = _write_managed_knowledge_file(
+            base_path,
+            category,
+            filename,
+            title,
+            content,
+        )
+        registration_error = _register_knowledge_document(file_path, chatbot_id)
+        if registration_error:
+            return registration_error
+        if not _notify_knowledge_document_added(api, file_path, title):
+            return _knowledge_notification_failure(title)
+        return f"Content saved and registered in the knowledge base: {title}"
     except Exception as e:
         return f"Error saving to knowledge base: {str(e)}"
+
+
+def _validate_knowledge_save(
+    content: Any,
+    title: Any,
+    category: Any,
+    config: RunnableConfig,
+) -> tuple[str, int | None] | str:
+    """Validate save input and resolve trusted request ownership metadata."""
+    if not isinstance(content, str) or not content.strip():
+        return "Error saving to knowledge base: content must not be empty."
+    if len(content.encode("utf-8")) > 65536:
+        return "Error saving to knowledge base: content exceeds 65536 UTF-8 bytes."
+    if not isinstance(title, str) or not title.strip() or len(title) > 160:
+        return "Error saving to knowledge base: title must contain 1 to 160 characters."
+    if not isinstance(category, str) or not re.fullmatch(
+        r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}", category
+    ):
+        return (
+            "Error saving to knowledge base: category must be a single safe "
+            "name of at most 64 characters."
+        )
+
+    configurable = (config or {}).get("configurable", {})
+    chatbot_id = configurable.get("chatbot_id")
+    if configurable.get("rag_document_scope") is not None and chatbot_id is None:
+        return (
+            "Error saving to knowledge base: this request has a scoped "
+            "document set but no chatbot ownership identity."
+        )
+    if chatbot_id is not None and (
+        isinstance(chatbot_id, bool)
+        or not isinstance(chatbot_id, int)
+        or chatbot_id < 1
+    ):
+        return "Error saving to knowledge base: chatbot assignment is invalid."
+
+    filename = "".join(
+        char for char in title if char.isalnum() or char in (" ", "-", "_")
+    ).strip()
+    filename = filename.replace(" ", "_")
+    if not filename:
+        return (
+            "Error saving to knowledge base: title has no usable filename "
+            "characters."
+        )
+    return f"{filename}.txt", chatbot_id
+
+
+def _knowledge_base_base_path() -> str:
+    """Return the configured base path for managed knowledge storage."""
+    settings = PathSettings.objects.first()
+    if not settings or not settings.base_path:
+        raise ValueError("managed storage path is unavailable")
+    return os.path.expanduser(settings.base_path)
+
+
+def _register_knowledge_document(
+    file_path: str, chatbot_id: int | None
+) -> str | None:
+    """Register persisted content and attach it to its owning chatbot."""
+    try:
+        registered = Document.objects.create(
+            path=file_path,
+            active=True,
+            indexed=False,
+        )
+    except Exception as error:
+        return (
+            f"Content was written to {file_path}, but document registration "
+            f"failed: {error}"
+        )
+    if registered is None:
+        return f"Content was written to {file_path}, but document registration failed."
+
+    if chatbot_id is None:
+        return None
+    try:
+        assignment = TargetFiles.objects.create(
+            chatbot_id=chatbot_id,
+            file_path=file_path,
+        )
+    except Exception as error:
+        return (
+            "Document was saved and registered, but assignment to chatbot "
+            f"{chatbot_id} failed: {error}"
+        )
+    if assignment is None:
+        return (
+            "Document was saved and registered, but its chatbot assignment "
+            "failed. It will not appear in that chatbot's document scope."
+        )
+    return None
+
+
+def _notify_knowledge_document_added(api: Any, file_path: str, title: str) -> bool:
+    """Emit the existing best-effort document refresh notification."""
+    if not api or not hasattr(api, "emit_signal"):
+        return True
+    try:
+        api.emit_signal(
+            SignalCode.RAG_DOCUMENT_ADDED,
+            {"file_path": file_path, "title": title},
+        )
+    except Exception as error:
+        logger.warning("Saved knowledge file but notification failed: %s", error)
+        return False
+    return True
+
+
+def _knowledge_notification_failure(title: str) -> str:
+    """Describe a successful save whose refresh signal could not be sent."""
+    return f"Content saved and registered, but refresh notification failed: {title}"
+
+
+def _write_managed_knowledge_file(
+    base_path: str, category: str, filename: str, title: str, content: str
+) -> str:
+    """Create a new managed KB file without following symlinks or overwriting.
+
+    Each directory component is opened relative to a held directory descriptor
+    with ``O_NOFOLLOW``. The leaf is created with ``O_EXCL`` so concurrent or
+    repeated saves cannot replace existing data.
+    """
+    if not os.path.isabs(base_path):
+        raise ValueError("managed storage path must be absolute")
+    components = [part for part in base_path.split(os.sep) if part]
+    if any(part in {".", ".."} for part in components):
+        raise ValueError("managed storage path must not contain dot components")
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    root_fd = os.open("/", flags)
+    current_fd = root_fd
+    try:
+        for component in components:
+            next_fd = _open_or_create_directory(current_fd, component, flags)
+            if current_fd != root_fd:
+                os.close(current_fd)
+            current_fd = next_fd
+        kb_fd = _open_or_create_directory(current_fd, "knowledge_base", flags)
+        try:
+            category_fd = _open_or_create_directory(kb_fd, category, flags)
+            try:
+                payload = (
+                    f"Title: {title}\nCategory: {category}\n\n---\n\n{content}"
+                ).encode("utf-8")
+                file_fd = os.open(
+                    filename,
+                    os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
+                    0o600,
+                    dir_fd=category_fd,
+                )
+                created_stat = os.fstat(file_fd)
+                phase = "write"
+                try:
+                    view = memoryview(payload)
+                    while view:
+                        written = os.write(file_fd, view)
+                        view = view[written:]
+                    phase = "file fsync"
+                    os.fsync(file_fd)
+                    os.close(file_fd)
+                    file_fd = -1
+                    phase = "directory fsync"
+                    os.fsync(category_fd)
+                except Exception as error:
+                    if file_fd >= 0:
+                        try:
+                            os.close(file_fd)
+                        except OSError:
+                            pass
+                    removed = _remove_created_knowledge_file(
+                        category_fd,
+                        filename,
+                        created_stat.st_dev,
+                        created_stat.st_ino,
+                    )
+                    if removed:
+                        raise OSError(
+                            f"knowledge file {phase} failed; the newly created "
+                            "file was removed and was not registered"
+                        ) from error
+                    raise OSError(
+                        f"knowledge file {phase} failed; an unregistered file "
+                        "may remain and needs reconciliation"
+                    ) from error
+                return os.path.join(base_path, "knowledge_base", category, filename)
+            finally:
+                os.close(category_fd)
+        finally:
+            os.close(kb_fd)
+    except OSError as error:
+        if error.errno in (errno.ELOOP, errno.ENOTDIR):
+            raise ValueError("managed storage path contains an unsafe directory component") from error
+        if error.errno == errno.EEXIST:
+            raise FileExistsError("a knowledge-base item with that title already exists") from error
+        raise
+    finally:
+        if current_fd != root_fd:
+            os.close(current_fd)
+        os.close(root_fd)
+
+
+def _open_or_create_directory(parent_fd: int, name: str, flags: int) -> int:
+    try:
+        return os.open(name, flags, dir_fd=parent_fd)
+    except FileNotFoundError:
+        try:
+            os.mkdir(name, mode=0o700, dir_fd=parent_fd)
+        except FileExistsError:
+            pass
+        # Sync the parent whether this call created the entry or raced with
+        # another creator. The directory must be durable before a file or DB
+        # row below it can refer to that path.
+        os.fsync(parent_fd)
+        return os.open(name, flags, dir_fd=parent_fd)
+
+
+def _remove_created_knowledge_file(
+    directory_fd: int, filename: str, device: int, inode: int
+) -> bool:
+    """Remove only the leaf inode created by this save call, then sync it."""
+    try:
+        current = os.stat(filename, dir_fd=directory_fd, follow_symlinks=False)
+    except FileNotFoundError:
+        current = None
+    except OSError:
+        return False
+    if current is not None:
+        if (current.st_dev, current.st_ino) != (device, inode):
+            return False
+        try:
+            os.unlink(filename, dir_fd=directory_fd)
+        except OSError:
+            return False
+    try:
+        os.fsync(directory_fd)
+    except OSError:
+        return False
+    return True

@@ -27,6 +27,7 @@ class GenerationMixin:
         do_tts_reply: bool = True,
         extra_context: Optional[Dict[str, Dict[str, Any]]] = None,
         skip_tool_setup: bool = False,
+        rag_document_scope: Optional[tuple[str, ...]] = None,
     ) -> Dict[str, Any]:
         """Generate a response using the loaded LLM.
 
@@ -51,6 +52,7 @@ class GenerationMixin:
             do_tts_reply,
             extra_context,
             skip_tool_setup,
+            rag_document_scope,
         )
 
     def _send_final_message(

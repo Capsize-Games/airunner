@@ -4,7 +4,7 @@ Issue: [P04](https://github.com/Capsize-Games/airunner/issues/2103)
 ([parent spec](https://github.com/Capsize-Games/airunner/issues/2083)).
 Work type: isolated evidence-gathering. Base commit `742a686c2` plus the
 uncommitted P02 profile context (`setup.py`, `services/setup.py`,
-`package/constraints-linux-nvidia-cu129.txt`), which this issue reads
+`package/constraints-linux-nvidia-cu129-historical-desktop.txt`), which this issue reads
 but does not modify.
 
 ## Decision
@@ -225,7 +225,7 @@ contract it must implement is:
 
 ```bash
 # From the repo root, in an isolated venv with the P02 profile
-# installed (package/constraints-linux-nvidia-cu129.txt):
+# installed from the historical desktop profile lock (not a current release recipe):
 pyinstaller --onedir --noconfirm --clean \
   --name airunner \
   --paths src \

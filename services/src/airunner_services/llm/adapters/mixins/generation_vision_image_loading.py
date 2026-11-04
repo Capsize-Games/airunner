@@ -6,9 +6,15 @@ import base64
 import io
 from pathlib import Path
 from typing import Any, Optional
-from urllib.request import Request, urlopen
 
 from PIL import Image as PILImage
+
+from airunner_services.url_safety import safe_fetch_bytes
+from airunner_services.utils.image.convert_binary_to_image import (
+    MAX_IMAGE_PIXELS,
+)
+
+MAX_REMOTE_IMAGE_BYTES = 25 * 1024 * 1024
 
 
 def image_from_data_url(path_str: str) -> PILImage.Image:
@@ -25,11 +31,20 @@ def image_from_remote_url(
     adapter: Any,
     path_str: str,
 ) -> Optional[PILImage.Image]:
-    """Download and decode one remote image URL."""
+    """Download and decode one policy-checked, bounded remote image URL."""
     try:
-        request = Request(path_str, headers={"User-Agent": "Mozilla/5.0"})
-        with urlopen(request, timeout=10) as response:
-            return PILImage.open(io.BytesIO(response.read())).convert("RGB")
+        image_bytes = safe_fetch_bytes(
+            path_str,
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout_seconds=10,
+            max_redirects=3,
+            max_bytes=MAX_REMOTE_IMAGE_BYTES,
+        )
+        with PILImage.open(io.BytesIO(image_bytes)) as image:
+            width, height = image.size
+            if width <= 0 or height <= 0 or width * height > MAX_IMAGE_PIXELS:
+                raise ValueError("remote image dimensions exceed the supported limit")
+            return image.convert("RGB")
     except Exception as error:
         adapter.logger.error("Failed to download image: %s", error)
         return None

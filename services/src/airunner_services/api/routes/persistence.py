@@ -13,7 +13,6 @@ from .persistence_contracts import (
 )
 from .persistence_mutations import (
     create_record,
-    delete_all,
     delete_record,
     get_or_create_record,
     merge_record,
@@ -47,8 +46,10 @@ def execute_state_operation(
     """Execute one state operation on one service-owned domain model."""
     model_cls = model_class(domain, model_name)
     operation = body.operation.lower().strip()
-    if operation == "delete_all":
-        return delete_all(model_cls)
+    # No whole-table wipe op: "delete_all" was reachable by any
+    # authenticated caller with no role check or confirmation, so it was
+    # removed from the data plane (API hardening wave 2). Unknown ops
+    # fall through to the 400 below.
     handler = OPERATION_HANDLERS.get(operation)
     if handler is not None:
         return handler(model_cls, body)

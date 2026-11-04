@@ -70,7 +70,7 @@ A feature is only "local" end-to-end if both its GUI entry point and its daemon-
 | VOICE-03 | Text-to-speech: eSpeak engine | `services/src/airunner_services/runtimes/espeak_model_manager.py` | local | auto | `services/tests/test_tts_synthesize_functional.py`, `test_tts_runtime_load.py` |
 | VOICE-04 | Text-to-speech: OpenVoice engine | `services/src/airunner_services/runtimes/openvoice_model_manager.py` (uses `torch.cuda.is_available()`, GPU when present) | gpu (CPU fallback exists) | auto | `services/tests/test_tts_runtime_load.py` |
 | VOICE-05 | Voice/engine preference UI | `src/airunner/components/tts/gui/widgets/voice_settings_widget.py`, `espeak_preferences_widget.py`, `open_voice_preferences_widget.py` | local | gap | No test found. Proposed: FOLLOWUP-2. |
-| VOICE-06 | Full voice conversation loop (STT → LLM → TTS) | `services/tests/test_llm_tts_functional.py`, `test_gui_llm_tts_functional.py`, `test_gui_stt_llm_tts_functional.py` (these ARE the existing tests, confirming this composed path already has coverage) | gpu | auto | Also manually validated end-to-end by [Q04](https://github.com/Capsize-Games/airunner/issues/2148) |
+| VOICE-06 | Full voice conversation loop (STT → LLM → TTS) | `services/tests/test_llm_tts_functional.py`, `test_gui_llm_tts_functional.py`, `test_gui_stt_llm_tts_functional.py` (these ARE the existing tests, confirming this composed path already has coverage) | gpu | auto | Composed service acceptance remains tracked by [Q04](https://github.com/Capsize-Games/airunner/issues/2148); this matrix does not establish a passed run |
 
 ## 4. Documents / embeddings / RAG
 

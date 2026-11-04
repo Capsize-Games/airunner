@@ -1,5 +1,6 @@
 """Service-owned Z-Image model manager."""
 
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 import torch
@@ -7,6 +8,15 @@ import torch
 from airunner_services.model_management.model_manager_interface import (
     ModelManagerInterface,
 )
+from airunner_services.model_management.model_registry import (
+    ModelMetadata,
+    ModelProvider,
+    ModelType as ResourceModelType,
+)
+from airunner_services.model_management.quantization_strategy import (
+    QuantizationLevel,
+)
+from airunner_services.art.utils.model_file_checker import ModelFileChecker
 from airunner_services.art.managers.stablediffusion.base_diffusers_model_manager import (
     BaseDiffusersModelManager,
 )
@@ -264,6 +274,78 @@ class ZImageModelManager(
             "Skipping _move_pipe_to_device for Z-Image "
             "(memory mixin handles device placement)"
         )
+
+    def _resource_preflight_options(self, resource_manager) -> Dict[str, Any]:
+        """Register and budget the selected pretrained Z-Image directory."""
+        if self.version != "Z-Image Turbo" or not self.model_path:
+            return {}
+        model_dir = Path(self.model_path)
+        if not model_dir.is_dir():
+            # Preserve the existing single-file/native FP8 load contract.
+            return {}
+        if not self._get_bundle_helper().has_complete_pretrained_structure(
+            model_dir
+        ):
+            return {"require_registered": True}
+        quantization_bits = (
+            self.quantization_bits if self.use_quantization else None
+        )
+        if self.use_quantization and quantization_bits not in (4, 8):
+            raise RuntimeError(
+                f"Pretrained Z-Image does not support {quantization_bits}-bit "
+                "quantization"
+            )
+
+        plan = self._get_pretrained_loader_helper().build_memory_plan(
+            model_dir,
+            use_quantization=self.use_quantization,
+            quantization_bits=quantization_bits,
+        )
+        self._zimage_memory_plan = plan
+        source_bytes = (
+            plan.transformer.source_tensor_bytes
+            + plan.text_encoder.source_tensor_bytes
+            + plan.vae.source_tensor_bytes
+        )
+        model_id = str(self.model_path)
+        repo_id = ModelFileChecker.get_repo_id_for_version(
+            "Z-Image Turbo",
+            "txt2img",
+        )
+        if not repo_id:
+            raise RuntimeError(
+                "Cannot resolve the bootstrap model identity for Z-Image Turbo"
+            )
+        preferred_quantization = {
+            4: QuantizationLevel.INT4,
+            8: QuantizationLevel.INT8,
+            None: QuantizationLevel.NONE,
+        }[quantization_bits]
+        resource_manager.registry.register_model(
+            ModelMetadata(
+                name="Z-Image Turbo",
+                provider=ModelProvider.STABLE_DIFFUSION,
+                model_type=ResourceModelType.TEXT_TO_IMAGE,
+                size_gb=source_bytes / (1024**3),
+                min_vram_gb=plan.estimated_vram_gib,
+                min_ram_gb=plan.estimated_ram_gib,
+                recommended_vram_gb=plan.estimated_vram_gib,
+                recommended_ram_gb=plan.estimated_ram_gib,
+                supports_quantization=True,
+                huggingface_id=repo_id,
+                model_id=model_id,
+                preferred_runtime_format="diffusers-pretrained",
+                runtime_backend="airunner-zimage",
+                preferred_download_repo_id=repo_id,
+            )
+        )
+        return {
+            "preferred_quantization": preferred_quantization,
+            "require_registered": True,
+            "auto_swap": False,
+            "estimated_vram_gb": plan.estimated_vram_gib,
+            "estimated_ram_gb": plan.estimated_ram_gib,
+        }
 
     @property
     def generator(self) -> torch.Generator:

@@ -1,0 +1,32 @@
+{
+  "distribution": "langchain-core",
+  "exact_pin": "langchain-core==1.4.7",
+  "files": [
+    {
+      "path": "packaging/licenses/langchain-core-1.4.7-supplement/LICENSE.txt",
+      "sha256": "4ec67e4ca6e6721dba849b2ca82261597c86a61ee214bbf21416006b7b2d0478",
+      "size_bytes": 1067,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "langchain-ai/langchain",
+        "revision": "51578289bb1f696a643e0740be1441039d8af8ce",
+        "sha256": "4ec67e4ca6e6721dba849b2ca82261597c86a61ee214bbf21416006b7b2d0478",
+        "size_bytes": 1067
+      }
+    }
+  ],
+  "license_source": "The selected wheel has no embedded license notice. The exact 1.4.7 source archive PKG-INFO and selected wheel hashes are recorded; the project declares MIT and its root LICENSE is copied byte-for-byte from the canonical source commit.",
+  "package_source_evidence": {
+    "path": "langchain_core-1.4.7/PKG-INFO",
+    "sha256": "737155c4969f2ea45d32ff08c63e337ca2f09a80d3c95aabd465e56cfb37f44b"
+  },
+  "selected_wheel": {
+    "filename": "langchain_core-1.4.7-py3-none-any.whl",
+    "sha256": "bcadd51951140ecdcba98311dbd931ba5de02a5ba8a2288dad5069c1eea2a13d"
+  },
+  "source_distribution": {
+    "filename": "langchain_core-1.4.7.tar.gz",
+    "sha256": "7a825d77de0a3f39adbd9d09612a75e85527e14a52c1601089bcc062972d9f2b"
+  },
+  "version": "1.4.7"
+}

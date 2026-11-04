@@ -45,9 +45,13 @@ _configure_daemon_environment()
 
 from logging.handlers import RotatingFileHandler
 
+from airunner_common.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
+
+# The installer and runtime share an application-owned resource location.
+os.environ.setdefault("NLTK_DATA", str(Path(AIRUNNER_BASE_PATH) / "nltk_data"))
+
 from airunner_services.runtimes.daemon_config import DaemonConfig
 from airunner_services.api.server import APIServer
-from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -95,33 +99,87 @@ class AIRunnerDaemon:
         self.app = None
         self.api_server = None
         self.shutdown_requested = False
+        self._shutting_down = False
+        self._signal_received = None
+        self._reload_requested = False
+        self._lock_file = None
         self._setup_logging()
-        self._setup_signal_handlers()
         self.lifecycle_service = None
 
-    def _acquire_lock(self) -> bool:
-        """Return True when no other daemon is listening on the configured port.
+    def _lock_file_path(self) -> Path:
+        """Return the daemon lockfile under the runtime layout dir.
 
-        Attempts a TCP connection to the port.  If something answers,
-        another daemon is already running.
+        The filename carries the configured API port so two daemons
+        with different configs cannot take different locks and then
+        collide on the same port (issue #2422).
         """
-        import socket
+        from airunner_services.config.runtime_layout import (
+            build_runtime_directory_layout,
+        )
 
-        server_config = self.config.config.get("server", {})
-        host = server_config.get("host", "127.0.0.1")
-        port = int(server_config.get("port", 8188))
+        port = self.config.config.get("server", {}).get("port", 8188)
+        name = f"daemon-{port}.lock"
+        configured = self.config.config.get("runtime", {}).get("root")
+        if configured:
+            return Path(configured) / name
+        return build_runtime_directory_layout().runtime_root / name
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(0.5)
+    def _acquire_lock(self) -> bool:
+        """Return True when this process holds the daemon lockfile.
+
+        Takes an exclusive non-blocking ``flock`` on a lockfile under
+        the runtime layout dir and holds it for the process lifetime
+        via ``self._lock_file``.  The kernel releases the lock when
+        the process dies, so no stale-lock cleanup is needed.  A TCP
+        probe cannot do this: another program may answer the port, or
+        the port may be free while a second daemon is still starting.
+        """
         try:
-            sock.connect((host, port))
-            # Connected — another daemon is listening
-            return False
-        except (OSError, ConnectionRefusedError, socket.timeout):
-            # Nothing listening — port is free
-            return True
-        finally:
-            sock.close()
+            import fcntl
+        except ImportError:  # pragma: no cover - non-POSIX fallback
+            fcntl = None  # type: ignore[assignment]
+
+        path = self._lock_file_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if fcntl is not None:
+            # Open without O_TRUNC: truncating before the
+            # non-blocking flock would destroy the holder's PID
+            # text even when the lock is already held (#2422).
+            fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
+            handle = os.fdopen(fd, "w")
+            try:
+                fcntl.flock(
+                    handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB
+                )
+            except OSError:
+                handle.close()
+                return False
+        else:  # pragma: no cover - non-POSIX fallback
+            try:
+                fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            except OSError:
+                return False
+            handle = os.fdopen(fd, "w")
+        self._lock_file = handle
+        try:
+            # Truncate only after the lock is held, so a failed
+            # acquisition never wipes the holder's PID text (#2422).
+            handle.seek(0)
+            handle.truncate(0)
+            handle.write(str(os.getpid()))
+            handle.flush()
+        except OSError:
+            pass
+        return True
+
+    def _release_lock(self) -> None:
+        """Release the daemon lockfile held for the process lifetime."""
+        handle, self._lock_file = self._lock_file, None
+        if handle is not None:
+            try:
+                handle.close()
+            except OSError:
+                pass
 
     def _setup_logging(self):
         """Configure logging for daemon mode."""
@@ -170,25 +228,64 @@ class AIRunnerDaemon:
         if hasattr(signal, "SIGHUP"):
             signal.signal(signal.SIGHUP, self._handle_reload_signal)
 
+    def _maybe_setup_signal_handlers(self) -> None:
+        """Install signal handlers when running on the main thread.
+
+        Constructing the daemon must stay side-effect free so import
+        or construction on another thread never raises ValueError
+        from signal.signal (issue #2420); start() performs the setup
+        where it is legal, skipping with a warning otherwise.
+        """
+        if threading.current_thread() is not threading.main_thread():
+            logger.warning(
+                "Skipping signal handler setup: "
+                "start() is not running on the main thread"
+            )
+            return
+        self._setup_signal_handlers()
+
     def _handle_shutdown_signal(self, signum, frame):
-        """Handle shutdown signals (SIGTERM, SIGINT)."""
+        """Record a shutdown request from SIGTERM/SIGINT.
+
+        Flag-only: blocking teardown (server stop, thread joins,
+        app cleanup, exit) runs in _run_loop, where such calls are
+        legal, instead of inside the async-signal handler (#2418).
+        """
         del frame
         logger.info(
-            f"Received signal {signum}, initiating graceful shutdown..."
+            f"Received signal {signum}, scheduling graceful shutdown..."
         )
+        self._signal_received = signum
         self.shutdown_requested = True
-        self.shutdown()
 
     def _handle_reload_signal(self, signum, frame):
-        """Handle reload signal (SIGHUP) - reload configuration."""
+        """Schedule a configuration reload from SIGHUP.
+
+        Flag-only: the running API and heartbeat threads keep
+        reading the current object while the handler just records
+        the request; _run_loop swaps the config atomically (#2421).
+        """
         del signum, frame
-        logger.info("Received SIGHUP, reloading configuration...")
-        self.config = DaemonConfig(self.config.config_path)
+        logger.info("Received SIGHUP, scheduling configuration reload...")
+        self._reload_requested = True
+
+    def _perform_reload(self) -> None:
+        """Re-read the config file and swap it in atomically."""
+        try:
+            reloaded = DaemonConfig(self.config.config_path)
+        except Exception as exc:
+            logger.error(
+                "Configuration reload failed, "
+                f"keeping active config: {exc}"
+            )
+            return
+        self.config = reloaded
         logger.info("Configuration reloaded")
 
     def start(self):
         """Start the daemon."""
         logger.info("Starting AI Runner daemon...")
+        self._maybe_setup_signal_handlers()
 
         if not self._acquire_lock():
             logger.error(
@@ -200,6 +297,11 @@ class AIRunnerDaemon:
 
         try:
             self._init_app_or_degraded()
+            # ServiceApp construction installs its own SIGINT/SIGTERM
+            # handlers; reinstall so the daemon stays the single
+            # owner. shutdown() still runs app cleanup from the
+            # main loop, so no cleanup is lost.
+            self._maybe_setup_signal_handlers()
             self._start_health_monitor()
             self._start_api_server()
 
@@ -222,7 +324,6 @@ class AIRunnerDaemon:
             self.app = self._create_headless_app()
             self._initialize_lifecycle_service()
             logger.info("AI Runner app initialized in headless mode")
-            self._preload_models()
             return
         self._enter_degraded_mode()
 
@@ -270,29 +371,6 @@ class AIRunnerDaemon:
         self.lifecycle_service = self.app.ensure_lifecycle_service()
         self.lifecycle_service.initialize()
         self.lifecycle_service.preload_llm_model()
-
-    def _preload_models(self):
-        """Preload configured models on startup."""
-        preload_list = self.config.config.get("models", {}).get("preload", [])
-
-        if not preload_list:
-            logger.info("No models configured for preloading")
-            return
-
-        logger.info(f"Preloading {len(preload_list)} models: {preload_list}")
-
-        from airunner_services.model_management.model_resource_manager import (
-            ModelResourceManager,
-        )
-
-        ModelResourceManager()
-
-        for model_id in preload_list:
-            try:
-                logger.info(f"Preloading model: {model_id}")
-                logger.info(f"Model {model_id} queued for preload")
-            except Exception as e:
-                logger.error(f"Failed to preload model {model_id}: {e}")
 
     def _start_health_monitor(self):
         """Start health monitoring heartbeat."""
@@ -342,7 +420,19 @@ class AIRunnerDaemon:
             self.server_thread = threading.Thread(
                 target=self.api_server.start, daemon=True
             )
+            self.api_server.server_thread = self.server_thread
             self.server_thread.start()
+
+            timeout = float(
+                server_config.get("startup_timeout_seconds", 15)
+            )
+            if not self.api_server.wait_until_started(
+                timeout=timeout
+            ):
+                raise RuntimeError(
+                    f"API server failed to bind "
+                    f"{host}:{port} within {timeout}s"
+                )
 
             logger.info(f"FastAPI server started on {host}:{port}")
             logger.info(f"API docs available at http://{host}:{port}/docs")
@@ -352,22 +442,40 @@ class AIRunnerDaemon:
             raise
 
     def _run_loop(self):
-        """Main daemon loop."""
+        """Run the main daemon loop, then shut down.
+
+        Blocking teardown lives here — not in the signal handler —
+        so server stop, thread joins, and cleanup run where blocking
+        calls are legal (issue #2418). SIGHUP reloads requested via
+        the flag are applied here between sleeps (issue #2421).
+        """
         logger.info("Entering daemon main loop")
 
         try:
             while not self.shutdown_requested:
+                if self._reload_requested:
+                    self._reload_requested = False
+                    self._perform_reload()
                 time.sleep(1)
 
         except KeyboardInterrupt:
             logger.info("Keyboard interrupt received")
-            self.shutdown()
+            self.shutdown_requested = True
+
+        self.shutdown()
+        sys.exit(0)
 
     def shutdown(self):
-        """Gracefully shutdown the daemon."""
-        if self.shutdown_requested:
+        """Gracefully shutdown the daemon.
+
+        Idempotent and safe to call from any thread; performs no
+        process exit itself — _run_loop exits after shutdown
+        returns (issue #2418).
+        """
+        if self._shutting_down:
             return
 
+        self._shutting_down = True
         self.shutdown_requested = True
         logger.info("Shutting down AI Runner daemon...")
 
@@ -400,7 +508,7 @@ class AIRunnerDaemon:
             logger.error(f"Error during shutdown: {e}", exc_info=True)
 
         finally:
-            sys.exit(0)
+            self._release_lock()
 
     def _shutdown_runtime_clients(self) -> None:
         """Close runtime clients owned by the daemon-backed app instance."""
@@ -422,8 +530,8 @@ class AIRunnerDaemon:
             client.close()
 
 
-def main():
-    """Main entry point for daemon."""
+def main(argv: list[str] | None = None):
+    """Main entry point for daemon and explicit offline/operator actions."""
     parser = argparse.ArgumentParser(description="AI Runner Daemon")
     parser.add_argument(
         "--config",
@@ -435,8 +543,38 @@ def main():
         action="store_true",
         help="Generate default configuration file and exit",
     )
+    parser.add_argument("--install-nltk-data", type=Path, help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--install-triton-toolchain",
+        action="store_true",
+        help="Download and stage reviewed NVIDIA developer inputs in a private user cache",
+    )
+    parser.add_argument("--triton-toolchain-dir", type=Path)
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+
+    if args.install_nltk_data is not None:
+        from airunner_services.setup_nltk_worker import download_nltk_data
+
+        download_nltk_data(args.install_nltk_data)
+        return
+
+    if args.install_triton_toolchain:
+        try:
+            from airunner_services.art.triton_toolchain_installer import (
+                install_private_toolchain,
+            )
+
+            receipt = install_private_toolchain(args.triton_toolchain_dir)
+        except (ImportError, OSError, ValueError) as exc:
+            parser.exit(1, f"Triton toolchain installation failed: {exc}\n")
+        print(
+            "Private Triton toolchain staged: "
+            f"{receipt['environment']['TRITON_PTXAS_PATH']}"
+        )
+        return
+    if args.triton_toolchain_dir is not None:
+        parser.error("--triton-toolchain-dir requires --install-triton-toolchain")
 
     if args.generate_config:
         config = DaemonConfig(args.config)

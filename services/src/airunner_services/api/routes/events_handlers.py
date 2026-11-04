@@ -9,7 +9,7 @@ the wire format, which is shared verbatim with the web client.
 from __future__ import annotations
 
 import re
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlsplit
 
 from airunner_services.conversations.conversation_history_manager import (
@@ -65,13 +65,48 @@ def _raw_messages(conversation_id: int) -> List[Dict[str, Any]]:
     return list(value) if isinstance(value, list) else []
 
 
+_CONVERSATIONS_LIMIT_DEFAULT = 50
+_CONVERSATIONS_LIMIT_MAX = 200
+_THREAD_LIMIT_DEFAULT = 200
+_THREAD_LIMIT_MAX = 1000
+
+
+def _parse_limit(raw: Any, default: int, maximum: int) -> Optional[int]:
+    """Coerce one caller limit into 1..maximum, defaulting when absent.
+
+    Returns None when the value is unparseable; numeric values are
+    clamped, never passed through unbounded.
+    """
+    if raw is None:
+        return default
+    try:
+        parsed = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return max(1, min(parsed, maximum))
+
+
 def _health(_path: str, _body: Dict[str, Any]) -> Tuple[int, Any]:
     return 200, {"status": "ok"}
 
 
 def _conversations(_path: str, body: Dict[str, Any]) -> Tuple[int, Any]:
-    limit = int(body.get("limit", 50))
-    rows = ConversationHistoryManager().list_conversations(limit=limit)
+    limit = _parse_limit(
+        body.get("limit", _CONVERSATIONS_LIMIT_DEFAULT),
+        _CONVERSATIONS_LIMIT_DEFAULT,
+        _CONVERSATIONS_LIMIT_MAX,
+    )
+    if limit is None:
+        return 400, {"detail": "invalid_limit"}
+    try:
+        offset = int(body.get("offset", 0))
+    except (TypeError, ValueError):
+        return 400, {"detail": "invalid_offset"}
+    if offset < 0:
+        return 400, {"detail": "invalid_offset"}
+    rows = ConversationHistoryManager().list_conversations(
+        limit=limit, offset=offset
+    )
     return 200, {"conversations": rows}
 
 
@@ -100,7 +135,14 @@ def _chatbot_query(_path: str, _body: Dict[str, Any]) -> Tuple[int, Any]:
 
 
 def _thread(path: str, _body: Dict[str, Any]) -> Tuple[int, Any]:
-    limit = int((_query(path).get("limit") or [200])[0])
+    raw = (_query(path).get("limit") or [None])[0]
+    limit = _parse_limit(
+        _THREAD_LIMIT_DEFAULT if raw is None else raw,
+        _THREAD_LIMIT_DEFAULT,
+        _THREAD_LIMIT_MAX,
+    )
+    if limit is None:
+        return 400, {"detail": "invalid_limit"}
     messages = ConversationHistoryManager().load_conversation_history(
         max_messages=limit
     )
@@ -119,7 +161,12 @@ def _truncate(_path: str, body: Dict[str, Any]) -> Tuple[int, Any]:
     conversation_id = body.get("conversation_id")
     if conversation_id is None:
         return 400, {"detail": "conversation_id required"}
-    keep = int(body.get("keep_count", 0))
+    try:
+        keep = int(body.get("keep_count", 0))
+    except (TypeError, ValueError):
+        return 400, {"detail": "invalid_keep_count"}
+    if keep < 0:
+        return 400, {"detail": "invalid_keep_count"}
     messages = _raw_messages(int(conversation_id))
     kept = messages[-keep:] if keep > 0 else []
     Conversation.objects.update(pk=int(conversation_id), value=kept)
@@ -127,11 +174,22 @@ def _truncate(_path: str, body: Dict[str, Any]) -> Tuple[int, Any]:
 
 
 def _previews(_path: str, body: Dict[str, Any]) -> Tuple[int, Any]:
-    wanted = {int(i) for i in (body.get("chatbot_ids") or [])}
+    raw_ids = body.get("chatbot_ids") or []
+    if not isinstance(raw_ids, list) or len(raw_ids) > 100:
+        return 400, {"detail": "invalid_chatbot_ids"}
+    try:
+        wanted = {int(value) for value in raw_ids}
+    except (TypeError, ValueError):
+        return 400, {"detail": "invalid_chatbot_ids"}
+
+    manager = ConversationHistoryManager()
     previews: Dict[str, Any] = {}
-    for row in ConversationHistoryManager().list_conversations(limit=0):
-        chatbot_id = row.get("chatbot_id")
-        if chatbot_id in wanted:
+    for chatbot_id in wanted:
+        rows = manager.list_conversations(
+            limit=1, chatbot_id=chatbot_id
+        )
+        if rows:
+            row = rows[0]
             previews[str(chatbot_id)] = {
                 "preview": row.get("summary") or None,
                 "updated_at": row.get("timestamp") or None,

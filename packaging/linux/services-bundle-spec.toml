@@ -10,27 +10,16 @@
 # bundle (airunner-services daemon, Qt-free). There is deliberately no
 # Qt/PySide6 payload, no Qt plugin set, and no WebEngine helper here;
 # the [qt] section records that as a checked decision, not an omission.
-# GUI-only R01 features map to "gui" in [r01_coverage]: they are served
-# by the desktop bundle, explicitly out of this artifact's scope.
+# Historical interface features map to "gui" in [r01_coverage] and remain
+# outside this service artifact. Consuming applications own their interfaces.
 #
 # Models are never bundled: weight files (*.gguf, *.safetensors, ...)
 # are [exclusions], and model downloads remain explicit post-install
 # steps (R01 DL-01/DL-02, D01/D02).
 #
-# Production policy data is never required from a public checkout: the
-# content-safety signature entry below is required=false because signed
-# policy provisioning happens in trusted release CI (S06). Tests use a
-# synthetic policy fixture, never production policy bytes.
-#
-# Release packaging gate: scripts/assemble_linux_bundle.py refuses to
-# freeze (exit 2, content-free, writes nothing) unless every staged
-# policy .dat is present, strictly versioned, non-empty, and
-# accompanied by a well-formed detached signature. A public checkout
-# ships the empty set with no sidecar, so local assembly fails closed
-# by design; only the trusted release fragment passes. With
-# --policy-trust-store the gate additionally verifies each signature
-# against those release keys. scripts/inspect_linux_bundle.py offers
-# the same shape check for frozen trees via --require-signed-policy.
+# Content policy resources are optional application data. The standard
+# bundle omits them; an application that configures policy data must
+# explicitly request signed-policy validation during assembly and inspection.
 
 [bundle]
 # Frozen executable name inside the bundle root. Matches
@@ -43,24 +32,66 @@ entry_module = "airunner_services.daemon"
 entry_function = "main"
 # Manifest identity of the entry point ("module:function").
 entry = "airunner_services.daemon:main"
-# P02 lock consumed by the isolated build environment.
-constraints = "package/constraints-linux-nvidia-cu129.txt"
+# Active reviewed hash lock for the Linux release profile. The prior desktop
+# lock is historical; input readiness and candidate acceptance are separate.
+constraints = "package/constraints-linux-nvidia-cu129-linux-release.txt"
 
 [profile]
-# The services-side Linux v1 NVIDIA release profile (P02): the
-# "desktop" aggregate of services/setup.py. The aggregates list must
-# union to exactly that aggregate's requirement list, in order.
-services_extra = "desktop"
+# The services-side Linux v1 NVIDIA release profile (P02). It excludes
+# the paused OpenVoice/Melo vendor and optional FacehuggerShield compatibility
+# extra; package metadata retains those opt-in extras. The active hash lock
+# contains the selected reviewed runtime inputs.
+services_extra = "linux-release"
+excludes = ["airunner-tts-vendor", "facehuggershield"]
 aggregates = [
     "llm-native",
     "stt-native",
     "art-python",
-    "tts-python",
+    "tts-python-core",
     "llm_weather",
     "search",
-    "computer_use",
     "nvidia",
     "linux",
+    "postgresql",
+]
+
+[native_speech]
+required = true
+
+# CUDA profile staging remains optional and explicit. Setting required=true
+# makes assembly require the complete externally pinned profile input set.
+[native_cuda_profile]
+required = false
+
+# The full Linux candidate resolves system libpq at runtime through ctypes.
+# Ship the reviewed Ubuntu package closure as an offline prerequisite.
+[postgresql_runtime]
+mode = "locked-ubuntu-debs"
+
+[dependency_notices]
+# After the freeze, collect the exact recorded license/NOTICE/copyright files
+# for every distribution in the active hash-locked profile environment.
+required = true
+dest = "legal/dependencies"
+manifest = "dependency-notices.json"
+source_supplements = [
+    "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/source-manifest.json",
+    "packaging/licenses/torch-2.13.0-cu129-supplement/source-manifest.json",
+    "packaging/licenses/langchain-core-1.4.7-supplement/source-manifest.json",
+    "packaging/licenses/langchain-text-splitters-1.1.2-supplement/source-manifest.json",
+    "packaging/licenses/langsmith-0.14.4-supplement/source-manifest.json",
+    "packaging/licenses/loguru-0.7.3-supplement/source-manifest.json",
+    "packaging/licenses/DeepCache-0.1.1-supplement/source-manifest.json",
+    "packaging/licenses/orjson-3.13.0-supplement/source-manifest.json",
+    "packaging/licenses/sentencepiece-0.2.1-supplement/source-manifest.json",
+    "packaging/licenses/zstandard-0.25.0-supplement/source-manifest.json",
+    "packaging/licenses/openmeteo-sdk-1.28.0-supplement/source-manifest.json",
+    "packaging/licenses/pydispatcher-2.0.7-supplement/source-manifest.json",
+]
+vendor_supplements = [
+    "packaging/licenses/cuda-toolkit-12.9.1-supplement/vendor-license.json",
+    "packaging/licenses/nvidia-nvshmem-cu12-3.4.5-supplement/vendor-license.json",
+    "packaging/licenses/nvidia-nccl-cu12-2.29.7-supplement/vendor-license.json",
 ]
 
 [qt]
@@ -109,6 +140,30 @@ module = "airunner_services.bin.airunner_civitai_download"
 function = "main"
 primary = false
 
+[[console_script]]
+name = "airunner-cleanup-llm-models"
+module = "airunner_services.bin.cleanup_llm_models"
+function = "main"
+primary = false
+
+[[console_script]]
+name = "airunner-docker-build"
+module = "airunner_services.bin.docker_build"
+function = "main"
+primary = false
+
+[[console_script]]
+name = "airunner-docker-wrapper"
+module = "airunner_services.bin.docker_wrapper"
+function = "main"
+primary = false
+
+[[console_script]]
+name = "airunner-generate-cert"
+module = "airunner_services.bin.generate_cert"
+function = "main"
+primary = false
+
 # Runtime-string imports PyInstaller's static analysis cannot see (the
 # P04 probe_data finding). Each entry cites the loader; the regression
 # test re-derives the literal module names from those loaders by AST.
@@ -118,6 +173,45 @@ primary = false
 # the daemon, so the modulegraph drops them and the frozen CLI loses
 # subcommands -- issue #2244).
 hidden_imports = [
+    "psycopg",
+    # Alembic executes these modules from packaged migration data. Keep every
+    # service import in that data in the frozen module graph and TOC gate.
+    "airunner_services.database.base",
+    "airunner_services.database.db",
+    "airunner_services.database.db.column",
+    "airunner_services.database.db.engine",
+    "airunner_services.database.db.table",
+    "airunner_services.database.migration_metadata",
+    "airunner_services.database.models",
+    "airunner_services.database.models.agent_config",
+    "airunner_services.database.models.airunner_settings",
+    "airunner_services.database.models.application_settings",
+    "airunner_services.database.models.canvas_layer",
+    "airunner_services.database.models.chatbot",
+    "airunner_services.database.models.companion_fact",
+    "airunner_services.database.models.companion_job",
+    "airunner_services.database.models.companion_narrative",
+    "airunner_services.database.models.companion_session",
+    "airunner_services.database.models.companion_turn",
+    "airunner_services.database.models.conversation",
+    "airunner_services.database.models.document",
+    "airunner_services.database.models.generator_settings",
+    "airunner_services.database.models.image_to_image_settings",
+    "airunner_services.database.models.language_settings",
+    "airunner_services.database.models.llm_generator_settings",
+    "airunner_services.database.models.llm_tool",
+    "airunner_services.database.models.memory_settings",
+    "airunner_services.database.models.openvoice_settings",
+    "airunner_services.database.models.outpaint_settings",
+    "airunner_services.database.models.path_settings",
+    "airunner_services.database.models.project_state",
+    "airunner_services.database.models.rag_settings",
+    "airunner_services.database.models.sound_settings",
+    "airunner_services.database.models.voice_settings",
+    "airunner_services.database.models.zimfile",
+    "airunner_services.database.secret_store",
+    "airunner_services.llm.companion.migration_ledger",
+
     # tool_registry.py:270 ensure-import of the tools package.
     "airunner_services.llm.tools",
     # model_registry.py:64 provider-config lookup.
@@ -134,6 +228,14 @@ hidden_imports = [
     "airunner_services.bin.airunner_hf_download",
     # [[console_script]] airunner-civitai-download.
     "airunner_services.bin.airunner_civitai_download",
+    # [[console_script]] airunner-cleanup-llm-models.
+    "airunner_services.bin.cleanup_llm_models",
+    # [[console_script]] airunner-docker-build.
+    "airunner_services.bin.docker_build",
+    # [[console_script]] airunner-docker-wrapper.
+    "airunner_services.bin.docker_wrapper",
+    # [[console_script]] airunner-generate-cert.
+    "airunner_services.bin.generate_cert",
 ]
 # --exclude-module: subtrees the services daemon never executes.
 # Guard-verified in the worktree (issue #2244), not assumed: the
@@ -147,6 +249,8 @@ hidden_imports = [
 # import of these tops in services/ or native/, and the
 # toc-exclusion gate fails the build if one is frozen anyway.
 exclude_modules = [
+    # Legacy local playback is outside the headless TTS release profile.
+    "pyttsx3",
     "airunner",
     "PySide6",
     "shiboken6",
@@ -184,7 +288,9 @@ collect_submodules = [
     "sklearn.externals.array_api_compat.numpy",
 ]
 # --collect-data: package data discovered by static import analysis.
-collect_data = ["airunner_services"]
+# Avoid implicit collection of optional content-policy files. Required
+# runtime data is listed explicitly in [[data]] below.
+collect_data = []
 # --copy-metadata: importlib.metadata lookups at runtime
 # (utils/application/get_version.py PACKAGE_NAMES). The "airunner" GUI
 # distribution is intentionally absent: get_version() falls through to
@@ -194,18 +300,13 @@ copy_metadata = [
     "airunner-services",
     "airunner-native",
     "airunner-common",
+    "triton",
 ]
 # --collect-binaries: native .so payloads loaded by filesystem path
 # at runtime (torch.ops.load_library, ctypes), invisible to the
 # modulegraph. Presence is verified on the bundle tree
 # (_internal/<package>/**/*.so), never the PYZ table of contents.
 collect_binaries = [
-    # mslk/__init__.py _load_library: torch.ops.load_library on the
-    # sibling mslk.so (boot dies in `import mslk` without it; #2245).
-    # The default lib*.so pattern misses the bare name, so
-    # hook-mslk.py collects it explicitly; the flag is a harmless
-    # no-op and the gate verifies the file landed.
-    "mslk",
     # llama_cpp/llama_cpp.py: ctypes libllama.so from llama_cpp/lib/
     # (plus versioned SONAME deps via hook-llama_cpp.py).
     "llama_cpp",
@@ -224,8 +325,7 @@ runtime_hooks = [
 # for packages PyInstaller's bundled hooks don't cover. Missing
 # dirs fail the build (recipe bug, like an empty data glob).
 additional_hooks_dirs = [
-    # hook-mslk.py (mslk.so + triton-jit py-mode) and
-    # hook-llama_cpp.py (versioned SONAME libs); #2245.
+    # hook-llama_cpp.py collects versioned SONAME libraries.
     "packaging/linux/pyi-hooks",
 ]
 # Frozen-import preconditions: bundle-relative source files the
@@ -236,9 +336,6 @@ additional_hooks_dirs = [
 frozen_source_markers = [
     "_internal/transformers/models/__init__.py",
     "_internal/transformers/models/auto/__init__.py",
-    # triton-jit py-mode source: @triton.jit decoration reads this
-    # file at import time (hook-mslk.py; #2245).
-    "_internal/mslk/quantize/triton/fp8_quantize.py",
 ]
 
 # Data payloads. source is a repo-relative glob; dest is the
@@ -246,8 +343,8 @@ frozen_source_markers = [
 # preserved). stage "collect" becomes a PyInstaller --add-data entry;
 # stage "root" is copied beside the executable after the freeze (legal
 # notices must be visible at the bundle top level, not inside the
-# collected tree). required=false entries may match nothing: they are
-# release-CI-provisioned artifacts, never demanded from a checkout.
+# collected tree). required=false entries may match nothing; policy
+# payloads are included only when explicitly enabled by the assembler.
 [[data]]
 source = "services/src/airunner_services/database/alembic.ini"
 dest = "airunner_services/database"
@@ -277,21 +374,49 @@ required = true
 source = "services/src/airunner_services/content_safety/data/*.dat"
 dest = "airunner_services/content_safety/data"
 stage = "collect"
-required = true
-comment = "policy data file; the assembly gate requires the staged set to be the signed non-empty release set, never the shipped empty set; tests substitute a synthetic fixture"
+required = false
+content_policy = true
+comment = "optional policy data; standard service bundles do not include application policy"
 
 [[data]]
 source = "services/src/airunner_services/content_safety/data/*.dat.sig"
 dest = "airunner_services/content_safety/data"
 stage = "collect"
 required = false
-comment = "signed policy signature, provisioned in trusted CI (S06); required=false because a public checkout must assemble nothing shippable without the release fragment; the sidecar ships with the .dat (sdist, wheel, frozen bundle) so the exact staged bytes stay re-verifiable after the freeze"
+content_policy = true
+comment = "optional detached signature for explicitly configured signed policy data"
+
+[[data]]
+source = "services/src/airunner_services/content_safety/data/policy_trust_store.json"
+dest = "airunner_services/content_safety/data"
+stage = "collect"
+required = false
+content_policy = true
+comment = "optional trust resource for explicitly configured signed policy data"
 
 [[data]]
 source = "services/src/airunner_services/assets/reference_speakers/*.wav"
 dest = "airunner_services/assets/reference_speakers"
 stage = "collect"
 required = true
+
+[[data]]
+source = "services/src/airunner_services/art/data/triton_external_toolchain_runtime.json"
+dest = "airunner_services/art/data"
+required = true
+stage = "collect"
+
+[[data]]
+source = "services/src/airunner_services/art/data/triton_external_toolchain_sources.json"
+dest = "airunner_services/art/data"
+required = true
+stage = "collect"
+
+[[data]]
+source = "services/src/airunner_services/art/data/triton_external_toolchain_notices/*"
+dest = "airunner_services/art/data/triton_external_toolchain_notices"
+required = true
+stage = "collect"
 
 [[data]]
 source = "services/src/airunner_services/bin/*.sh"
@@ -314,6 +439,48 @@ required = true
 [[data]]
 source = "THIRD_PARTY_NOTICES.md"
 dest = "legal"
+stage = "root"
+required = true
+
+[[data]]
+source = "packaging/licenses/pyinstaller-6.12.0-COPYING.txt"
+dest = "legal/third-party"
+stage = "root"
+required = true
+
+[[data]]
+source = "packaging/licenses/pyinstaller-6.12.0-provenance.json"
+dest = "legal/third-party"
+stage = "root"
+required = true
+
+[[data]]
+source = "packaging/licenses/libuv-LICENSE"
+dest = "legal"
+stage = "root"
+required = true
+
+[[data]]
+source = "packaging/licenses/watchfiles-rust-crates/*"
+dest = "legal"
+stage = "root"
+required = true
+
+[[data]]
+source = "packaging/licenses/pydantic-core-rust-crates/*"
+dest = "legal"
+stage = "root"
+required = true
+
+[[data]]
+source = "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/THIRD_PARTY_NOTICES.txt"
+dest = "legal/kornia-rs"
+stage = "root"
+required = true
+
+[[data]]
+source = "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notice-manifest.json"
+dest = "legal/kornia-rs"
 stage = "root"
 required = true
 
@@ -415,6 +582,7 @@ paths = [
 ]
 
 [warn_allowlist]
+source_evidence = "release-planning/linux-v1/pyinstaller-warning-dispositions-attempt4.json"
 # Reviewed missing-module set (issue #2244, build #1 evidence).
 # Compared by top-level name. Review method: every module under
 # these tops was probed against the build venv with importlib
@@ -843,9 +1011,6 @@ modules = [
     "priority",
     "prompt_toolkit",
     "psutil",
-    "psycopg2",
-    "psycopg_c",
-    "psycopg_pool",
     "ptpython",
     "ptxcompiler",
     "pudb",
@@ -1023,6 +1188,109 @@ modules = [
     "zstd",
 ]
 
+# Optional imports are tolerated only for the exact selected callers. The
+# runtime selects Psycopg's ctypes implementation and never activates its C
+# or binary implementations. SQLAlchemy's legacy psycopg2 dialect remains an
+# optional compatibility probe. einops is optional for the selected model
+# profile; Torch's generic compile/pickler integrations probe it conditionally.
+importer_scoped = [
+    { module = "arabic_reshaper", importers = ["pypdf.generic._appearance_stream"] },
+    { module = "av", importers = ["sentence_transformers.base.model_card", "transformers.pipelines.video_classification", "transformers.video_utils"] },
+    { module = "bidi", importers = ["pypdf.generic._appearance_stream"] },
+    { module = "brotli", importers = ["aiohttp.compression_utils", "httpx._decoders", "httpx2._decoders", "pypdf.filters", "scrapy.downloadermiddlewares.httpcompression", "scrapy.utils._compression", "trafilatura.utils", "urllib3.response", "urllib3.util.request"] },
+    { module = "colorama", importers = ["_pytest._io.terminalwriter", "_pytest.capture", "loguru._colorama", "numba.core.errors", "torch._inductor.runtime.runtime_utils", "tqdm.utils"] },
+    { module = "colorama.win32", importers = ["loguru._colorama"] },
+    { module = "colorama.winterm", importers = ["loguru._colorama"] },
+    { module = "cupti", importers = ["torch.profiler._cupti_monitor"] },
+    { module = "cv2", importers = ["diffusers.pipelines.consisid.pipeline_consisid", "diffusers.utils.export_utils", "mistral_common.imports", "mistral_common.tokens.tokenizers.image", "transformers.models.minicpm_ocr.image_processing_minicpm_ocr", "transformers.models.pp_doclayout_v3.image_processing_pp_doclayout_v3", "transformers.models.pp_ocrv5_server_det.image_processing_pp_ocrv5_server_det", "transformers.video_utils"] },
+    { module = "diskcache", importers = ["llama_cpp.llama_cache"] },
+    { module = "einops", importers = ["torch._dynamo.decorators", "torch.fx._graph_pickler"] },
+    { module = "einops._torch_specific", importers = ["torch._dynamo.decorators"] },
+    { module = "essentia", importers = ["transformers.models.pop2piano.feature_extraction_pop2piano"] },
+    { module = "flax", importers = ["diffusers.models.controlnets.controlnet_flax", "diffusers.models.unets.unet_2d_condition_flax", "diffusers.models.vae_flax", "diffusers.pipelines.pipeline_flax_utils", "diffusers.pipelines.stable_diffusion.pipeline_output", "diffusers.pipelines.stable_diffusion.safety_checker_flax", "diffusers.pipelines.stable_diffusion_xl.pipeline_output", "diffusers.schedulers.scheduling_ddim_flax", "diffusers.schedulers.scheduling_ddpm_flax", "diffusers.schedulers.scheduling_dpmsolver_multistep_flax", "diffusers.schedulers.scheduling_euler_discrete_flax", "diffusers.schedulers.scheduling_karras_ve_flax", "diffusers.schedulers.scheduling_lms_discrete_flax", "diffusers.schedulers.scheduling_pndm_flax", "diffusers.schedulers.scheduling_sde_ve_flax", "diffusers.schedulers.scheduling_utils_flax"] },
+    { module = "flax.core", importers = ["diffusers.models.controlnets.controlnet_flax", "diffusers.models.modeling_flax_utils", "diffusers.models.unets.unet_2d_condition_flax", "diffusers.models.vae_flax", "diffusers.pipelines.controlnet.pipeline_flax_controlnet", "diffusers.pipelines.pipeline_flax_utils", "diffusers.pipelines.stable_diffusion.pipeline_flax_stable_diffusion", "diffusers.pipelines.stable_diffusion.pipeline_flax_stable_diffusion_img2img", "diffusers.pipelines.stable_diffusion.pipeline_flax_stable_diffusion_inpaint", "diffusers.pipelines.stable_diffusion.safety_checker_flax", "diffusers.pipelines.stable_diffusion_xl.pipeline_flax_stable_diffusion_xl"] },
+    { module = "flax.jax_utils", importers = ["diffusers.pipelines.controlnet.pipeline_flax_controlnet", "diffusers.pipelines.stable_diffusion.pipeline_flax_stable_diffusion", "diffusers.pipelines.stable_diffusion.pipeline_flax_stable_diffusion_img2img", "diffusers.pipelines.stable_diffusion.pipeline_flax_stable_diffusion_inpaint"] },
+    { module = "flax.linen", importers = ["diffusers.models.attention_flax", "diffusers.models.controlnets.controlnet_flax", "diffusers.models.embeddings_flax", "diffusers.models.resnet_flax", "diffusers.models.unets.unet_2d_blocks_flax", "diffusers.models.unets.unet_2d_condition_flax", "diffusers.models.vae_flax"] },
+    { module = "flax.serialization", importers = ["diffusers.models.modeling_flax_utils", "diffusers.models.modeling_pytorch_flax_utils"] },
+    { module = "flax.training", importers = ["diffusers.pipelines.controlnet.pipeline_flax_controlnet", "diffusers.pipelines.stable_diffusion.pipeline_flax_stable_diffusion", "diffusers.pipelines.stable_diffusion.pipeline_flax_stable_diffusion_img2img", "diffusers.pipelines.stable_diffusion.pipeline_flax_stable_diffusion_inpaint"] },
+    { module = "flax.traverse_util", importers = ["diffusers.models.modeling_flax_pytorch_utils", "diffusers.models.modeling_flax_utils", "diffusers.models.modeling_pytorch_flax_utils"] },
+    { module = "fqdn", importers = ["jsonschema._format"] },
+    { module = "g2p_en", importers = ["transformers.models.fastspeech2_conformer.tokenization_fastspeech2_conformer"] },
+    { module = "h2", importers = ["httpx._client", "httpx2._client", "urllib3.http2.connection"] },
+    { module = "h2.config", importers = ["httpcore._async.http2", "httpcore._sync.http2", "httpcore2._async.http2", "httpcore2._sync.http2", "scrapy.core.http2.protocol", "twisted.web._http2"] },
+    { module = "h2.connection", importers = ["httpcore._async.http2", "httpcore._sync.http2", "httpcore2._async.http2", "httpcore2._sync.http2", "scrapy.core.http2.protocol", "twisted.web._http2", "urllib3.http2.connection"] },
+    { module = "h2.errors", importers = ["scrapy.core.http2.protocol", "scrapy.core.http2.stream", "twisted.web._http2"] },
+    { module = "h2.events", importers = ["httpcore._async.http2", "httpcore._sync.http2", "httpcore2._async.http2", "httpcore2._sync.http2", "scrapy.core.http2.protocol", "twisted.web._http2", "urllib3.http2.connection"] },
+    { module = "h2.exceptions", importers = ["httpcore._async.http2", "httpcore._sync.http2", "httpcore2._async.http2", "httpcore2._sync.http2", "scrapy.core.downloader.handlers._httpx", "scrapy.core.http2.protocol", "scrapy.core.http2.stream", "twisted.web._http2"] },
+    { module = "h2.settings", importers = ["httpcore._async.http2", "httpcore._sync.http2", "httpcore2._async.http2", "httpcore2._sync.http2"] },
+    { module = "httpx2_jsfetch", importers = ["httpx2._transports"] },
+    { module = "importlib_resources", importers = ["alembic.util.compat", "jsonschema_specifications._core", "pycountry", "setuptools._vendor.jaraco.text", "tqdm.cli"] },
+    { module = "ipyniivue", importers = ["datasets.features.nifti"] },
+    { module = "isoduration", importers = ["jsonschema._format"] },
+    { module = "jieba", importers = ["sumy.nlp.tokenizers"] },
+    { module = "lance", importers = ["datasets.packaged_modules.lance.lance"] },
+    { module = "lance.file", importers = ["datasets.packaged_modules.lance.lance"] },
+    { module = "langgraph_api", importers = ["langgraph_sdk._shared.utilities"] },
+    { module = "langgraph_api.server", importers = ["langgraph_sdk._async.client"] },
+    { module = "mypy", importers = ["pydantic.mypy"] },
+    { module = "mypy.errorcodes", importers = ["pydantic.mypy", "pydantic.v1.mypy"] },
+    { module = "mypy.expandtype", importers = ["pydantic.mypy"] },
+    { module = "mypy.nodes", importers = ["pydantic.mypy", "pydantic.v1.mypy"] },
+    { module = "mypy.options", importers = ["pydantic.mypy", "pydantic.v1.mypy"] },
+    { module = "mypy.plugin", importers = ["pydantic.mypy", "pydantic.v1.mypy"] },
+    { module = "mypy.plugins", importers = ["pydantic.mypy", "pydantic.v1.mypy"] },
+    { module = "mypy.semanal", importers = ["pydantic.mypy", "pydantic.v1.mypy"] },
+    { module = "mypy.semanal_shared", importers = ["pydantic.mypy"] },
+    { module = "mypy.server", importers = ["pydantic.mypy", "pydantic.v1.mypy"] },
+    { module = "mypy.state", importers = ["pydantic.mypy"] },
+    { module = "mypy.type_visitor", importers = ["pydantic.mypy"] },
+    { module = "mypy.typeops", importers = ["pydantic.mypy"] },
+    { module = "mypy.types", importers = ["pydantic.mypy", "pydantic.v1.mypy"] },
+    { module = "mypy.typevars", importers = ["pydantic.mypy", "pydantic.v1.mypy"] },
+    { module = "mypy.util", importers = ["pydantic.mypy", "pydantic.v1.mypy"] },
+    { module = "mypy.version", importers = ["pydantic.mypy", "pydantic.v1.mypy"] },
+    { module = "nagisa", importers = ["transformers.models.qwen3_asr.processing_qwen3_asr"] },
+    { module = "nibabel", importers = ["datasets.features.features", "datasets.features.nifti"] },
+    { module = "num2words", importers = ["transformers.models.smolvlm.processing_smolvlm"] },
+    { module = "nvmath", importers = ["torch._native.ops.foreach_mm.nvmath_impl"] },
+    { module = "nvmath.bindings", importers = ["torch._native.ops.foreach_mm.nvmath_impl"] },
+    { module = "origami", importers = ["torch._inductor.template_heuristics.triton"] },
+    { module = "pexpect", importers = ["_pytest.legacypath", "_pytest.pytester"] },
+    { module = "posixpath.isreserved", importers = ["posixpath", "twisted.python.filepath"] },
+    { module = "pretty_midi", importers = ["transformers.models.pop2piano.tokenization_pop2piano"] },
+    { module = "psycopg2", importers = ["sqlalchemy", "sqlalchemy.dialects.postgresql.psycopg2"] },
+    { module = "psycopg_binary", importers = ["psycopg.pq"] },
+    { module = "psycopg_c", importers = ["psycopg.pq"] },
+    { module = "pycrfsuite", importers = ["nltk.tag.crf"] },
+    { module = "pyiceberg", importers = ["datasets.packaged_modules.iceberg.iceberg"] },
+    { module = "pyiceberg.expressions", importers = ["datasets.packaged_modules.iceberg.iceberg"] },
+    { module = "pyiceberg.io", importers = ["datasets.packaged_modules.iceberg.iceberg"] },
+    { module = "pyiceberg.table", importers = ["datasets.packaged_modules.iceberg.iceberg"] },
+    { module = "pyzes", importers = ["torch.xpu"] },
+    { module = "rfc3339_validator", importers = ["jsonschema._format"] },
+    { module = "rfc3986_validator", importers = ["jsonschema._format"] },
+    { module = "rfc3987_syntax", importers = ["jsonschema._format"] },
+    { module = "sitecustomize", importers = ["site"] },
+    { module = "socksio", importers = ["httpcore._async.socks_proxy", "httpcore._sync.socks_proxy", "httpcore2._async.socks_proxy", "httpcore2._sync.socks_proxy", "httpx._transports.default", "httpx2._transports.default"] },
+    { module = "socksio.exceptions", importers = ["scrapy.core.downloader.handlers._httpx"] },
+    { module = "soynlp", importers = ["transformers.models.qwen3_asr.processing_qwen3_asr"] },
+    { module = "spacy", importers = ["datasets.utils._dill", "langchain_text_splitters.spacy"] },
+    { module = "spacy.lang", importers = ["langchain_text_splitters.spacy"] },
+    { module = "spacy.language", importers = ["langchain_text_splitters.spacy"] },
+    { module = "teich", importers = ["datasets.packaged_modules.json.json"] },
+    { module = "test", importers = ["multiprocess.util"] },
+    { module = "tornado", importers = ["joblib._dask", "tenacity", "tenacity.tornadoweb"] },
+    { module = "tornado.concurrent", importers = ["tenacity.tornadoweb"] },
+    { module = "trimesh", importers = ["datasets.features.mesh"] },
+    { module = "tsfile", importers = ["datasets.packaged_modules.tsfile.tsfile"] },
+    { module = "tsfile.constants", importers = ["datasets.packaged_modules.tsfile.tsfile"] },
+    { module = "tvm_ffi", importers = ["torch._vendor.quack.cache.jit"] },
+    { module = "uri_template", importers = ["jsonschema._format"] },
+    { module = "webcolors", importers = ["jsonschema._format"] },
+    { module = "xlstm", importers = ["transformers.models.xlstm.configuration_xlstm"] },
+    { module = "xlstm.xlstm_large", importers = ["transformers.models.xlstm.modeling_xlstm"] },
+]
+
 [manifest]
 # P04 manifest contract: bundle-manifest.json beside the executable.
 filename = "bundle-manifest.json"
@@ -1032,11 +1300,12 @@ file_fields = ["path", "sha256"]
 # R01 feature-dependency coverage (feature-matrix.md). Every stable
 # feature ID must appear exactly once. Token semantics:
 #   extra name  - daemon-side deps come from that services/setup.py
-#                 extra (must be inside the desktop aggregate)
+#                 extra (must be inside the selected release aggregate)
 #   core        - base install_requires only, no extra needed
 #   gui         - Qt desktop bundle scope, explicitly out of this
 #                 artifact (services-only scope, not a silent drop)
-#   tracked:XXX - not yet implemented; owned by release issue XXX
+#   tracked:XXX - unfinished work owned by release issue XXX
+#   deferred:openvoice - OpenVoice is excluded by the owner's release decision
 [r01_coverage]
 ART-01 = "art-python"
 ART-02 = "gui"
@@ -1062,10 +1331,10 @@ CHAT-09 = "tracked:S12"
 CHAT-10 = "llm-native"
 VOICE-01 = "gui"
 VOICE-02 = "stt-native"
-VOICE-03 = "tts-python"
-VOICE-04 = "tts-python"
+VOICE-03 = "tts-python-core"
+VOICE-04 = "deferred:openvoice"
 VOICE-05 = "gui"
-VOICE-06 = "llm-native,stt-native,tts-python"
+VOICE-06 = "llm-native,stt-native,tts-python-core"
 RAG-01 = "gui"
 RAG-02 = "core"
 RAG-03 = "gui"

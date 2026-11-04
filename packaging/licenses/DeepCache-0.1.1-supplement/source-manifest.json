@@ -1,0 +1,44 @@
+{
+  "distribution": "DeepCache",
+  "version": "0.1.1",
+  "exact_pin": "DeepCache==0.1.1",
+  "license_source": "DeepCache PyPI sdist attribution in DeepCache-0.1.1/DeepCache/flops.py; full MIT license text copied byte-for-byte from the separately identified upstream LICENSE files. The attribution header names the projects but does not identify exact upstream code revisions.",
+  "source_distribution": {
+    "filename": "DeepCache-0.1.1.tar.gz",
+    "sha256": "8bc995d8c0ee7f3eb51ca080c951916bf0eb044ebdc75215b1753621ac8f80e6"
+  },
+  "selected_wheel": {
+    "filename": "DeepCache-0.1.1-py3-none-any.whl",
+    "sha256": "aa4aa5f8e9a2e5a41d59900305c3c86c20834537d0c67bf2d8bb7075618ae48a"
+  },
+  "package_source_evidence": {
+    "path": "DeepCache-0.1.1/DeepCache/flops.py",
+    "sha256": "788c6a9dff7bb8905bec418f5853ca56d815304c6f5dc0bafe7c9327837ac430"
+  },
+  "files": [
+    {
+      "path": "packaging/licenses/DeepCache-0.1.1-supplement/LICENSE-ptflops.txt",
+      "size_bytes": 1075,
+      "sha256": "c791d032af35123823c6e163ae0c453c72304fa225483961d869979001237e64",
+      "upstream_source": {
+        "repository": "sovrasov/flops-counter.pytorch",
+        "revision": "8781ecff9f56b64e3618314cb0df15d6a76f3bc6",
+        "path": "LICENSE",
+        "size_bytes": 1075,
+        "sha256": "c791d032af35123823c6e163ae0c453c72304fa225483961d869979001237e64"
+      }
+    },
+    {
+      "path": "packaging/licenses/DeepCache-0.1.1-supplement/LICENSE-thop.txt",
+      "size_bytes": 1067,
+      "sha256": "36f577ad288f1beae8188b6ec09808eaed278c08b8284bacc694bb56ffbf3dfc",
+      "upstream_source": {
+        "repository": "Lyken17/pytorch-OpCounter",
+        "revision": "43c064afb71383501e41eaef9e8c8407265cf77f",
+        "path": "LICENSE",
+        "size_bytes": 1067,
+        "sha256": "36f577ad288f1beae8188b6ec09808eaed278c08b8284bacc694bb56ffbf3dfc"
+      }
+    }
+  ]
+}

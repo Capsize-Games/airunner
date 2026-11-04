@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "repository": "Capsize-Games/airunner",
+  "workflow": ".github/workflows/cuda-build-image-inventory.yml",
+  "artifact": {
+    "run_id": 41482860195,
+    "source_revision": "4215e978a11220ab7bcf5e9458c406186e859313",
+    "id": 13160814796,
+    "name": "llama-cpp-python-cu129-sm120a",
+    "zip_sha256": "79add050ada248ed1b8e186693cdec6e8511cb9495cea3923f1bdf5b3420e1b2",
+    "created_at": "2026-11-02T16:58:10Z",
+    "expires_at": "2026-11-16T16:58:04Z",
+    "retention_days": 14
+  },
+  "wheel": {
+    "filename": "llama_cpp_python-0.3.21+capsize.1-py3-none-linux_x86_64.whl",
+    "sha256": "3a38ddc647bc978750f6139074318070523cf498b03dd58949a4380a1a759b35",
+    "size_bytes": 150594012,
+    "name": "llama_cpp_python",
+    "version": "0.3.21+capsize.1",
+    "requires_python": ">=3.8",
+    "license": "MIT",
+    "tag": "py3-none-linux_x86_64",
+    "record_entries": 97,
+    "required_runtime_dependencies": [
+      "typing-extensions>=4.5.0",
+      "numpy>=1.20.0",
+      "jinja2>=2.11.3"
+    ],
+    "optional_runtime_dependencies": [
+      "diskcache>=5.6.1; extra == \"disk\""
+    ],
+    "isolated_dependency_names": [
+      "diskcache"
+    ]
+  },
+  "build": {
+    "wrapper_commit": "d2bcbac46605f11d382426dd88d67e8b5c124cd7",
+    "llama_cpp_commit": "f53577432541bb9edc1588c4ef45c66bf07e4468",
+    "cuda_image": "nvidia/cuda:12.9.2-devel-ubuntu24.04@sha256:16656a1ef115bca9e1f820c6349876f1486d2b3c9a0e615773799fe402960dc5",
+    "cuda_arch": "120a-real",
+    "network_during_compile": "none",
+    "model_or_gpu_execution": "none",
+    "source_date_epoch": "1777269304",
+    "cmake_archive_sha256": "5a1133ff103c71eb5120e2cc3de922733e7d8a26a98ae716397e8676adb367bf",
+    "backend_wheels": {
+      "pip-26.2.2-py3-none-any.whl": "fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70",
+      "scikit_build_core-1.1.1-py3-none-any.whl": "6f6d6cf600e2e9639fd258ecd11cfc19bd189354b968916a519c6793e7e26237",
+      "pathspec-1.1.1-py3-none-any.whl": "a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189",
+      "packaging-26.3-py3-none-any.whl": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"
+    },
+    "wrapper_patch_sha256": "bcbb3cdb76fd56ee26e9b3088f312ffea65cf1c48354c92482d6663fcc167a4a",
+    "wrapper_version": "0.3.21+capsize.1"
+  },
+  "durability": {
+    "status": "temporary_actions_artifact",
+    "note": "Before final release, archive the same reviewed wheel as an explicit durable release asset and record its immutable URL and hash."
+  }
+}

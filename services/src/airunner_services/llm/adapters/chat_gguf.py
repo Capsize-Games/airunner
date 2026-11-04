@@ -1,8 +1,9 @@
-"""LangChain adapter for GGUF models via llama-cpp-python."""
+"""LangChain adapter for supervised or standalone GGUF runtimes."""
 
 from typing import Any, Dict, List, Optional
 
 from langchain_core.language_models.chat_models import BaseChatModel
+from pydantic import Field
 
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.llm.adapters.chat_gguf_execution_mixin import (
@@ -37,10 +38,12 @@ class ChatGGUF(
     ChatGGUFExecutionMixin,
     BaseChatModel,
 ):
-    """LangChain ChatModel adapter for GGUF models via llama-cpp-python."""
+    """Keep GGUF prompting and tools independent of native process ownership."""
 
     model_path: str
     gguf_runtime_profile: Optional[str] = None
+    runtime_model_id: Optional[str] = None
+    sidecar_client: Optional[Any] = Field(default=None, exclude=True, repr=False)
     n_ctx: int = 32768
     n_gpu_layers: int = -1
     n_batch: int = 256
@@ -127,7 +130,7 @@ class ChatGGUF(
         )
 
     def model_post_init(self, __context: Any) -> None:
-        """Initialize the llama-cpp-python model after Pydantic init."""
+        """Initialize the selected GGUF runtime after Pydantic setup."""
         super().model_post_init(__context)
         if self.chat_format is not None:
             self._detected_format = self.chat_format
@@ -175,6 +178,10 @@ class ChatGGUF(
     def set_interrupted(self, value: bool) -> None:
         """Set the interrupted flag for stopping generation."""
         self._interrupted = value
+        if value and self._llama is not None:
+            cancel = getattr(self._llama, "cancel_active_requests", None)
+            if callable(cancel):
+                cancel()
 
     def should_stop_generation(self) -> bool:
         """Check if generation should stop."""

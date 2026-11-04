@@ -1,0 +1,18 @@
+{
+  "tag": "v0.3.0",
+  "source_commit": "3d1806423402f47d1f7612a8cd8fc70d48c5a3c2",
+  "source_review_status": "reviewed",
+  "source_review_note": "Bounded source, patch, build/package/promotion and input review is recorded in release-planning/services/input-reviews/airunner-native-0.3.0.md. The exact merged source and annotated tag are preserved in the private native maintenance copy. No exhaustive upstream or toolchain review is claimed.",
+  "provenance_status": "verified",
+  "provenance_note": "All nine immutable v0.3.0 assets were independently downloaded. Their sizes and SHA-256 values match GitHub digests; archive checksum files and source/tag/platform provenance match the selected release. Native OS smoke and publication run 41745941955 passed. Application/model acceptance scope is recorded separately.",
+  "archives": {
+    "linux": {
+      "asset": "runtime-sidecars-linux.tar.gz",
+      "sha256": "59adcd438fed44c63ed65a4b17cfbf4afbdecaba164cfeec3d300b909dd5d9e0"
+    },
+    "windows": {
+      "asset": "runtime-sidecars-windows.tar.gz",
+      "sha256": "b7f671b693b1a78c6d100e5287306bd5a05420a5ef46c7d5d7fd4e72882c7aa1"
+    }
+  }
+}

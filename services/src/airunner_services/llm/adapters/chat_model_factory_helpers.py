@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import ipaddress
 import os
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlsplit
 
 
 @dataclass(frozen=True)
@@ -169,6 +171,46 @@ def build_provider_runtime_config(
     return _local_provider_runtime(provider_params)
 
 
+def validate_ollama_base_url(base_url: str) -> str:
+    """Validate an Ollama endpoint before constructing its client.
+
+    Loopback Ollama is a local inference route and stays available while
+    offline. Other hosts go through the shared offline and SSRF policy,
+    including the existing explicit private-host allowlist.
+    """
+    from airunner_services.url_safety import (
+        SSRFBlocked,
+        validate_url_for_fetch,
+    )
+
+    raw = str(base_url or "").strip()
+    try:
+        parsed = urlsplit(raw)
+        hostname = parsed.hostname
+        _port = parsed.port
+    except ValueError as exc:
+        raise SSRFBlocked("invalid Ollama base URL") from exc
+
+    if parsed.scheme.lower() not in {"http", "https"}:
+        raise SSRFBlocked("unsupported Ollama URL scheme")
+    if not hostname:
+        raise SSRFBlocked("missing Ollama URL hostname")
+    if parsed.username or parsed.password:
+        raise SSRFBlocked("userinfo not allowed")
+
+    if hostname.lower() == "localhost":
+        return raw
+    try:
+        address = ipaddress.ip_address(hostname)
+    except ValueError:
+        address = None
+    if address is not None and address.is_loopback:
+        return raw
+
+    validate_url_for_fetch(raw)
+    return raw
+
+
 def _local_provider_runtime(
     provider_params: dict[str, Any],
 ) -> ProviderRuntimeConfig:
@@ -198,14 +240,17 @@ def _ollama_provider_runtime(
     provider_params: dict[str, Any],
 ) -> ProviderRuntimeConfig:
     """Build the Ollama provider runtime configuration."""
-    return ProviderRuntimeConfig(
-        provider="ollama",
-        model_name=getattr(llm_settings, "ollama_model", "llama2"),
-        base_url=getattr(
+    base_url = validate_ollama_base_url(
+        getattr(
             llm_settings,
             "ollama_base_url",
             "http://localhost:11434",
-        ),
+        )
+    )
+    return ProviderRuntimeConfig(
+        provider="ollama",
+        model_name=getattr(llm_settings, "ollama_model", "llama2"),
+        base_url=base_url,
         **provider_params,
     )
 

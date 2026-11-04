@@ -1,3 +1,21 @@
+airunner (6.1.9-1) unstable; urgency=medium
+
+  * Prepare the services-only package for services 6.1.9 and native
+    launcher 6.1.4; no Qt desktop client is included.
+  * Refresh the bundled airunner-common files to 6.1.8 from the verified
+    release wheel and record source and artifact hashes.
+  * Keep FacehuggerShield out of default runtime requirements and make
+    LLM settings load dotenv files only when DEV_ENV=1.
+  * Add bounded headless eSpeak WAV rendering without local playback and
+    expose the voice catalogue; omit OpenVoice vendor extras from the
+    current Linux profile.
+  * Bound API admission, setup work and public list queries; report setup
+    completion truthfully and use real local-provider embedding results.
+  * Preserve user data in guarded migration downgrades and stream ZIM
+    document batches through the ingestion path.
+
+ -- Capsize LLC <contact@capsizegames.com>  Sun, 01 Nov 2026 14:25:24 -0700
+
 airunner (6.1.3-3) unstable; urgency=medium
 
   * Fix #2250 (clean-container install failed): postinst no longer

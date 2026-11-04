@@ -93,8 +93,56 @@ def test_assemble_dry_run_prints_full_recipe(
     # Root-staged payloads (legal/) are copied post-freeze, never
     # passed as --add-data.
     assert "legal" not in proc.stdout
+    assert "content_safety/data" not in proc.stdout
+    assert "--collect-data airunner_services" not in proc.stdout
     assert not (tmp_path / "dist").exists()
     assert not (tmp_path / "work").exists()
+
+
+def test_full_bundle_rejects_missing_speech_before_freeze(tmp_path, assemble_mod, monkeypatch):
+    monkeypatch.setattr(assemble_mod, "_freeze_tree", lambda *_args: pytest.fail("freeze started without speech payload"))
+    result = assemble_mod.main([
+        "--base", "testrev", "--distpath", str(tmp_path / "dist"),
+        "--workpath", str(tmp_path / "work"),
+    ])
+    assert result == 2
+    assert not (tmp_path / "dist").exists()
+    assert not (tmp_path / "work").exists()
+
+
+def test_core_spec_does_not_require_speech_engine(inspect_mod):
+    core = inspect_mod.load_spec(REPO_ROOT / "packaging/linux/services-core-bundle-spec.toml")
+    assert core["native_speech"]["required"] is False
+    assert core["warn_allowlist"]["source_evidence"] == ""
+
+
+def test_changed_warning_sources_stop_assembly_before_freeze(tmp_path, assemble_mod, monkeypatch):
+    monkeypatch.setattr(assemble_mod, "_validate_payload", lambda *_args: None)
+    monkeypatch.setattr(assemble_mod, "verify_warning_source_reviews", lambda *_args: ["source changed"])
+    monkeypatch.setattr(assemble_mod, "_freeze_tree", lambda *_args: pytest.fail("unreviewed source was frozen"))
+    assert assemble_mod.main([
+        "--base", "testrev", "--distpath", str(tmp_path / "dist"),
+        "--workpath", str(tmp_path / "work"), "--espeak-payload", str(tmp_path / "speech"),
+    ]) == 2
+    assert not (tmp_path / "dist").exists()
+
+
+def test_content_policy_data_is_included_only_for_explicit_validation(
+    tmp_path: Path,
+    assemble_mod: types.ModuleType,
+    spec: dict[str, Any],
+) -> None:
+    """Opt-in strict builds collect configured policy resources."""
+    command = assemble_mod.build_command(
+        spec,
+        REPO_ROOT,
+        tmp_path / "entry.py",
+        tmp_path / "dist",
+        tmp_path / "work",
+        "pyinstaller",
+        include_content_policy=True,
+    )
+    assert any("content_safety/data/policy_terms.dat" in item for item in command)
 
 
 def test_assemble_dry_run_without_repo_pythonpath(

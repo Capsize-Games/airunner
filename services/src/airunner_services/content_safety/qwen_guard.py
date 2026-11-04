@@ -1,10 +1,8 @@
-"""Required contextual text adapter: Qwen3Guard-Gen-0.6B (S08, #2252).
+"""Optional contextual text adapter: Qwen3Guard-Gen-0.6B.
 
-Approved input-side evaluator (S07 section 2): Qwen3Guard-Gen-0.6B
-(Apache-2.0) on the pinned transformers stack, strict mode
-(Controversial counts as unsafe). Only an explicit Safety Safe
-verdict allows; Unsafe, strict Controversial, missing, empty, and
-unparseable replies all deny.
+This adapter parses classifier replies in strict mode, where only an explicit
+Safety Safe verdict allows; Unsafe, Controversial, missing, empty, and
+unparseable replies deny.
 
 :func:`load_qwen_guard_evaluator` builds its pipeline with
 ``local_files_only=True``: a missing cache entry fails as
@@ -30,9 +28,8 @@ from airunner_services.content_safety.semantic import (
 
 logger = logging.getLogger(__name__)
 
-# Approved text evaluator (S07 section 2). P11 records the immutable
-# SHA pin for MODEL_REVISION once weights are provisioned; until then
-# the loader resolves the cached default revision, still offline.
+# The loader resolves the cached default revision offline until
+# MODEL_REVISION is set to an immutable revision.
 MODEL_ID = "Qwen/Qwen3Guard-Gen-0.6B"
 MODEL_REVISION: Optional[str] = None
 

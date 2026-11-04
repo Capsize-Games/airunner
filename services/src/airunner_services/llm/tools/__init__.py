@@ -1,6 +1,16 @@
 """Central module for loading all LLM tools.
 
-Import this module to register all available tools with the ToolRegistry.
+Importing this module registers every built-in tool with the
+``ToolRegistry`` (each tool module registers itself on import via the
+``@tool`` decorator). Long-running project tools register from
+``airunner_services.llm.long_running.tools``; explicitly enabled
+external extensions load last through ``extensions_loader`` and may
+override a built-in by registering the same name.
+
+Nothing here executes at import time beyond registration: validation
+(``validate_tool_code``), capability confinement
+(``tool_worker_confine``), and per-request server-side argument checks
+(``ToolExecutionMixin``) all run later, on the tool-call path.
 """
 
 # Import all tool modules to trigger registration

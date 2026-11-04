@@ -15,6 +15,7 @@ from airunner_services.runtimes.contracts import (
     MessageRole,
     RuntimeAction,
     RuntimeKind,
+    RuntimeMode,
 )
 from airunner_services.runtimes.registry import RuntimeRegistry
 
@@ -52,6 +53,37 @@ def resolve_llm_client(registry: RuntimeRegistry) -> RuntimeClient:
         raise HTTPException(status_code=503, detail="LLM runtime unavailable") from exc
 
 
+def has_function_tool_data(
+    messages: List[RuntimeChatMessage],
+    tools: Optional[List[dict[str, Any]]] = None,
+    tool_choice: Any = None,
+) -> bool:
+    """Whether this request uses the stateless function-tool contract."""
+    return bool(tools or tool_choice is not None) or any(
+        message.role is MessageRole.TOOL
+        or bool(message.tool_calls)
+        or message.tool_call_id is not None
+        for message in messages
+    )
+
+
+def require_sidecar_for_function_tools(
+    client: RuntimeClient,
+    messages: List[RuntimeChatMessage],
+    tools: Optional[List[dict[str, Any]]] = None,
+    tool_choice: Any = None,
+) -> None:
+    """Prevent client schemas from entering local app-tool execution paths."""
+    if not has_function_tool_data(messages, tools, tool_choice):
+        return
+    descriptor = getattr(client, "descriptor", None)
+    if descriptor is None or descriptor.mode is not RuntimeMode.SIDECAR:
+        raise HTTPException(
+            status_code=501,
+            detail="Function tools are unsupported by the configured LLM runtime",
+        )
+
+
 def to_runtime_messages(messages: List[ChatMessage]) -> List[RuntimeChatMessage]:
     """Convert API messages into the neutral runtime contract format."""
     runtime_messages = []
@@ -64,7 +96,13 @@ def to_runtime_messages(messages: List[ChatMessage]) -> List[RuntimeChatMessage]
                 detail=f"Unsupported chat role: {message.role}",
             ) from exc
         runtime_messages.append(
-            RuntimeChatMessage(role=role, content=message.content)
+            RuntimeChatMessage(
+                role=role,
+                content=message.content,
+                name=message.name,
+                tool_calls=message.tool_calls,
+                tool_call_id=message.tool_call_id,
+            )
         )
     return runtime_messages
 
@@ -97,8 +135,17 @@ async def invoke_llm_runtime(
     gguf_runtime_profile: Optional[str],
     temperature: float,
     max_tokens: Optional[int],
-) -> str:
-    """Invoke the configured LLM runtime client."""
+    enable_thinking: Optional[bool] = None,
+    tools: Optional[List[dict[str, Any]]] = None,
+    tool_choice: Any = None,
+) -> tuple[str, str, List[dict[str, Any]], dict[str, Any]]:
+    """Invoke the configured LLM runtime client.
+
+    Returns ``(content, finish_reason, tool_calls, usage)``. The finish
+    reason is the runtime's own value (``"length"`` when the token budget
+    truncated the reply, e.g. a thinking model that spent it all reasoning),
+    never a synthesized ``"stop"`` for a truncated empty answer.
+    """
     invocation = LLMInvocationRequest(
         messages=messages,
         model=model,
@@ -107,6 +154,9 @@ async def invoke_llm_runtime(
         else {},
         temperature=temperature,
         max_tokens=max_tokens,
+        enable_thinking=enable_thinking,
+        tools=tools or [],
+        tool_choice=tool_choice,
     )
     envelope = RequestEnvelope(
         runtime=RuntimeKind.LLM,
@@ -116,7 +166,14 @@ async def invoke_llm_runtime(
     )
     response = await asyncio.to_thread(client.invoke, envelope)
     raise_for_runtime_error(response)
-    return str(response.payload.get("content", ""))
+    response_tools = response.payload.get("tools", [])
+    response_usage = response.payload.get("usage", {})
+    return (
+        str(response.payload.get("content", "")),
+        str(response.payload.get("finish_reason") or "stop"),
+        response_tools if isinstance(response_tools, list) else [],
+        response_usage if isinstance(response_usage, dict) else {},
+    )
 
 
 async def run_runtime_action(
@@ -155,21 +212,33 @@ def websocket_chunk(delta: StreamDelta) -> dict[str, Any]:
     if delta.status is EnvelopeStatus.FAILED:
         return {
             "type": "error",
+            "request_id": delta.request_id,
             "content": delta.metadata.get("error", "LLM runtime failed"),
+            "done": True,
+        }
+    if delta.status is EnvelopeStatus.CANCELLED:
+        return {
+            "type": "cancelled",
+            "request_id": delta.request_id,
             "done": True,
         }
     payload = {
         "type": "chunk",
+        "request_id": delta.request_id,
         "content": delta.delta.get("content", ""),
         "done": delta.final,
     }
     tool_calls = delta.delta.get("tool_calls")
     if tool_calls:
         payload["tool_calls"] = tool_calls
+    if isinstance(delta.metadata.get("usage"), dict):
+        payload["usage"] = delta.metadata["usage"]
     return payload
 
 
-def websocket_envelope(data: dict[str, Any]) -> RequestEnvelope:
+def websocket_envelope(
+    data: dict[str, Any], request_id: str | None = None
+) -> RequestEnvelope:
     """Build one streaming runtime envelope from a websocket payload."""
     profile = data.get("gguf_runtime_profile")
     payload = LLMInvocationRequest(
@@ -185,10 +254,13 @@ def websocket_envelope(data: dict[str, Any]) -> RequestEnvelope:
         temperature=float(data.get("temperature", 0.7)),
         stream=True,
     )
-    return RequestEnvelope(
-        runtime=RuntimeKind.LLM,
-        action=RuntimeAction.INVOKE,
-        provider="local",
-        stream=True,
-        payload=payload.model_dump(),
-    )
+    envelope_values = {
+        "runtime": RuntimeKind.LLM,
+        "action": RuntimeAction.INVOKE,
+        "provider": "local",
+        "stream": True,
+        "payload": payload.model_dump(),
+    }
+    if request_id is not None:
+        envelope_values["request_id"] = request_id
+    return RequestEnvelope(**envelope_values)

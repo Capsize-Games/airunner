@@ -9,13 +9,15 @@ import ssl
 from pathlib import Path
 
 import certifi
+import json
 from packaging.requirements import Requirement
 from packaging.version import Version
 from PIL import Image
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[2]
-LOCK = ROOT / "package" / "constraints-linux-nvidia-cu129.txt"
+LOCK = ROOT / "package" / "constraints-linux-nvidia-cu129-linux-release.txt"
 SERVICES_SETUP = ROOT / "services" / "setup.py"
 
 SECURITY_FLOORS = {
@@ -68,6 +70,20 @@ def _runtime_requirement(package: str) -> Requirement:
 
 
 def test_linux_lock_meets_security_floors_and_runtime_requirements() -> None:
+    release_inputs = json.loads(
+        (ROOT / "release-planning/services/release-inputs.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    lock_status = release_inputs["release_profile"]["lock_status"]
+    if lock_status == "generation_pending":
+        assert not LOCK.exists(), "pending release lock path must not be populated"
+        pytest.skip(
+            "linux-release security pin check waits for the active lock; "
+            "release preflight currently blocks candidate execution"
+        )
+    assert lock_status == "ready", lock_status
+    assert LOCK.is_file(), "ready linux-release profile requires its active lock"
     for package, floor in SECURITY_FLOORS.items():
         block = _locked_block(package)
         locked = _locked_version(package)

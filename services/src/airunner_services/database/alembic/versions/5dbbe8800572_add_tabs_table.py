@@ -17,8 +17,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    """No-op historical marker; this revision never created the tabs table."""
     pass
 
 
 def downgrade() -> None:
+    """No-op is reversible because the paired upgrade changed no schema."""
     pass

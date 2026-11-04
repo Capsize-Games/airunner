@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import os
+import secrets
+import stat
 import subprocess
+import threading
 import time
 from typing import Any, Callable, Optional
 from urllib.error import URLError
@@ -17,6 +20,11 @@ from airunner_services.config.runtime_layout import (
 )
 from airunner_services.runtimes.whisper_cpp_runtime_settings import (
 	WhisperCppRuntimeSettings,
+)
+from airunner_services.api.loopback_token import (
+	get_or_create_loopback_token,
+	load_loopback_token,
+	loopback_token_path,
 )
 
 
@@ -44,6 +52,10 @@ class SidecarSTTLauncher:
 		self._process: Optional[subprocess.Popen] = None
 		self._last_error = ""
 		self._log_handle = None
+		# Re-entrant: start() reaches stop() through the wait path.
+		self._lock = threading.RLock()
+		self._recent_stderr = ""
+		self._api_key: Optional[str] = None
 
 	@property
 	def endpoint(self) -> str:
@@ -82,6 +94,8 @@ class SidecarSTTLauncher:
 			self.settings.language,
 			"--inference-path",
 			self.settings.normalized_inference_path,
+			"--api-key-file",
+			str(loopback_token_path()),
 		]
 		if self.settings.request_prefix:
 			command.extend(["--request-path", self.settings.request_prefix])
@@ -91,29 +105,38 @@ class SidecarSTTLauncher:
 			command.append("--no-gpu")
 		return command
 
+	@property
+	def health_timeout_seconds(self) -> float:
+		"""Return the per-poll health timeout derived from startup budget."""
+		startup = self.settings.startup_timeout_seconds
+		return max(1.0, min(5.0, startup / 10.0))
+
 	def start(self) -> None:
 		"""Start the sidecar and wait until its health endpoint responds."""
-		if self.is_ready():
-			return
-		self._last_error = ""
-		self._spawn_if_needed()
-		self._wait_until_ready()
+		with self._lock:
+			self._api_key = self._ensure_api_key_file()
+			if self.is_ready():
+				return
+			self._last_error = ""
+			self._spawn_if_needed()
+			self._wait_until_ready()
 
 	def stop(self) -> None:
 		"""Stop the managed process when one is running."""
-		process = self._process
-		self._process = None
-		try:
-			if process is None or process.poll() is not None:
-				return
-			process.terminate()
+		with self._lock:
+			process = self._process
+			self._process = None
 			try:
-				process.wait(timeout=5)
-			except subprocess.TimeoutExpired:
-				process.kill()
-				process.wait(timeout=5)
-		finally:
-			self._close_log_handle()
+				if process is None or process.poll() is not None:
+					return
+				process.terminate()
+				try:
+					process.wait(timeout=5)
+				except subprocess.TimeoutExpired:
+					process.kill()
+					process.wait(timeout=5)
+			finally:
+				self._close_log_handle()
 
 	def is_running(self) -> bool:
 		"""Return True when the subprocess is still alive."""
@@ -124,7 +147,10 @@ class SidecarSTTLauncher:
 		if not self.is_running():
 			return False
 		try:
-			with self._health_opener(self._health_url(), timeout=1) as response:
+			with self._health_opener(
+				self._health_url(),
+				timeout=self.health_timeout_seconds,
+			) as response:
 				return 200 <= getattr(response, "status", 0) < 300
 		except (OSError, URLError):
 			return False
@@ -142,6 +168,36 @@ class SidecarSTTLauncher:
 			return RuntimeHealthStatus.FAILED, self._last_error
 		return RuntimeHealthStatus.STOPPED, "not loaded"
 
+	@staticmethod
+	def _ensure_api_key_file() -> str:
+		"""Provision and validate the private local runtime credential."""
+		token = get_or_create_loopback_token()
+		persisted = load_loopback_token()
+		path = loopback_token_path()
+		try:
+			info = path.lstat()
+			private_regular_file = (
+				stat.S_ISREG(info.st_mode)
+				and stat.S_IMODE(info.st_mode) == 0o600
+			)
+		except OSError:
+			private_regular_file = False
+		if (
+			persisted is None
+			or not private_regular_file
+			or not secrets.compare_digest(token, persisted)
+		):
+			raise RuntimeError(
+				"Unable to validate the private local runtime credential file"
+			)
+		return token
+
+	def internal_auth_headers(self) -> dict[str, str]:
+		"""Return auth headers for requests made to this managed child only."""
+		if not self._api_key:
+			return {}
+		return {"Authorization": f"Bearer {self._api_key}"}
+
 	def _required_model_path(self) -> str:
 		"""Return the configured ggml model path or raise a helpful error."""
 		model_path = self.settings.model_path
@@ -151,6 +207,7 @@ class SidecarSTTLauncher:
 			return resolve_existing_file(
 				model_path,
 				label="Configured whisper.cpp model",
+				allowed_suffixes=(".bin",),
 			)
 		except PathPolicyError as error:
 			raise RuntimeError(str(error)) from error
@@ -182,13 +239,39 @@ class SidecarSTTLauncher:
 				return
 			if self._process is not None and self._process.poll() is not None:
 				code = self._process.poll()
-				self._last_error = f"whisper.cpp exited with code {code}"
+				self._last_error = (
+					f"whisper.cpp exited with code {code}"
+					f"{self._child_output_tail()}"
+				)
 				raise RuntimeError(self._last_error)
 			self._sleep(0.1)
 
 		self.stop()
 		self._last_error = "Timed out waiting for whisper.cpp to become ready"
 		raise RuntimeError(self._last_error)
+
+	def _child_output_tail(self, limit: int = 4096) -> str:
+		"""Return the last bytes of sidecar output for error reports.
+
+		File logging stays opt-in (AIRUNNER_SAVE_LOG_TO_FILE=1); when it
+		is off there is no output to report and the hint says how to
+		enable it.
+		"""
+		layout = build_runtime_directory_layout()
+		try:
+			with open(layout.log_file("stt-sidecar"), "rb") as handle:
+				handle.seek(0, os.SEEK_END)
+				size = handle.tell()
+				handle.seek(max(0, size - limit))
+				tail = handle.read().decode("utf-8", "replace").strip()
+		except OSError:
+			tail = ""
+		if tail:
+			return f"\nLast sidecar output:\n{tail}"
+		return (
+			" (child output discarded; set AIRUNNER_SAVE_LOG_TO_FILE=1 "
+			"to capture it)"
+		)
 
 	def _health_url(self) -> str:
 		"""Return the sidecar health-check URL."""

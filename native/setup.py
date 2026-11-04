@@ -15,7 +15,7 @@ from pathlib import Path
 
 from setuptools import find_packages, setup
 
-_RELEASE_VERSION = "6.1.3"
+_RELEASE_VERSION = "6.1.4"
 VERSION = os.environ.get("AIRUNNER_BUILD_VERSION", _RELEASE_VERSION)
 
 # The project is GPL-3.0-only (issue #2058): the repo-root LICENSE file, every
@@ -25,18 +25,9 @@ LICENSE_CLASSIFIERS = [
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
 ]
 
-# Supply-chain hardening (issue #2036). This was a hash-pinned GitHub archive
-# URL, but PyPI rejects any distribution carrying a PEP 440 direct reference
-# ("400 Can't have direct dependency"), so no such package can ever be
-# published. facehuggershield 1.0.0 is on PyPI, so depend on it by version.
-#
-# This does not weaken the original intent. That pin existed so "a tampered or
-# moved tag cannot be substituted" -- but a git tag *can* be moved, which is
-# exactly why it needed a digest. A PyPI release cannot: a version is immutable
-# once uploaded and can only be yanked, never replaced. Installs also verify
-# PyPI's own hashes over TLS. For a fully hash-locked install, pin digests in a
-# requirements file at deploy time, which is where hash-locking belongs --
-# install_requires cannot express it for consumers anyway.
+# Optional compatibility pin for consumers that explicitly request the
+# legacy-shield extra. The current headless launcher does not call its
+# historical activation helper.
 FACEHUGGERSHIELD_REQUIREMENT = "facehuggershield==1.0.0"
 
 # Per-package README used as long_description (mirrors services/). The
@@ -70,37 +61,43 @@ NATIVE_CONSOLE_SCRIPTS = [
     "airunner-native=airunner_native.launcher:main",
 ]
 
-# airunner-common only: launcher.py's app-specific imports (airunner,
-# airunner_services) are all function-scoped, deferred until the launcher
-# actually runs, not hard install-time dependencies (issue #2217) -- see
-# the "services"/"daemon" and "gui"/"desktop" extras below for the two
-# ways this package actually gets used together with the rest of the
-# application.
+# launcher.py's service imports (airunner_services, plus the test-mode
+# helper's airunner.components imports) are all function-scoped,
+# deferred until the launcher actually runs, not hard install-time
+# dependencies (issue #2217) -- see the "services"/"daemon" extras below
+# for how this package gets used together with the services runtime.
 NATIVE_BASE_REQUIREMENTS = [
     # airunner-common is independently versioned in its own repository
     # now (issue #2197, https://github.com/Capsize-Games/airunner-common),
     # so a compatible-release pin per the versioning policy (#2191)
-    # instead of an exact lockstep VERSION pin.
-    "airunner-common~=6.1",
-    FACEHUGGERSHIELD_REQUIREMENT,
+    # instead of an exact lockstep VERSION pin. The floor is 6.1.8 so
+    # launcher and services share the same common dependency graph.
+    "airunner-common~=6.1.8",
 ]
 
 
 def build_native_extras_require() -> dict[str, list[str]]:
     """Return optional extras for the native package surface."""
-    gui_requirements = [f"airunner=={VERSION}"]
+    # The root `airunner` GUI distribution is no longer published, so
+    # the historical `gui`/`desktop` extra names resolve to the
+    # headless services runtime instead of failing on an
+    # uninstallable pin. Kept under the old names so existing
+    # install commands keep working against the services surface.
+    # The floor is 6.1.5: older services predate the shared
+    # generation-table/LLMRequest/LLMResponse APIs this launcher
+    # consumes, so 6.1.0-6.1.4 must not resolve (issue #2441).
+    headless_requirements = ["airunner-services>=6.1.5,<7"]
     return {
         "development": DEVELOPMENT_REQUIREMENTS,
         "dev": DEVELOPMENT_REQUIREMENTS,
+        "legacy-shield": [FACEHUGGERSHIELD_REQUIREMENT],
         # A headless/daemon-role install: this launcher plus the
         # services package, no GUI.
-        "services": [f"airunner-services=={VERSION}"],
-        "daemon": [f"airunner-services=={VERSION}"],
-        # A GUI-client-role install. airunner itself already depends on
-        # airunner-services, so this extra alone is enough for a full
-        # desktop install.
-        "gui": gui_requirements,
-        "desktop": gui_requirements,
+        "services": ["airunner-services>=6.1.5,<7"],
+        "daemon": ["airunner-services>=6.1.5,<7"],
+        # Former GUI-client-role names; now aliases for headless.
+        "gui": headless_requirements,
+        "desktop": headless_requirements,
     }
 
 

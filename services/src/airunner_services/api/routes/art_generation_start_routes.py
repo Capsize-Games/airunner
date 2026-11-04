@@ -15,7 +15,6 @@ from airunner_services.content_safety_gate import (
 )
 from airunner_services.utils.application import get_logger
 from airunner_services.utils.job_tracker import (
-    JobStatus as JobState,
     JobTracker,
 )
 
@@ -130,9 +129,6 @@ async def create_generation_job(
     # not available locally is rejected, so a bad request never
     # occupies the worker until the timeout (issue #2229).
     resolved_model = resolve_generation_model(request)
-    # Art generation owns its own tracker lifecycle, but it still coordinates
-    # with the daemon LLM so image work does not start while VRAM is occupied.
-    await unload_llm_before_art(req, source="art_generate")
     client = resolve_art_client(require_runtime_registry(req))
     tracker = JobTracker()
     seed_value = resolve_seed_value(request.seed)
@@ -141,12 +137,71 @@ async def create_generation_job(
     art_request = request.model_copy(
         update={"seed": seed_value, "model": resolved_model}
     )
-    job_id = await tracker.create_job(
+    job_id = await tracker.create_art_job(
         metadata=build_generation_job_metadata(art_request, seed_value),
+        capacity=1,
     )
-    await tracker.update_progress(job_id, 1.0, JobState.RUNNING)
-    asyncio.create_task(run_art_job(tracker, job_id, art_request, client))
-    return job_id
+    if job_id is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Art generation capacity is full; retry later",
+            headers={"Retry-After": "1"},
+        )
+    tracker.bind_art_client(job_id, client)
+    register_request = getattr(client, "register_request", None)
+    request_registered = False
+    runner_owns_reservation = False
+
+    async def _cleanup_before_runner() -> None:
+        finish_request = getattr(client, "finish_request", None)
+        try:
+            if request_registered and callable(finish_request):
+                finish_request(job_id)
+        finally:
+            await tracker.discard_art_job(job_id)
+
+    # Art generation owns one process-wide background slot, held through the
+    # runner's actual terminal boundary. Coordinate the LLM handoff only after
+    # admission so a rejected request has no model lifecycle side effects.
+    try:
+        if callable(register_request):
+            register_request(job_id)
+            request_registered = True
+        await unload_llm_before_art(req, source="art_generate")
+        if not await tracker.mark_art_job_running(job_id):
+            finish_request = getattr(client, "finish_request", None)
+            if request_registered and callable(finish_request):
+                finish_request(job_id)
+            await tracker.finish_art_job(job_id)
+            runner_owns_reservation = True
+            return job_id
+
+        async def _run_reserved_job() -> None:
+            try:
+                await run_art_job(tracker, job_id, art_request, client)
+            finally:
+                finish_request = getattr(client, "finish_request", None)
+                try:
+                    if request_registered and callable(finish_request):
+                        finish_request(job_id)
+                finally:
+                    await tracker.finish_art_job(job_id)
+
+        task = asyncio.create_task(_run_reserved_job())
+        tracker.attach_art_task(job_id, task, client)
+        runner_owns_reservation = True
+        return job_id
+    finally:
+        if not runner_owns_reservation:
+            # The API request still owns the reservation until its runner is
+            # attached. CancelledError is a BaseException, so this finally
+            # covers cancellation during handoff and status/progress awaits.
+            cleanup_task = asyncio.create_task(_cleanup_before_runner())
+            try:
+                await asyncio.shield(cleanup_task)
+            except asyncio.CancelledError:
+                await cleanup_task
+                raise
 
 
 @router.post("/generate", response_model=GenerationResponse)

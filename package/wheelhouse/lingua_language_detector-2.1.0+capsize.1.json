@@ -1,0 +1,82 @@
+{
+  "distribution": "lingua-language-detector",
+  "licenses": {
+    "cargo_notice_manifest_sha256": "3d4313f0a6c5def209452786a32c1e5b01c100b02cd388a2db61cea3052b25ae",
+    "license_file_declarations": 127,
+    "project_license": "Apache-2.0 (preserved)",
+    "scope": "Selected Linux normal/build crates; does not claim every locked or workspace package is compiled or linked.",
+    "selected_crate_license_notice_texts": 125,
+    "selected_linux_normal_build_registry_crates": 67
+  },
+  "native_build": {
+    "cargo": "1.99.1 (5f94df478 2026-08-27)",
+    "cargo_incremental": false,
+    "cargo_jobs": 1,
+    "command": "maturin build --release --locked --interpreter <isolated CPython 3.13.5> --out <wheelhouse> --compatibility linux --auditwheel skip",
+    "environment": "HOME and CARGO_HOME isolated without production credentials; source archives staged before build; Cargo network disabled during build.",
+    "extension_sha256": "165734b9334a5ab06c6a74b88fafd8a36804c535d45d0c8db994ecb4458d854e",
+    "extension_size_bytes": 100024480,
+    "glibc_max_symbol": "GLIBC_2.34",
+    "maturin": "1.16.0",
+    "needed_shared_libraries": [
+      "libgcc_s.so.1",
+      "libm.so.6",
+      "libc.so.6",
+      "ld-linux-x86-64.so.2"
+    ],
+    "network_during_build": "disabled; all required Cargo archives staged before the offline build",
+    "python": "3.13.5",
+    "rustc": "1.99.1 (58cf8f9c3 2026-10-13)",
+    "target": "x86_64-unknown-linux-gnu",
+    "uv": "0.13.4"
+  },
+  "sbom": {
+    "dependency_graph_preserved": true,
+    "local_filesystem_references_remaining": 0,
+    "local_purls_sanitized": 78,
+    "local_refs_sanitized": 229,
+    "original_sha256": "aa5a7384abb69d96acfc4480e896a1cc42ae70a57c20839303cb450ce5ec64c8",
+    "path": "lingua_language_detector-2.1.0+capsize.1.dist-info/sboms/lingua.cyclonedx.json",
+    "sanitized_sha256": "1444658252aa798fc6a138ba6a016085f62baf54b0a0df419b3e97e7b5dc8ba0",
+    "source_revision": "ed300698b165e48f52166fc9a102c47e5a491c2c"
+  },
+  "schema_version": 1,
+  "source": {
+    "cargo_lock_sha256": "a6192667937b8da5096622a5fa15e1c92b04c90b70c56c861d2b5d1903a4fd74",
+    "merged_sha": "ed300698b165e48f52166fc9a102c47e5a491c2c",
+    "private_pull_request": 1,
+    "private_repository": "https://github.com/Capsize-Games/lingua-python-maintenance",
+    "release_url": "https://github.com/Capsize-Games/lingua-python-maintenance/releases/tag/v2.1.0-capsize.1",
+    "tag": "v2.1.0-capsize.1",
+    "upstream_commit": "c6eea404d8e09b7f455da2da79f7f6f0e149ce76",
+    "upstream_repository": "https://github.com/pemistahl/lingua-rs",
+    "upstream_tag": "v1.7.0"
+  },
+  "verification": {
+    "all_language_smoke": "75 languages; all-language detector returned ENGLISH",
+    "exclusions": [
+      "No PyPI or crates.io publication",
+      "No full Rust workspace tests",
+      "No WebAssembly tests",
+      "No PyPy build",
+      "No Windows or macOS build",
+      "No Ubuntu 24 runtime job",
+      "No model download or GPU work"
+    ],
+    "github_actions": "disabled; no CI checks ran",
+    "offline_locked_linux_wheel_build": "passed",
+    "upstream_python_tests": "71 passed",
+    "wheel_packager_tests": "2 passed",
+    "wheel_record": "all 135 members covered; RECORD and 127 License-File paths verified"
+  },
+  "version": "2.1.0+capsize.1",
+  "wheel": {
+    "abi_tag": "cp313",
+    "filename": "lingua_language_detector-2.1.0+capsize.1-cp313-cp313-linux_x86_64.whl",
+    "platform_scope": "Linux x86_64 CPython 3.13; no manylinux portability claim; extension GLIBC symbol ceiling 2.34.",
+    "platform_tag": "linux_x86_64",
+    "python_tag": "cp313",
+    "sha256": "54e28516c3700995cd9336eee0d569f7e8fc41fdbe2c7f36602e1da7edd000db",
+    "size_bytes": 96409675
+  }
+}

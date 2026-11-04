@@ -8,7 +8,6 @@ Create Date: 2025-05-08 21:16:32.806276
 
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 from airunner_services.database.db import alter_column
 from airunner_services.database.models.outpaint_settings import (

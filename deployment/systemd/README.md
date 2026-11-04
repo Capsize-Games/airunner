@@ -63,6 +63,10 @@ background service that starts automatically at system boot.
    - `AIRUNNER_PYTHON=/path/to/python`
    - `AIRUNNER_DATA_DIR=/path/to/runtime-data`
 
+   `AIRUNNER_PYTHON` wins when set; otherwise the renderer picks the
+   first executable under `<install>/venv`, `<install>/.venv`, then
+   `<install>/bin` (same order `install_distributed.sh` resolves).
+
 3. **Reload systemd to recognize the new service:**
    ```bash
    sudo systemctl daemon-reload

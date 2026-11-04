@@ -24,12 +24,20 @@ class DocumentIndexRetriever:
         self._similarity_top_k = similarity_top_k
         self._doc_ids = doc_ids
 
-    def retrieve(self, query: str) -> list[Document]:
+    def retrieve(self, query: str, doc_ids: Optional[Sequence[str]] = None) -> list[Document]:
+        if self._doc_ids is None:
+            effective_doc_ids = doc_ids
+        elif doc_ids is None:
+            effective_doc_ids = self._doc_ids
+        else:
+            effective_doc_ids = tuple(set(self._doc_ids) & set(doc_ids))
+        if effective_doc_ids is not None and not effective_doc_ids:
+            return []
         hits = self._index.similarity_search(
             query,
             self._embedding_model,
             self._similarity_top_k,
-            self._doc_ids,
+            effective_doc_ids,
         )
         return [hit.document for hit in hits]
 
@@ -57,7 +65,7 @@ class MultiIndexRetriever:
         self._rag_mixin = rag_mixin
         self._similarity_top_k = similarity_top_k
 
-    def retrieve(self, query: str) -> list[Document]:
+    def retrieve(self, query: str, doc_ids: Optional[Sequence[str]] = None) -> list[Document]:
         """Load and search only documents marked as active by user.
 
         This searches both:
@@ -68,11 +76,15 @@ class MultiIndexRetriever:
         Returns:
             List of LangChain documents from active document indexes
         """
+        if doc_ids is not None and not doc_ids:
+            return []
+
         query_vector = self._embed_query(query)
         if query_vector is None:
             return []
 
         all_documents: list = []
+        identity = _embedding_identity(self._rag_mixin.embedding)
 
         if hasattr(self._rag_mixin, "_index") and self._rag_mixin._index:
             try:
@@ -85,6 +97,8 @@ class MultiIndexRetriever:
                     self._rag_mixin._index.similarity_search_by_vector(
                         query_vector,
                         self._similarity_top_k,
+                        doc_ids,
+                        expected_identity=identity,
                     )
                 )
 
@@ -100,7 +114,12 @@ class MultiIndexRetriever:
                     )
 
         active_doc_ids = self._rag_mixin._get_active_document_ids()
+        if doc_ids is not None:
+            allowed = set(doc_ids)
+            active_doc_ids = [doc_id for doc_id in active_doc_ids if doc_id in allowed]
 
+        if not active_doc_ids and doc_ids is not None:
+            return _top_documents(all_documents, self._similarity_top_k)
         if not active_doc_ids:
             if hasattr(self._rag_mixin, "logger"):
                 self._rag_mixin.logger.warning(
@@ -123,6 +142,7 @@ class MultiIndexRetriever:
                     doc_index.similarity_search_by_vector(
                         query_vector,
                         self._similarity_top_k,
+                        expected_identity=identity,
                     )
                 )
 
@@ -148,3 +168,8 @@ class MultiIndexRetriever:
 def _top_documents(hits: list, limit: int) -> list[Document]:
     hits.sort(key=lambda hit: hit.score, reverse=True)
     return [hit.document for hit in hits[:limit]]
+
+
+def _embedding_identity(embedder):
+    identity = getattr(embedder, "verified_identity", None)
+    return identity.to_dict() if callable(getattr(identity, "to_dict", None)) else None

@@ -1,0 +1,27 @@
+{
+  "distribution": "compel",
+  "version": "2.4.0+capsize.1",
+  "filename": "compel-2.4.0+capsize.1-py3-none-any.whl",
+  "wheel_sha256": "4ab7bb76510acdd9e607e1f2202cbcb18adbe2750ed26b1fa406e4cc91cb6e43",
+  "size_bytes": 37088,
+  "license": "MIT",
+  "license_file": "compel-LICENSE",
+  "license_sha256": "fcad42b976d27806d6a626e602056abbdc75925e0195f9fbcc21668aa9001f3b",
+  "canonical_repository": "https://github.com/damian0815/compel",
+  "upstream_tag": "v2.4.0",
+  "upstream_commit": "c60b9fbc7fa9eb443af96c326951589b5ca7a299",
+  "upstream_sdist_sha256": "9d935d35bb4d16fa21d4b3b529d8b8f9dc784d67b44e42f46cd48c9dd321adc2",
+  "metadata_patch_commit": "166fded6c7ec3b54e704cf81e90607540443051e",
+  "build_environment": {
+    "python": "3.13.5",
+    "uv": "0.13.4",
+    "setuptools": "84.2.1",
+    "setuptools_wheel_sha256": "ca140b45d5325a9478f880e351484f62fef15f336462e449ca0c03c873d589c2",
+    "wheel": "0.48.0",
+    "wheel_wheel_sha256": "3217dcc807155e45db462d7ef2431f5ddda0d7273b700d05a67b271ceb1287ab",
+    "packaging": "26.3",
+    "packaging_wheel_sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+    "network_during_build": false
+  },
+  "review_record": "release-planning/services/input-reviews/compel-2.4.0-capsize.1.md"
+}

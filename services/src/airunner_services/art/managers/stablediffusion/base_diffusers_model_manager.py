@@ -84,6 +84,8 @@ class BaseDiffusersModelManager(
             "cpu_offload_applied": None,
             "model_cpu_offload_applied": None,
             "tome_sd_applied": None,
+            "torch_compile_applied": None,
+            "torch_compile_status": "disabled",
             "tome_ratio": 0.0,
             "use_enable_sequential_cpu_offload": None,
             "enable_model_cpu_offload": None,
@@ -94,6 +96,11 @@ class BaseDiffusersModelManager(
         self._pooled_prompt_embeds: Optional[torch.Tensor] = None
         self._negative_pooled_prompt_embeds: Optional[torch.Tensor] = None
         self._pipe = None
+        self._torch_compile_original_unet = None
+        self._torch_compile_owner_pipe = None
+        self._torch_compile_compiled_unet = None
+        self.torch_compile_applied = False
+        self.torch_compile_status = "disabled"
         self._current_prompt: str = ""
         self._current_negative_prompt: str = ""
         self._current_prompt_2: str = ""
@@ -300,9 +307,18 @@ class BaseDiffusersModelManager(
         resource_manager: ModelResourceManager,
     ) -> bool:
         """Prepare shared prerequisites before the main SD pipeline load."""
+        try:
+            preflight_options = self._resource_preflight_options(
+                resource_manager
+            )
+        except Exception as exc:
+            self.logger.error("Cannot prepare model resource budget: %s", exc)
+            self.change_model_status(self.model_type, ModelStatus.FAILED)
+            return False
         prepare_result = resource_manager.prepare_model_loading(
             model_id=self.model_path,
             model_type="text_to_image",
+            **preflight_options,
         )
         if not prepare_result["can_load"]:
             reason = prepare_result.get("reason", "Unknown reason")
@@ -312,6 +328,14 @@ class BaseDiffusersModelManager(
         if not self._ensure_safety_checker_ready():
             return False
         return True
+
+    def _resource_preflight_options(
+        self,
+        resource_manager: ModelResourceManager,
+    ) -> Dict[str, Any]:
+        """Return optional model-specific coordinator preflight settings."""
+        del resource_manager
+        return {}
 
     def _ensure_safety_checker_ready(self) -> bool:
         """Load the safety checker when configured and update failure state."""

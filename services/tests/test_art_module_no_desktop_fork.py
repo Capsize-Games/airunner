@@ -33,23 +33,20 @@ _FORMERLY_DUPLICATED = [
 
 
 def test_desktop_art_tree_has_no_non_gui_basename_collisions():
-    """Only __init__.py may share a basename outside the GUI tree.
+    """The desktop art tree was removed; nothing can collide.
 
-    A non-``__init__.py`` collision means a module was forked again.
+    With the services-only cutover there is no ``src/airunner`` tree,
+    so the basename-collision set is vacuously empty.
     """
-    desktop_basenames = {
-        p.name
-        for p in _DESKTOP_ART.rglob("*.py")
-        if "gui" not in p.relative_to(_DESKTOP_ART).parts
-        and "__pycache__" not in p.parts
-    }
+    assert not _DESKTOP_ART.exists(), _DESKTOP_ART
+    desktop_basenames: set[str] = set()
     services_basenames = {
         p.name
         for p in _SERVICES_ART.rglob("*.py")
         if "__pycache__" not in p.parts
     }
     collisions = desktop_basenames & services_basenames
-    assert collisions == {"__init__.py"}, collisions
+    assert collisions == set(), collisions
 
 
 def test_formerly_duplicated_modules_exist_only_in_services():

@@ -1,7 +1,7 @@
-"""Mandatory image adapter: Falconsai nsfw_image_detection (S09, #2252).
+"""Optional image-policy adapter: Falconsai nsfw_image_detection.
 
-Approved narrow output-side evaluator (S07 section 2) through the
-``image-classification`` pipeline. Scores at or above threshold plus
+It provides an output-side evaluator through the ``image-classification``
+pipeline. Scores at or above threshold plus
 half the band withhold, at or below threshold minus half the band
 release; band-interior, malformed, and missing scores yield None
 (withheld as uncertain). The default operating point is PROVISIONAL
@@ -25,9 +25,8 @@ from airunner_services.content_safety.image_verdict import (
 
 logger = logging.getLogger(__name__)
 
-# Approved narrow image evaluator (S07 section 2). P11 records the
-# immutable SHA pin for MODEL_REVISION once weights are provisioned;
-# until then the loader resolves the cached default revision offline.
+# The loader resolves the cached default revision offline until
+# MODEL_REVISION is set to an immutable revision.
 MODEL_ID = "Falconsai/nsfw_image_detection"
 MODEL_REVISION: Optional[str] = None
 

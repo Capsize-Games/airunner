@@ -19,6 +19,7 @@ query string because a browser WebSocket cannot set headers.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Dict
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
@@ -28,15 +29,26 @@ from airunner_services.api.routes.events_handlers import (
     dispatch,
 )
 from airunner_services.api.routes.ws_auth import websocket_auth_failed
+from airunner_services.data.tenant import (
+    get_tenant_key,
+    reset_tenant_key,
+    set_tenant_key,
+)
 
 router = APIRouter()
 
 
 async def _handle(ws: WebSocket, msg: Dict[str, Any]) -> None:
-    """Answer one ``rpc`` frame with one ``rpc_response`` frame."""
+    """Answer one ``rpc`` frame with one ``rpc_response`` frame.
+
+    ``dispatch`` runs synchronous ORM calls that would stall the
+    event loop (and with it ``/events``, ``/llm/stream``, ``/tts/ws``),
+    so it runs in a worker thread like the TTS route (issue #2426).
+    """
     if msg.get("type") != "rpc":
         return
-    code, body = dispatch(
+    code, body = await asyncio.to_thread(
+        dispatch,
         str(msg.get("method", "")),
         str(msg.get("path", "")),
         msg.get("body") or {},
@@ -59,11 +71,15 @@ async def events(ws: WebSocket) -> None:
         return
     await ws.accept()
     await ws.send_json({"type": "bootstrap", "body": bootstrap_payload()})
-    while True:
-        try:
-            msg = await ws.receive_json()
-        except WebSocketDisconnect:
-            return
-        except ValueError:
-            continue
-        await _handle(ws, msg)
+    conn_token = set_tenant_key(get_tenant_key())
+    try:
+        while True:
+            try:
+                msg = await ws.receive_json()
+            except WebSocketDisconnect:
+                return
+            except ValueError:
+                continue
+            await _handle(ws, msg)
+    finally:
+        reset_tenant_key(conn_token)

@@ -21,10 +21,12 @@ usage() {
     cat <<EOF
 Usage: ./deployment/install_distributed.sh [options]
 
-Linux-first distributed installer for AIRunner daemon and GUI-client roles.
+Linux-first distributed installer for the AIRunner headless daemon
+(services-only; the former GUI-client role was removed with the
+desktop client).
 
 Options:
-  --role ROLE                 daemon|gui-client
+  --role ROLE                 daemon (only role; gui-client was removed)
   --install-root PATH         Base install root for the selected role
   --python CMD                Python interpreter to use for venv creation
   --service-profile NAME      Services extra for the selected role
@@ -32,6 +34,10 @@ Options:
   --systemd                   Register the daemon role with systemd
   -h, --help                  Show this help text
 EOF
+    echo ""
+    echo "Model sidecars (llama-server/whisper-server) are not installed"
+    echo "here: fetch the pinned prebuilt bundle from airunner-native"
+    echo "(tag in .github/native-sidecar-version) after installing."
 }
 
 
@@ -82,7 +88,8 @@ normalize_role() {
             printf 'daemon\n'
             ;;
         gui|gui-client)
-            printf 'gui-client\n'
+            log_error "Role '${ROLE}' was removed with the desktop client; only 'daemon' is supported"
+            exit 1
             ;;
         *)
             log_error "Unsupported distributed role: ${ROLE}"
@@ -93,14 +100,7 @@ normalize_role() {
 
 
 default_service_profile() {
-    case "$1" in
-        daemon)
-            printf 'headless\n'
-            ;;
-        gui-client)
-            printf 'core\n'
-            ;;
-    esac
+    printf 'linux-release\n'
 }
 
 
@@ -116,15 +116,30 @@ install_packages() {
 
     case "$role" in
         daemon)
-            "$venv_python" -m pip install \
-                "$ROOT_DIR/services[$service_profile]"
-            ;;
-        gui-client)
+            # The daemon role still launches through
+            # airunner_native.launcher (see the import-boundary
+            # allowlist), so the venv needs both distributions.
             "$venv_python" -m pip install \
                 "$ROOT_DIR/services[$service_profile]" \
-                "$ROOT_DIR"
+                "$ROOT_DIR/native"
             ;;
     esac
+}
+
+
+fetch_sidecar_note() {
+    # This installer never builds or downloads model sidecars
+    # (llama-server/whisper-server): that toolchain lives in
+    # Capsize-Games/airunner-native on its own release cadence.
+    # After installing, fetch the pinned prebuilt bundles named in
+    # .github/native-sidecar-version, the same source
+    # scripts/install.sh --sidecars uses. Fetch the matching
+    # runtime-sidecars-linux.tar.gz release asset from
+    # Capsize-Games/airunner-native for that tag.
+    log_info 'Sidecars are a separate post-step: fetch the pinned'
+    log_info 'runtime-sidecars-linux.tar.gz from airunner-native'
+    log_info '(tag in .github/native-sidecar-version) before enabling'
+    log_info 'local-model modalities.'
 }
 
 
@@ -140,10 +155,6 @@ link_role_command() {
         daemon)
             source_path="$role_root/venv/bin/airunner-daemon"
             target_name='airunner-distributed-daemon'
-            ;;
-        gui-client)
-            source_path="$role_root/venv/bin/airunner"
-            target_name='airunner-distributed-gui'
             ;;
     esac
 
@@ -191,10 +202,6 @@ print_next_steps() {
             printf 'Launch manually: %s/venv/bin/airunner-daemon\n' "$role_root"
             printf 'Shortcut: %s/airunner-distributed-daemon\n' "$LOCAL_BIN_DIR"
             ;;
-        gui-client)
-            printf 'Launch manually: %s/venv/bin/airunner\n' "$role_root"
-            printf 'Shortcut: %s/airunner-distributed-gui\n' "$LOCAL_BIN_DIR"
-            ;;
     esac
 }
 
@@ -210,8 +217,12 @@ main() {
     resolved_role="$(normalize_role)"
     ROLE="$resolved_role"
     role_root="$(role_install_root "$ROLE")"
-    service_profile="${SERVICE_PROFILE:-$(default_service_profile "$ROLE") }"
+    service_profile="${SERVICE_PROFILE:-$(default_service_profile)}"
     service_profile="${service_profile% }"
+    if service_profile_uses_deferred_tts_vendor "$service_profile"; then
+        log_error "Service profile '${service_profile}' includes deferred airunner-tts-vendor; use linux-release or tts-python-core while OpenVoice/Melo remain deferred"
+        exit 1
+    fi
 
     resolved_python="$(find_python "$PYTHON_CMD" 3.13)" || {
         log_error 'Python 3.13+ is required for distributed installs'
@@ -228,6 +239,7 @@ main() {
 
     log_info "Installing ${ROLE} packages with services[${service_profile}]"
     install_packages "$venv_python" "$ROLE" "$service_profile"
+    fetch_sidecar_note
     link_role_command "$role_root" "$ROLE"
 
     if [[ "$INSTALL_SYSTEMD" == '1' ]]; then

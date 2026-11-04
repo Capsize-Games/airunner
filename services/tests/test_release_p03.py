@@ -8,10 +8,11 @@ The in-repo build (``scripts/build_runtime_sidecars.sh``,
 contract in this repository is now:
 
 - one authoritative pin, ``.github/native-sidecar-version``, consumed
-  by both the developer installer and the release workflow;
+  by the CPU sidecar installer/release workflow, plus an independent
+  verified CUDA profile pin when CUDA payload delivery is requested;
 - the published bundle layout (``bin/llama-server``,
-  ``bin/whisper-server``) matching the paths runtime discovery and the
-  installer link step use;
+  ``bin/whisper-server``, full notices/provenance, and the isolated CUDA
+  profile) matching runtime discovery without replacing the CPU binary;
 - no developer absolute paths and no undocumented system binaries in
   the installer sidecar path;
 - documentation describing the pinned-bundle flow, not the removed
@@ -26,6 +27,7 @@ text and never executed.
 from __future__ import annotations
 
 from pathlib import Path
+import json
 
 import pytest
 
@@ -35,8 +37,12 @@ from airunner_services.runtimes.bundled_runtime_paths import (
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _PIN_FILE = _REPO_ROOT / ".github" / "native-sidecar-version"
+_CHECKSUM_FILE = _REPO_ROOT / ".github" / "native-sidecar-checksums.json"
 _INSTALL_SH = _REPO_ROOT / "scripts" / "install.sh"
 _WORKFLOW = _REPO_ROOT / ".github" / "workflows" / "pypi-dispatch.yml"
+_DOCKERFILE = _REPO_ROOT / "Dockerfile"
+_DOCKER_WORKFLOW = _REPO_ROOT / ".github" / "workflows" / "docker-release.yml"
+_DEV_LAUNCHER = _REPO_ROOT / "scripts" / "dev" / "run_services.sh"
 _NATIVE_REPO = "Capsize-Games/airunner-native"
 _LINUX_BUNDLE = "runtime-sidecars-linux.tar.gz"
 _SIDECAR_BINARIES = ("llama-server", "whisper-server")
@@ -47,13 +53,27 @@ def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def test_pin_file_is_the_single_authoritative_manifest() -> None:
-    """One pin file holds the whole native-sidecar selection."""
+def test_tag_and_digest_metadata_bind_one_native_sidecar_source() -> None:
+    """The tag and checksum records bind to the reviewed source commit."""
     raw = _read_text(_PIN_FILE)
     lines = [line for line in raw.splitlines() if line.strip()]
     assert len(lines) == 1, raw
     tag = lines[0].strip()
     assert tag and "/" not in tag and " " not in tag, raw
+    metadata = json.loads(_read_text(_CHECKSUM_FILE))
+    assert metadata["tag"] == tag == "v0.3.0"
+    assert metadata["source_commit"] == "3d1806423402f47d1f7612a8cd8fc70d48c5a3c2"
+    assert metadata["source_review_status"] == "reviewed"
+    review = "release-planning/services/input-reviews/airunner-native-0.3.0.md"
+    assert review in metadata["source_review_note"]
+    assert (_REPO_ROOT / review).is_file()
+    assert metadata["provenance_status"] == "verified"
+    assert metadata["archives"]["linux"]["sha256"] == (
+        "59adcd438fed44c63ed65a4b17cfbf4afbdecaba164cfeec3d300b909dd5d9e0"
+    )
+    assert metadata["archives"]["windows"]["sha256"] == (
+        "b7f671b693b1a78c6d100e5287306bd5a05420a5ef46c7d5d7fd4e72882c7aa1"
+    )
 
 
 def test_removed_in_repo_sidecar_build_stays_removed() -> None:
@@ -66,12 +86,12 @@ def test_removed_in_repo_sidecar_build_stays_removed() -> None:
 
 
 def test_installer_consumes_pin_file_without_hardcoded_tag() -> None:
-    """install.sh resolves the tag from the pin file at run time."""
+    """The staging helper resolves the CPU tag from the checked-in pin."""
     text = _read_text(_INSTALL_SH)
-    assert ".github/native-sidecar-version" in text
-    assert _NATIVE_REPO in text
-    assert "releases/download/${tag}/" in text
-    assert _LINUX_BUNDLE in text
+    stager = _read_text(_REPO_ROOT / "scripts" / "stage_native_runtime_payload.py")
+    assert "stage_native_runtime_payload.py" in text
+    assert 'CPU_TAG_FILE = ROOT / ".github/native-sidecar-version"' in stager
+    assert 'CPU_ASSET = "runtime-sidecars-linux.tar.gz"' in stager
 
 
 def test_release_workflow_consumes_same_pin_and_repo() -> None:
@@ -82,6 +102,13 @@ def test_release_workflow_consumes_same_pin_and_repo() -> None:
     assert "releases/download/${tag}/" in text
     assert "for platform in linux windows" in text
     assert "runtime-sidecars-${platform}.tar.gz" in text
+    assert "--checksums .github/native-sidecar-checksums.json" in text
+    assert "python scripts/sidecar_archive.py verify" in text
+    fetch = text.split("  fetch-sidecars:", 1)[1].split(
+        "  publish-release-assets:", 1
+    )[0]
+    assert fetch.index("sidecar_archive.py check-pin") < fetch.index("curl -fsSL")
+    assert fetch.index("curl -fsSL") < fetch.index("sidecar_archive.py verify")
 
 
 def test_bundle_bin_layout_matches_runtime_discovery(
@@ -112,6 +139,10 @@ def test_explicit_override_wins_over_bundle(
     """An explicit binary path still bypasses bundle discovery."""
     custom = tmp_path / "custom-llama-server"
     custom.write_text("#!/bin/sh\n")
+    # resolve_runtime_executable requires the override to be executable
+    # (PermissionError otherwise, enforced since the voice-slice
+    # hardening): the fixture binary must carry the exec bit.
+    custom.chmod(0o755)
     monkeypatch.setenv("AIRUNNER_BUNDLE_ROOT", str(tmp_path))
     monkeypatch.setenv("AIRUNNER_LLAMA_SERVER_BIN", str(custom))
 
@@ -139,7 +170,7 @@ def test_installer_links_the_discovered_binary_names() -> None:
     """The installer link step uses the bundle/discovery names."""
     text = _read_text(_INSTALL_SH)
     assert "for binary_name in llama-server whisper-server" in text
-    assert 'link_sidecar_binaries "$download_dir/bin"' in text
+    assert 'link_sidecar_binaries "$NATIVE_RUNTIME_DIR/bin"' in text
 
 
 def test_installer_sidecar_paths_are_repo_relative() -> None:
@@ -147,17 +178,69 @@ def test_installer_sidecar_paths_are_repo_relative() -> None:
     text = _read_text(_INSTALL_SH)
     for forbidden in ("/home/", "/root/", "/Users/", "/tmp/"):
         assert forbidden not in text, forbidden
-    assert 'download_dir="$ROOT_DIR/build/' in text
-    assert 'clone_dir="$ROOT_DIR/build/' in text
+    assert 'NATIVE_RUNTIME_DIR="$ROOT_DIR/build/runtime-sidecars/linux"' in text
+    assert 'NATIVE_CUDA_PROFILE_PIN="${AIRUNNER_NATIVE_CUDA_PROFILE_PIN:-' in text
 
 
-def test_sidecar_fetch_tools_are_documented_prerequisites() -> None:
-    """curl and git (the network tools install.sh needs) are in README."""
-    readme = _read_text(_REPO_ROOT / "README.md")
-    assert "curl" in readme
-    assert "git" in readme
-    assert ".github/native-sidecar-version" in readme
-    assert "build/runtime-sidecars-download/" in readme
+def test_installer_and_workflow_consume_expected_archive_digests() -> None:
+    """Both download paths require the committed checksum authority."""
+    installer = _read_text(_INSTALL_SH)
+    workflow = _read_text(_WORKFLOW)
+    assert "stage_native_runtime_payload.py" in installer
+    assert ".github/native-sidecar-checksums.json" in workflow
+    assert "sidecar_archive.py verify" in workflow
+
+
+def test_installer_never_extracts_an_unverified_tarball() -> None:
+    """Hash verification and file selection precede both installed links."""
+    text = _read_text(_INSTALL_SH)
+    assert "tar -xzf" not in text
+    stage = text.index('stage_native_runtime_payload.py"')
+    link = text.index('link_sidecar_binaries "$NATIVE_RUNTIME_DIR/bin"')
+    assert stage < link
+    assert "--require-cuda-profile" in text
+    assert "--cuda-profile-pin \"$NATIVE_CUDA_PROFILE_PIN\"" in text
+
+
+def test_cuda_selection_never_falls_back_to_a_source_build() -> None:
+    """CUDA selection stages only the independently pinned release profile."""
+    text = _read_text(_INSTALL_SH)
+    assert "build_sidecars_from_source" not in text
+    assert "build_runtime_sidecars.sh" not in text
+    assert "git -c core.hooksPath=/dev/null clone" not in text
+    assert "no reviewed CUDA profile pin" in _read_text(
+        _REPO_ROOT / "scripts" / "stage_native_runtime_payload.py"
+    )
+
+
+def test_dev_launcher_uses_profile_override_without_changing_bundle_root() -> None:
+    text = _read_text(_DEV_LAUNCHER)
+    assert "AIRUNNER_LLAMA_CUDA_PROFILE_ROOT" in text
+    assert "unset AIRUNNER_LLAMA_CUDA_PROFILE_ROOT" in text
+    assert "AIRUNNER_BUNDLE_ROOT=" not in text
+
+
+def test_runtime_settings_accept_separate_profile_root_override() -> None:
+    text = _read_text(
+        _REPO_ROOT
+        / "services/src/airunner_services/runtimes/llama_cpp_runtime_settings.py"
+    )
+    assert 'cuda_profile_root=os.environ.get("AIRUNNER_LLAMA_CUDA_PROFILE_ROOT")' in text
+
+
+def test_full_docker_image_requires_both_verified_profiles_and_preserves_runtime_paths() -> None:
+    dockerfile = _read_text(_DOCKERFILE)
+    workflow = _read_text(_DOCKER_WORKFLOW)
+    assert "source=native-runtime" in dockerfile
+    assert "sha256sum -c SHA256SUMS" in dockerfile
+    assert "/native-runtimes/cuda-sm120a/profile-manifest.json" in dockerfile
+    assert "COPY --from=reviewed-inputs /native-runtime/payload/ /opt/airunner/" in dockerfile
+    assert "ENV AIRUNNER_BUNDLE_ROOT=/opt/airunner" in dockerfile
+    assert "AIRUNNER_BUNDLE_ROOT=/opt/airunner" in dockerfile
+    assert "AIRUNNER_PYTHON" not in dockerfile
+    assert "install -m 0755 /opt/airunner-speech/bin/espeak-ng /opt/airunner/bin/espeak-ng" in dockerfile
+    assert "cp -a /opt/airunner-speech/share/espeak-ng-data /opt/airunner/share/espeak-ng-data" in dockerfile
+    assert "--require-cuda-profile" in workflow
 
 
 def test_docs_do_not_reference_removed_build_paths() -> None:

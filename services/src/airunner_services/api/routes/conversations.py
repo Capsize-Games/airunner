@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from airunner_services.conversations.conversation_history_manager import (
     ConversationHistoryManager,
@@ -56,10 +56,15 @@ def _sync_deleted_conversation(request: Request, conversation_id: int) -> None:
 
 
 @router.get("/conversations", response_model=ConversationListResponse)
-async def list_conversations(limit: int = 50) -> ConversationListResponse:
-    """Return serialized conversation metadata through the service API."""
+async def list_conversations(
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> ConversationListResponse:
+    """Return one bounded page of conversation metadata."""
     return ConversationListResponse(
-        conversations=_manager().list_conversations(limit=limit)
+        conversations=_manager().list_conversations(
+            limit=limit, offset=offset
+        )
     )
 
 

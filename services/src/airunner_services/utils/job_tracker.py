@@ -38,6 +38,7 @@ class JobState:
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
     metadata: dict[str, Any] = field(default_factory=dict)
+    execution_finished: bool = True
 
     def to_dict(self) -> dict[str, Any]:
         """Return one JSON-serializable representation of the job state."""
@@ -50,6 +51,7 @@ class JobState:
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
             "metadata": self.metadata,
+            "execution_finished": self.execution_finished,
         }
 
 
@@ -73,6 +75,13 @@ class JobTracker:
 
         self._jobs: dict[str, JobState] = {}
         self._futures: dict[str, asyncio.Future] = {}
+        # Art generation is a physical, long-running resource.  Keep its
+        # reservation until the runtime call and result handling really end,
+        # even when the HTTP job has already been marked cancelled.
+        self._art_slots: set[str] = set()
+        self._art_tasks: dict[str, asyncio.Task] = {}
+        self._art_clients: dict[str, Any] = {}
+        self._cleanup_tasks: set[asyncio.Task] = set()
         self._initialized = True
         logger.info("JobTracker initialized")
 
@@ -92,6 +101,126 @@ class JobTracker:
             logger.info("Created job %s", job_id)
             return job_id
 
+    async def create_art_job(
+        self,
+        metadata: Optional[dict[str, Any]] = None,
+        *,
+        capacity: int = 1,
+    ) -> Optional[str]:
+        """Atomically create an art job if provider capacity is available."""
+        async with self._lock:
+            if len(self._art_slots) >= capacity:
+                return None
+            job_id = str(uuid.uuid4())
+            self._jobs[job_id] = JobState(
+                job_id=job_id,
+                status=JobStatus.PENDING,
+                metadata=metadata or {},
+                execution_finished=False,
+            )
+            self._futures[job_id] = asyncio.Future()
+            self._art_slots.add(job_id)
+            logger.info("Created reserved art job %s", job_id)
+            return job_id
+
+    def attach_art_task(self, job_id: str, task: asyncio.Task, client: Any) -> None:
+        """Retain the job task and runtime client for supervised shutdown."""
+        self._art_tasks[job_id] = task
+        self._art_clients[job_id] = client
+
+    def bind_art_client(self, job_id: str, client: Any) -> None:
+        """Retain the runtime client while an admitted job is preparing."""
+        self._art_clients[job_id] = client
+
+    async def finish_art_job(self, job_id: str) -> None:
+        """Release capacity only after the job runner actually terminates."""
+        async with self._lock:
+            self._art_slots.discard(job_id)
+            job = self._jobs.get(job_id)
+            if job is not None:
+                job.execution_finished = True
+            self._art_tasks.pop(job_id, None)
+            self._art_clients.pop(job_id, None)
+
+    async def mark_art_job_running(self, job_id: str) -> bool:
+        """Atomically start a pending art job before its runner is attached."""
+        async with self._lock:
+            job = self._jobs.get(job_id)
+            if job is None or job.status is not JobStatus.PENDING:
+                return False
+            job.status = JobStatus.RUNNING
+            job.progress = 1.0
+            job.updated_at = datetime.now()
+            return True
+
+    async def discard_art_job(self, job_id: str) -> None:
+        """Remove an admitted job that failed before its ID was returned."""
+        async with self._lock:
+            self._art_slots.discard(job_id)
+            self._art_tasks.pop(job_id, None)
+            self._art_clients.pop(job_id, None)
+            self._jobs.pop(job_id, None)
+            future = self._futures.pop(job_id, None)
+            if future is not None and not future.done():
+                future.cancel()
+
+    async def shutdown_art_jobs(self, timeout: float = 30.0) -> None:
+        """Request cancellation and wait without abandoning runtime threads.
+
+        A timed-out task remains retained and keeps its capacity reservation;
+        asyncio.wait does not cancel the runner or its underlying worker call.
+        """
+        async with self._lock:
+            active = [
+                (
+                    job_id,
+                    self._art_clients.get(job_id),
+                    self._art_tasks.get(job_id),
+                )
+                for job_id in self._art_slots
+                if self._jobs.get(job_id) is not None
+            ]
+        for job_id, _client, _task in active:
+            await self.cancel_job(job_id)
+
+        async def _cancel(client: Any, job_id: str) -> None:
+            if client is None:
+                return
+            cancel = getattr(client, "cancel", None)
+            if callable(cancel):
+                await asyncio.to_thread(cancel, job_id)
+
+        async def _cancel_all() -> None:
+            await asyncio.gather(
+                *(_cancel(client, job_id) for job_id, client, _ in active),
+                return_exceptions=True,
+            )
+
+        cancel_task = asyncio.create_task(_cancel_all())
+        self._cleanup_tasks.add(cancel_task)
+        cancel_task.add_done_callback(self._cleanup_tasks.discard)
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout
+        _done, cancel_pending = await asyncio.wait(
+            {cancel_task}, timeout=min(timeout, 5.0)
+        )
+        if cancel_pending:
+            logger.error(
+                "Art runtime cancellation requests remain active during "
+                "shutdown; cleanup continues in the background"
+            )
+        tasks = [task for _, _, task in active if task is not None and not task.done()]
+        if tasks:
+            _done, pending = await asyncio.wait(
+                tasks, timeout=max(0.0, deadline - loop.time())
+            )
+            if pending:
+                logger.error(
+                    "Art jobs remain active during shutdown (count=%d); "
+                    "their reservations remain held",
+                    len(pending),
+                )
+
     async def update_progress(
         self,
         job_id: str,
@@ -105,6 +234,12 @@ class JobTracker:
                 return
 
             job = self._jobs[job_id]
+            if job.status in {
+                JobStatus.COMPLETED,
+                JobStatus.FAILED,
+                JobStatus.CANCELLED,
+            }:
+                return
             job.progress = progress
             if status:
                 job.status = status
@@ -134,6 +269,12 @@ class JobTracker:
                 return
 
             job = self._jobs[job_id]
+            if job.status in {
+                JobStatus.CANCELLED,
+                JobStatus.FAILED,
+                JobStatus.COMPLETED,
+            }:
+                return
             job.status = JobStatus.COMPLETED
             job.progress = 100.0
             job.result = result
@@ -153,6 +294,12 @@ class JobTracker:
                 return
 
             job = self._jobs[job_id]
+            if job.status in {
+                JobStatus.CANCELLED,
+                JobStatus.FAILED,
+                JobStatus.COMPLETED,
+            }:
+                return
             job.status = JobStatus.FAILED
             job.error = error
             job.updated_at = datetime.now()
@@ -183,7 +330,10 @@ class JobTracker:
             job.updated_at = datetime.now()
             future = self._futures.get(job_id)
             if future is not None and not future.done():
-                future.set_exception(Exception("Job cancelled by user"))
+                if job_id in self._art_slots:
+                    future.cancel()
+                else:
+                    future.set_exception(Exception("Job cancelled by user"))
 
             logger.info("Job %s cancelled", job_id)
             return True
@@ -224,6 +374,8 @@ class JobTracker:
             to_remove = []
 
             for job_id, job in self._jobs.items():
+                if job_id in self._art_slots:
+                    continue
                 if job.status not in {
                     JobStatus.COMPLETED,
                     JobStatus.FAILED,

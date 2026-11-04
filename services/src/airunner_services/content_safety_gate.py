@@ -1,11 +1,11 @@
-"""Application-level helpers for the content-safety input gate.
+"""Application-level helpers for the optional content-policy integration.
 
 This module deliberately contains **no matching logic**. It is a thin
 shared application layer that delegates to the hash-based matcher in
 :mod:`airunner_services.content_safety` and centralizes the single
 generic rejection message used by every generation entry point.
 
-Enforcement architecture: the authoritative choke point sits
+When ``AIRUNNER_CONTENT_POLICY_MODE=enforce``, the authoritative choke point sits
 in-pipeline -- the art manager ``_generate`` paths and the Z-Image
 pipeline ``__call__`` entries call :func:`enforce_prompt_fields` (or
 :func:`enforce_prompt_text`) first, so a direct in-process generate
@@ -19,17 +19,16 @@ Ordering: the hash matcher runs first and a match blocks immediately without
 consulting the optional semantic judge (fast path). Only a clean hash check
 proceeds to the semantic layer, which is off by default and only ever adds a
 block -- it can never turn a matcher block into an allow. A clean optional
-check then proceeds to the required contextual layer (S08), which is
-likewise OFF by default -- the S07 evaluator selection behind it is
-approved (see ``release-planning/linux-v1/safety-evaluation.md`` §2;
-adapter: ``content_safety.qwen_guard``) -- and fails closed when
-enabled: unavailable, timed-out, erroring, or ambiguous outcomes deny.
+check then proceeds to the optional contextual layer when its separate
+switch is enabled. It calls the injected evaluator (the
+``content_safety.qwen_guard`` module provides an adapter) and fails closed
+when enabled: unavailable, timed-out, erroring, or ambiguous outcomes deny.
 Matcher denials are always preserved: no later layer runs after a
 matcher block.
 
-When mandatory policy data is missing, empty, or invalid, the gate denies
-generation before any side effect; callers surface the actionable
-installation/policy error from :func:`rejection_message` for that reason.
+The integration is disabled by default. In ``enforce`` mode, missing, empty,
+or invalid policy data denies generation before any side effect; callers
+surface the actionable installation/policy error from :func:`rejection_message`.
 
 No function here logs, returns, or otherwise surfaces the checked text or
 any matched term; only a boolean, a generic reason code and a field name
@@ -43,6 +42,9 @@ from typing import Optional
 from airunner_services.content_safety import (
     ContentSafetyResult,
     check_prompt_fields,
+)
+from airunner_services.content_safety.config import (
+    content_policy_is_enforced,
 )
 from airunner_services.content_safety.matcher import (
     REASON_POLICY_UNAVAILABLE,
@@ -124,7 +126,7 @@ def enforce_prompt_fields(
     is nothing to match, so the call passes -- this never weakens a
     text-bearing call, which always fails closed when data is unusable.
     """
-    if not has_checkable_text(fields):
+    if not content_policy_is_enforced() or not has_checkable_text(fields):
         return
     result = evaluate_prompt_fields(fields)
     if not result.allowed:
@@ -178,21 +180,23 @@ def evaluate_prompt_fields(
 ) -> ContentSafetyResult:
     """Return the gate result for one generation request's text fields.
 
-    The hash matcher runs first; a match blocks immediately and the semantic
-    judge is never called. ``None`` and empty values are skipped. When no
-    policy data set is loaded the matcher denies the request with the
-    policy-unavailable reason, so generation cannot proceed without its
-    mandatory check; callers surface that denial via :func:`rejection_message`.
+    The default ``disabled`` mode allows the request without loading policy
+    data. In ``enforce`` mode, the hash matcher runs first; a match blocks
+    immediately and the semantic judge is never called. ``None`` and empty
+    values are skipped. Missing policy data denies with the policy-unavailable
+    reason, which callers surface via :func:`rejection_message`.
 
     After a clean hash check, the optional semantic layer is consulted (off
     by default and inert unless a judge is registered). It blocks only on an
     explicit not-allowed verdict; unavailable, timed-out, erroring, or
     ambiguous outcomes leave the request allowed. A clean optional check
-    then proceeds to the required contextual layer, which runs only when
-    explicitly enabled (OFF by default until release enablement) and
+    then proceeds to the optional contextual layer, which runs only when
+    ``AIRUNNER_CONTENT_SAFETY_CONTEXTUAL`` is truthy and
     fails closed: any non-allowed contextual outcome denies with a
     generic, content-free reason.
     """
+    if not content_policy_is_enforced():
+        return ContentSafetyResult.allowed_result()
     result = check_prompt_fields(**fields)
     if not result.allowed:
         return result
@@ -205,13 +209,16 @@ def evaluate_publication_fields(
 ) -> ContentSafetyResult:
     """Return the gate result for generated text before publication.
 
-    Same layering as :func:`evaluate_prompt_fields`: the mandatory hash
-    matcher runs first and blocks immediately (including when policy data
-    is unavailable), then the optional semantic layer, then the required
-    contextual layer which fails closed when enabled. Callers evaluate the
-    complete buffered output -- streamed tokens, tool-originated final
-    text, and text handed to speech -- and publish only when allowed.
+    Same layering as :func:`evaluate_prompt_fields` in ``enforce`` mode: the
+    hash matcher runs first and blocks immediately (including when policy data
+    is unavailable), then the optional semantic layer, then the optional
+    contextual layer which fails closed when enabled. The default ``disabled``
+    mode returns allowed without loading policy data. Callers evaluate the
+    complete buffered output -- streamed tokens, tool-originated final text,
+    and text handed to speech -- and publish only when allowed.
     """
+    if not content_policy_is_enforced():
+        return ContentSafetyResult.allowed_result()
     result = check_prompt_fields(**fields)
     if not result.allowed:
         return result

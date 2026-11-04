@@ -1,0 +1,30 @@
+{
+  "artifact_sources": [
+    {
+      "filename": "pip-26.2.2-py3-none-any.whl",
+      "name": "pip",
+      "sha256": "fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70",
+      "size_bytes": 1819850,
+      "source": {
+        "filename": "pip-26.2.2-py3-none-any.whl",
+        "kind": "https",
+        "sha256": "fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70",
+        "size_bytes": 1819850,
+        "url": "https://files.pythonhosted.org/packages/3f/06/3e4420302363fbb71be3c7f35ce042f54bfca330e3e66b3a2e3c4cca579f/pip-26.2.2-py3-none-any.whl"
+      },
+      "version": "26.2.2",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    }
+  ],
+  "schema_version": 1,
+  "selected_count": 1,
+  "selected_lock_sha256": "87af9041b0b049531f3595bb9b1953fa864f6736c3e1bbf01e3b981c2ed9a16a",
+  "source_review": {
+    "review": "release-planning/services/DEPENDENCY_DECISIONS.md",
+    "status": "The exact pip 26.2.2 source and wheel were reviewed for the hosted offline Python bootstrap; wheel SHA-256 matches the recorded build input."
+  },
+  "status": "candidate-only; not activated",
+  "target": "Python 3.13 package frontend bootstrap for the offline Docker install"
+}

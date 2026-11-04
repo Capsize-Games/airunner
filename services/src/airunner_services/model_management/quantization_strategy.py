@@ -28,6 +28,7 @@ class QuantizationConfig:
     description: str
     estimated_memory_gb: float
     requires_calibration: bool = False
+    estimated_ram_gb: float | None = None
 
 
 class QuantizationStrategy:

@@ -3,7 +3,9 @@
 import os
 from dataclasses import dataclass
 
-if os.environ.get("DEV_ENV", "1") == "1":
+# Match shared settings: packaged service imports do not load working-directory
+# dotenv files unless development mode is explicitly enabled.
+if os.environ.get("DEV_ENV", "0") == "1":
     try:
         from dotenv import load_dotenv
 

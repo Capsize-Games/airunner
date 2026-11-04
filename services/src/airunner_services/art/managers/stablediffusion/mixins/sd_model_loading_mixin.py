@@ -8,13 +8,15 @@ Compel, DeepCache, and schedulers.
 import os
 from typing import Dict, Optional
 
-import diffusers
 from DeepCache import DeepCacheSDHelper
 from compel import Compel
 from transformers import CLIPImageProcessor
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 
 from airunner_services.database.models.schedulers import Schedulers
+from airunner_services.art.managers.stablediffusion.model_loader import (
+    resolve_scheduler_class,
+)
 from airunner_services.art.runtime_enums import ModelStatus, ModelType
 from airunner_common.settings import AIRUNNER_LOCAL_FILES_ONLY
 
@@ -79,10 +81,13 @@ class SDModelLoadingMixin:
             return
 
         scheduler_class_name = scheduler_record.name
-        scheduler_class = getattr(diffusers, scheduler_class_name, None)
+        scheduler_class = resolve_scheduler_class(
+            scheduler_class_name, self.logger
+        )
         if scheduler_class is None:
             self.logger.error(
-                "Scheduler class %s not found in diffusers for %s",
+                "Scheduler class %s refused or not found in diffusers "
+                "for %s",
                 scheduler_class_name,
                 requested_name,
             )

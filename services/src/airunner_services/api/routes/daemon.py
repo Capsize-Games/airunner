@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import List
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 
 from airunner_services.api.models.daemon_runtime_status_response import (
     DaemonRuntimeStatusResponse,
@@ -32,6 +32,8 @@ from airunner_services.api.routes.daemon_helpers import (
 )
 from airunner_services.ipc.messages import ResponseEnvelope
 from airunner_services.runtimes.contracts import RuntimeAction, RuntimeKind
+from airunner_services.data.tenant import get_tenant_key
+from .llm_request_registry import http_owner, registry_for, valid_request_id
 
 router = APIRouter()
 router.include_router(hardware_router)
@@ -165,6 +167,15 @@ async def cancel_runtime(
 ):
     """Cancel an active runtime request through the daemon API."""
     runtime = parse_runtime_kind(runtime_name)
+    if runtime is RuntimeKind.LLM:
+        request_id = route_request.request_id
+        owner = http_owner(request, get_tenant_key())
+        if not valid_request_id(request_id):
+            raise HTTPException(status_code=404, detail="Active request not found")
+        client = registry_for(request.app).authorized_client(request_id, owner)
+        if client is None:
+            raise HTTPException(status_code=404, detail="Active request not found")
+        return cancel_runtime_action(client, route_request)
     client = resolve_runtime_client(
         request,
         runtime,

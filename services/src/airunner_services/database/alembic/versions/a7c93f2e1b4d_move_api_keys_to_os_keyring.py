@@ -44,33 +44,37 @@ def upgrade() -> None:
     bind = op.get_bind()
     inspector = sa.inspect(bind)
     existing_tables = set(inspector.get_table_names())
-    for table_name, columns in _TABLES.items():
-        if table_name not in existing_tables:
-            continue
-        table_columns = {
-            column["name"] for column in inspector.get_columns(table_name)
-        }
-        for column_name in columns:
-            if column_name not in table_columns:
+    # One savepoint for the whole move: a crash midway rolls back every
+    # row instead of leaving half-migrated secrets behind.
+    with bind.begin_nested():
+        for table_name, columns in _TABLES.items():
+            if table_name not in existing_tables:
                 continue
-            rows = bind.execute(
-                sa.text(
-                    f"SELECT id, {column_name} FROM {table_name} "
-                    f"WHERE {column_name} IS NOT NULL "
-                    f"AND {column_name} != ''"
-                )
-            ).fetchall()
-            for row_id, value in rows:
-                if not value:
+            table_columns = {
+                column["name"]
+                for column in inspector.get_columns(table_name)
+            }
+            for column_name in columns:
+                if column_name not in table_columns:
                     continue
-                store_secret(column_name, str(value))
-                bind.execute(
+                rows = bind.execute(
                     sa.text(
-                        f"UPDATE {table_name} SET {column_name}=:empty "
-                        f"WHERE id=:id"
-                    ),
-                    {"empty": "", "id": row_id},
-                )
+                        f"SELECT id, {column_name} FROM {table_name} "
+                        f"WHERE {column_name} IS NOT NULL "
+                        f"AND {column_name} != ''"
+                    )
+                ).fetchall()
+                for row_id, value in rows:
+                    if not value:
+                        continue
+                    store_secret(column_name, str(value))
+                    bind.execute(
+                        sa.text(
+                            f"UPDATE {table_name} SET {column_name}=:empty "
+                            f"WHERE id=:id"
+                        ),
+                        {"empty": "", "id": row_id},
+                    )
 
 
 def downgrade() -> None:

@@ -43,6 +43,7 @@ def run_generation_stream(
     llm_request: Optional[Any],
     complete_response,
     sequence_counter,
+    rag_document_scope: Optional[tuple[str, ...]] = None,
 ) -> Dict[str, Any]:
     """Run the generation stream and return the captured workflow result."""
     sync_request_scope_to_workflow_manager(owner)
@@ -70,6 +71,7 @@ def run_generation_stream(
             llm_request,
             complete_response,
             sequence_counter,
+            rag_document_scope,
         )
     finally:
         _restore_sampling(owner, sampling_patch)
@@ -161,6 +163,7 @@ def _stream_generation(
     llm_request: Optional[Any],
     complete_response,
     sequence_counter,
+    rag_document_scope: Optional[tuple[str, ...]] = None,
 ) -> Dict[str, Any]:
     """Execute the workflow stream and convert it into the result dict."""
     try:
@@ -173,7 +176,9 @@ def _stream_generation(
                 "Passing %s image(s) to workflow stream",
                 len(images),
             )
-        result = _stream_messages(owner, prompt, generation_kwargs, images)
+        result = _stream_messages(
+            owner, prompt, generation_kwargs, images, rag_document_scope
+        )
         if owner._interrupted:
             interrupt_msg = handle_interrupted_generation(
                 owner,
@@ -223,7 +228,7 @@ def _normalize_generation_kwargs(
     )
 
 
-def _stream_messages(owner, prompt: str, generation_kwargs: dict, images) -> Dict[str, Any]:
+def _stream_messages(owner, prompt: str, generation_kwargs: dict, images, rag_document_scope=None) -> Dict[str, Any]:
     """Collect raw and final workflow messages from the stream."""
     result_messages = []
     raw_messages = []
@@ -231,6 +236,7 @@ def _stream_messages(owner, prompt: str, generation_kwargs: dict, images) -> Dic
         prompt,
         generation_kwargs,
         images=images,
+        rag_document_scope=rag_document_scope,
     ):
         if owner._interrupted:
             owner.logger.info("Stream interrupted - breaking out of generation")
@@ -250,6 +256,7 @@ def do_generate(
     do_tts_reply: bool = True,
     extra_context: Optional[Dict[str, Dict[str, Any]]] = None,
     skip_tool_setup: bool = False,
+    rag_document_scope: Optional[tuple[str, ...]] = None,
 ) -> Dict[str, Any]:
     """Generate a response using the loaded LLM."""
     del do_tts_reply, extra_context
@@ -285,6 +292,7 @@ def do_generate(
         llm_request,
         complete_response,
         sequence_counter,
+        rag_document_scope,
     )
     prompt_tokens, completion_tokens, total_tokens = extract_usage_tokens(result)
     executed_tools = executed_tools_from_workflow(owner._workflow_manager)

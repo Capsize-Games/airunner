@@ -7,9 +7,6 @@ Create Date: 2025-11-30 18:34:11.469944
 """
 from typing import Sequence, Union
 
-from alembic import op
-import sqlalchemy as sa
-
 from airunner_services.database.db import drop_table
 
 
@@ -29,17 +26,10 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Recreate speech_t5_settings table
-    op.create_table('speech_t5_settings',
-    sa.Column('id', sa.INTEGER(), nullable=False),
-    sa.Column('datasets_path', sa.VARCHAR(), nullable=True),
-    sa.Column('processor_path', sa.VARCHAR(), nullable=True),
-    sa.Column('vocoder_path', sa.VARCHAR(), nullable=True),
-    sa.Column('model_path', sa.VARCHAR(), nullable=True),
-    sa.Column('pitch', sa.INTEGER(), nullable=True),
-    sa.Column('voice', sa.VARCHAR(), nullable=True),
-    sa.PrimaryKeyConstraint('id')
+    """Reject recreating the dropped SpeechT5 table without its user data."""
+    raise RuntimeError(
+        "Cannot downgrade this revision because speech_t5_settings was "
+        "dropped and its rows cannot be reconstructed safely. Restore a "
+        "pre-upgrade database backup to recover the lost data; otherwise "
+        "keep this revision and upgrade forward."
     )
-    
-    # Drop xtts_settings table if it exists
-    drop_table(table_name="xtts_settings")

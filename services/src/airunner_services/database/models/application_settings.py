@@ -79,9 +79,10 @@ class ApplicationSettings(BaseModel):
         default=DEFAULT_IMAGE_GENERATOR.value,
     )
     # API credentials are stored in the OS keyring (optional 'keyring'
-    # package); these columns hold only a keyring reference. In
-    # headless/unattended environments without a keyring backend they fall
-    # back to the plaintext value with a logged warning (GitHub issue #2035).
+    # package); these columns hold only a keyring reference. Without a
+    # keyring backend they hold plaintext only with explicit
+    # AIRUNNER_ALLOW_PLAINTEXT_SECRETS=1 opt-in, else storing raises
+    # (GitHub issue #2035).
     hf_api_key_read_key = Column(String, default="")
     hf_api_key_write_key = Column(String, default="")
     civit_ai_api_key = Column(String, default="")

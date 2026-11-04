@@ -7,8 +7,9 @@ write the P04 bundle manifest, then gate the result through
 inspect_linux_bundle (manifest hashes, required resources, exclusion
 scan, warn-file gate, frozen-module presence).
 
-Run from the repo root in an isolated venv with the P02 profile
-installed (package/constraints-linux-nvidia-cu129.txt)::
+Run from the repo root in an isolated venv with the P02 linux-release
+profile installed from its validated hash lock. Lock generation is pending;
+the candidate workflow fails closed until that lock exists.
 
     venv/bin/python scripts/assemble_linux_bundle.py --dry-run
     venv/bin/python scripts/assemble_linux_bundle.py \\
@@ -18,14 +19,9 @@ installed (package/constraints-linux-nvidia-cu129.txt)::
 command without executing it. stdlib only; safe to run with no
 repository on PYTHONPATH.
 
-Release policy gate (S06): every real (non-dry-run) assembly first
-form-checks the staged content-safety policy set -- present,
-strictly versioned, non-empty, with a well-formed detached
-signature -- and exits 2 with a content-free error before writing
-anything when the set is absent, empty, unsigned, or synthetic-only.
-With --policy-trust-store the gate additionally verifies each
-detached signature against that owner-provisioned trust store,
-which is what rejects data signed outside the release process.
+Content policy data is optional and omitted from the standard bundle.
+Applications that choose signed policy data can request strict build
+validation with --require-signed-policy and --policy-trust-store.
 """
 
 from __future__ import annotations
@@ -48,6 +44,21 @@ from linux_bundle_assemble import (
     stage_root_files,
     write_entry_script,
     write_manifest,
+)
+from dependency_notices import collect_dependency_notices
+from stage_espeak_native_payload import stage_espeak_payload, _validate_payload
+from postgresql_runtime_payload import (
+    PostgreSQLPayloadError,
+    stage_runtime_payload,
+    validate_staged_runtime,
+    validate_staged_supplement,
+    validate_build_host,
+)
+from verify_warning_source_reviews import verify_warning_source_reviews
+from stage_cuda_runtime_profile import (
+    StageError,
+    stage_cuda_profile,
+    verify_cuda_profile_archive,
 )
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -97,7 +108,19 @@ def _assemble_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--pyinstaller", default="pyinstaller")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--require-sidecars", action="store_true")
+    parser.add_argument("--espeak-payload", type=Path, default=None)
+    parser.add_argument("--postgresql-runtime-inputs", type=Path, default=None)
+    parser.add_argument("--postgresql-build-supplement-inputs", type=Path, default=None)
+    parser.add_argument("--cuda-profile-archive", type=Path, default=None)
+    parser.add_argument("--cuda-profile-sha256", default=None)
+    parser.add_argument("--cuda-profile-artifact-id", default=None)
+    parser.add_argument("--cuda-profile-source-repository", default=None)
+    parser.add_argument("--cuda-profile-source-commit", default=None)
+    parser.add_argument("--cuda-profile-source-tree", default=None)
+    parser.add_argument("--cuda-profile-producer-commit", default=None)
+    parser.add_argument("--cuda-profile-recipe-sha256", default=None)
     parser.add_argument("--policy-trust-store", type=Path, default=None)
+    parser.add_argument("--require-signed-policy", action="store_true")
     return parser.parse_args(argv)
 
 
@@ -218,11 +241,13 @@ def _freeze_cmd(
     workpath: Path,
     distpath: Path,
     pyinstaller: str,
+    include_content_policy: bool = False,
 ) -> tuple[Path, list[str]]:
     """Return the entry path and exact freeze command for the spec."""
     entry_script = workpath / "_bundle_entry.py"
     command = build_command(
-        spec, _REPO_ROOT, entry_script, distpath, workpath, pyinstaller
+        spec, _REPO_ROOT, entry_script, distpath, workpath, pyinstaller,
+        include_content_policy=include_content_policy,
     )
     return entry_script, command
 
@@ -233,6 +258,10 @@ def _freeze_tree(
     distpath: Path,
     command: list[str],
     pyinstaller: str,
+    espeak_payload: Path | None = None,
+    postgresql_runtime_inputs: Path | None = None,
+    postgresql_build_supplement_inputs: Path | None = None,
+    cuda_profile_inputs: dict[str, Any] | None = None,
 ) -> Path:
     """Freeze the bundle and stage root payloads; return its dir."""
     write_entry_script(
@@ -244,16 +273,41 @@ def _freeze_tree(
     bundle_dir = distpath / str(spec["bundle"]["executable"])
     if not bundle_dir.is_dir():
         raise SystemExit(f"pyinstaller produced no bundle dir: {bundle_dir}")
-    _finish_tree(spec, bundle_dir)
+    _finish_tree(
+        spec, bundle_dir, espeak_payload, postgresql_runtime_inputs,
+        postgresql_build_supplement_inputs,
+        cuda_profile_inputs,
+    )
     return bundle_dir
 
 
-def _finish_tree(spec: dict[str, Any], bundle_dir: Path) -> None:
-    """Stage root payloads and prune hook data in the frozen tree."""
+def _finish_tree(
+    spec: dict[str, Any],
+    bundle_dir: Path,
+    espeak_payload: Path | None = None,
+    postgresql_runtime_inputs: Path | None = None,
+    postgresql_build_supplement_inputs: Path | None = None,
+    cuda_profile_inputs: dict[str, Any] | None = None,
+) -> None:
+    """Stage root payloads, prune hook data, then collect locked notices."""
     (bundle_dir / spec["runtimes"]["bin_dir"]).mkdir(exist_ok=True)
     stage_root_files(spec, _REPO_ROOT, bundle_dir)
     pruned = prune_bundle(bundle_dir, spec)
     print(f"pruned {len(pruned)} hook-collected paths")
+    if espeak_payload is not None:
+        stage_espeak_payload(espeak_payload, bundle_dir)
+    stage_runtime_payload(
+        postgresql_runtime_inputs, bundle_dir, spec, _REPO_ROOT,
+        postgresql_build_supplement_inputs,
+    )
+    if cuda_profile_inputs is not None:
+        stage_cuda_profile(
+            cuda_profile_inputs["archive"],
+            bundle_dir,
+            **{key: value for key, value in cuda_profile_inputs.items() if key != "archive"},
+        )
+    if spec.get("dependency_notices", {}).get("required", False):
+        collect_dependency_notices(spec, _REPO_ROOT, bundle_dir)
 
 
 def _write_bundle_manifest(
@@ -264,6 +318,35 @@ def _write_bundle_manifest(
     print(f"wrote {bundle_dir / spec['manifest']['filename']}")
     print(f"  {len(manifest['files'])} files, base {base}")
     return manifest
+
+
+def _cuda_profile_inputs(
+    args: argparse.Namespace, spec: dict[str, Any]
+) -> dict[str, Any] | None:
+    """Require a complete external pin when this build explicitly stages CUDA."""
+    fields = {
+        "archive": args.cuda_profile_archive,
+        "expected_sha256": args.cuda_profile_sha256,
+        "artifact_id": args.cuda_profile_artifact_id,
+        "source_repository": args.cuda_profile_source_repository,
+        "source_commit": args.cuda_profile_source_commit,
+        "source_tree": args.cuda_profile_source_tree,
+        "producer_commit": args.cuda_profile_producer_commit,
+        "recipe_sha256": args.cuda_profile_recipe_sha256,
+    }
+    supplied = [value is not None for value in fields.values()]
+    required = bool(spec.get("native_cuda_profile", {}).get("required", False))
+    if not any(supplied):
+        if required:
+            raise StageError(
+                "bundle spec requires CUDA profile inputs and external identities"
+            )
+        return None
+    if not all(supplied):
+        raise StageError(
+            "CUDA profile staging requires the archive and every external identity"
+        )
+    return fields
 
 
 def _report_gate(result: Any, bundle_dir: Path) -> int:
@@ -293,6 +376,9 @@ def _inspect_frozen(
         warn_file=warn_file if warn_file.is_file() else None,
         toc_paths=toc_paths,
         require_sidecars=args.require_sidecars,
+        require_signed_policy=(
+            args.require_signed_policy or args.policy_trust_store is not None
+        ),
     )
     return _report_gate(result, bundle_dir)
 
@@ -304,7 +390,16 @@ def main(argv: list[str] | None = None) -> int:
     spec = inspect.load_spec(args.spec or DEFAULT_SPEC)
     if _report_spec_errors(inspect.spec_errors(spec)):
         return 2
-    if not args.dry_run:
+    try:
+        cuda_profile_inputs = _cuda_profile_inputs(args, spec)
+    except StageError as exc:
+        print(f"CUDA PROFILE: {exc}", file=sys.stderr)
+        return 2
+    validate_policy = args.require_signed_policy or args.policy_trust_store is not None
+    if validate_policy and args.policy_trust_store is None:
+        print("POLICY: --require-signed-policy requires --policy-trust-store", file=sys.stderr)
+        return 2
+    if validate_policy and not args.dry_run:
         problems = gate_staged_policy(
             spec, _REPO_ROOT, args.policy_trust_store
         )
@@ -313,15 +408,76 @@ def main(argv: list[str] | None = None) -> int:
     workpath, distpath = _output_paths(args, spec)
     base = resolve_base_rev(_REPO_ROOT, args.base)
     entry_script, command = _freeze_cmd(
-        spec, workpath, distpath, args.pyinstaller
+        spec, workpath, distpath, args.pyinstaller, validate_policy
     )
     if args.dry_run:
         _print_dry_run(base, entry_script, command)
         return 0
+    if cuda_profile_inputs is not None:
+        try:
+            verify_cuda_profile_archive(
+                cuda_profile_inputs["archive"],
+                **{
+                    key: value
+                    for key, value in cuda_profile_inputs.items()
+                    if key != "archive"
+                },
+            )
+        except (OSError, StageError) as exc:
+            print(f"CUDA PROFILE: {exc}", file=sys.stderr)
+            return 2
+    if args.espeak_payload is None and spec.get("native_speech", {}).get("required", False):
+        print("SPEECH: full bundle requires --espeak-payload from the reviewed native build", file=sys.stderr)
+        return 2
+    if args.espeak_payload is not None:
+        try:
+            _validate_payload(
+                args.espeak_payload, _REPO_ROOT / "packaging/espeak/source-lock.json", _REPO_ROOT
+            )
+        except (OSError, ValueError) as exc:
+            print(f"SPEECH: {exc}", file=sys.stderr)
+            return 2
+    postgresql_mode = spec.get("postgresql_runtime", {}).get("mode")
+    if postgresql_mode == "locked-ubuntu-debs":
+        if args.postgresql_runtime_inputs is None:
+            print("POSTGRESQL: full bundle requires staged reviewed Ubuntu libpq inputs", file=sys.stderr)
+            return 2
+        if args.postgresql_build_supplement_inputs is None:
+            print("POSTGRESQL: full bundle requires staged glibc build compatibility inputs", file=sys.stderr)
+            return 2
+        try:
+            validate_build_host()
+            validate_staged_runtime(args.postgresql_runtime_inputs, _REPO_ROOT)
+            validate_staged_supplement(args.postgresql_build_supplement_inputs, _REPO_ROOT)
+        except (OSError, PostgreSQLPayloadError) as exc:
+            print(f"POSTGRESQL: {exc}", file=sys.stderr)
+            return 2
+    elif postgresql_mode == "disabled":
+        if args.postgresql_runtime_inputs is not None or args.postgresql_build_supplement_inputs is not None:
+            print("POSTGRESQL: SQLite-only bundle cannot accept PostgreSQL inputs", file=sys.stderr)
+            return 2
+    else:
+        print("POSTGRESQL: bundle spec must explicitly select a runtime policy", file=sys.stderr)
+        return 2
+    evidence = spec.get("warn_allowlist", {}).get("source_evidence")
+    if evidence:
+        problems = verify_warning_source_reviews(_REPO_ROOT / evidence)
+        if problems:
+            for problem in problems:
+                print(f"SOURCE REVIEW: {problem}", file=sys.stderr)
+            return 2
     bundle_dir = _freeze_tree(
-        spec, workpath, distpath, command, args.pyinstaller
+        spec,
+        workpath,
+        distpath,
+        command,
+        args.pyinstaller,
+        args.espeak_payload,
+        args.postgresql_runtime_inputs,
+        args.postgresql_build_supplement_inputs,
+        cuda_profile_inputs,
     )
-    manifest = _write_bundle_manifest(bundle_dir, spec, base)
+    _write_bundle_manifest(bundle_dir, spec, base)
     return _inspect_frozen(inspect, spec, bundle_dir, args)
 
 

@@ -18,48 +18,12 @@ EXPECTED_CLASSIFIER = (
 )
 
 
-def _root_setup_kwargs() -> dict:
-    """Build the root GUI package setup kwargs via runpy in-process.
-
-    Importing ``setup`` would trigger the full setuptools machinery; running
-    the file as a script and capturing ``setup()`` kwargs keeps the test cheap
-    and side-effect free.
-    """
-    import runpy
-    import sys
-
-    captured: dict = {}
-    import setuptools
-
-    def _fake_setup(**kwargs) -> None:
-        captured.update(kwargs)
-
-    _orig_setup = setuptools.setup
-    setuptools.setup = _fake_setup
-    try:
-        runpy.run_path(
-            str(_PROJECT_ROOT / "setup.py"),
-            run_name="__airunner_setup_probe__",
-        )
-    finally:
-        setuptools.setup = _orig_setup
-        sys.modules.pop("setup", None)
-    assert captured, "root setup() was not called"
-    return captured
-
-
 def test_repo_root_license_is_gpl_with_copyright() -> None:
     """The LICENSE file is the full GPL-3.0 text and carries a copyright line."""
     text = (_PROJECT_ROOT / "LICENSE").read_text(encoding="utf-8")
     assert "GNU GENERAL PUBLIC LICENSE" in text
     assert "Version 3" in text
     assert "Copyright" in text, "LICENSE must carry a copyright notice"
-
-
-def test_root_setup_metadata_is_gpl() -> None:
-    kwargs = _root_setup_kwargs()
-    assert kwargs["license"] == EXPECTED_LICENSE
-    assert EXPECTED_CLASSIFIER in kwargs["classifiers"]
 
 
 def test_airunner_common_license_classifier_is_gpl() -> None:

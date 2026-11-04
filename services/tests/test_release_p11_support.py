@@ -21,7 +21,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 LICENSES_MD = REPO_ROOT / "release-planning" / "linux-v1" / "licenses.md"
 SPEC_PATH = REPO_ROOT / "packaging" / "linux" / "services-bundle-spec.toml"
 CONSTRAINTS_PATH = (
-    REPO_ROOT / "package" / "constraints-linux-nvidia-cu129.txt"
+    REPO_ROOT
+    / "package"
+    / "constraints-linux-nvidia-cu129-historical-desktop.txt"
 )
 BOOTSTRAP_PATH = (
     REPO_ROOT
@@ -35,8 +37,9 @@ PIN_PATH = REPO_ROOT / ".github" / "native-sidecar-version"
 LICENSE_PATH = REPO_ROOT / "LICENSE"
 NOTICE_PATH = REPO_ROOT / "NOTICE"
 THIRD_PARTY_PATH = REPO_ROOT / "THIRD_PARTY_NOTICES.md"
+LIBUV_LICENSE_PATH = REPO_ROOT / "packaging" / "licenses" / "libuv-LICENSE"
 
-LEGAL_FILES = (LICENSE_PATH, NOTICE_PATH, THIRD_PARTY_PATH)
+LEGAL_FILES = (LICENSE_PATH, NOTICE_PATH, THIRD_PARTY_PATH, LIBUV_LICENSE_PATH)
 
 
 def read_text(path: Path) -> str:

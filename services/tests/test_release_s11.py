@@ -108,6 +108,7 @@ class _StubLogger:
 
 @pytest.fixture(autouse=True)
 def _clean_state(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("AIRUNNER_CONTENT_POLICY_MODE", "enforce")
     image_verdict.set_evaluator(None)
     monkeypatch.setattr(mixin_mod, "clear_memory", lambda *a, **k: None)
     yield

@@ -37,7 +37,6 @@ for _path in reversed(
         # path. The old "<repo>/model/src" entry was a phantom path and is
         # removed.
         _PROJECT_ROOT / "native" / "src",
-        _PROJECT_ROOT / "src",
     )
 ):
     _path_str = str(_path)

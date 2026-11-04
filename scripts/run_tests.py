@@ -47,39 +47,32 @@ def _pytest_command(*args: str) -> list[str]:
     return [sys.executable, "-m", "pytest", *args]
 
 
+# services/tests/ is flat (no per-component subdirectories), so
+# --component resolves to the real filename prefixes present in that
+# directory (release issue #2440). A component with no matching files
+# still falls through to the missing-dir error below.
+_COMPONENT_FILE_PREFIXES: dict[str, str] = {
+    "llm": "test_llm",
+    "art": "test_art",
+    "tts": "test_tts",
+    "stt": "test_stt",
+    "daemon": "test_daemon",
+    "release": "test_release",
+}
+
+
 def _component_targets(
     base_path: Path,
     component: str,
 ) -> tuple[list[Path], str] | None:
     """Resolve one component name or alias into pytest targets."""
-    alias_targets = {
-        "chat": [
-            base_path
-            / "chat"
-            / "gui"
-            / "widgets"
-            / "tests"
-            / "test_chat_prompt_widget_show_event.py",
-            base_path
-            / "chat"
-            / "gui"
-            / "widgets"
-            / "tests"
-            / "test_conversation_widget_streaming.py",
-        ],
-        "documents": [
-            base_path
-            / "documents"
-            / "gui"
-            / "widgets"
-            / "tests"
-            / "test_knowledge_base_panel_widget.py",
-        ],
-    }
-    if component in alias_targets:
-        return alias_targets[component], (
-            f"Focused validation suite for {component}"
-        )
+    prefix = _COMPONENT_FILE_PREFIXES.get(component)
+    if prefix is not None:
+        targets = sorted(base_path.glob(prefix + "*.py"))
+        if targets:
+            return targets, (
+                f"Focused validation suite for {component}"
+            )
     test_path = base_path / component / "tests"
     if test_path.exists():
         return [test_path], f"Safe unit tests for {component} component"
@@ -368,7 +361,7 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
     Returns:
         Exit code from pytest
     """
-    base_path = Path("src/airunner/components")
+    base_path = Path("services/tests")
 
     if component:
         resolved = _component_targets(base_path, component)
@@ -381,9 +374,7 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
         test_targets, description = resolved
     else:
         test_targets = [base_path]
-        description = "Safe unit tests (GUI suites excluded)"
-
-    include_gui_tests = component in {"chat", "documents"}
+        description = "Services unit tests (desktop GUI removed)"
 
     cmd = _pytest_command(*[str(path) for path in test_targets])
 
@@ -398,52 +389,27 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
             "--color=yes",
             "-ra",  # Show summary of all test outcomes
             "-m",
-            (
-                "not eval and not benchmark and not integration"
-                if include_gui_tests
-                else "not gui and not eval and not benchmark and not integration"
-            ),
-            "--ignore=src/airunner/components/eval",  # Exclude eval tests
-            "--ignore=src/airunner/components/server/tests/functional",
+            "not eval and not benchmark and not integration",
         ]
     )
 
     return run_command(
         cmd,
         description,
-        env=_build_pytest_env(skip_gui=not include_gui_tests),
+        env=_build_pytest_env(skip_gui=True),
     )
-
-
-def _gui_component_targets(base_path: Path, component: str) -> list[Path] | None:
-    """Resolve one component into its GUI subtree."""
-    gui_path = base_path / component / "gui"
-    if gui_path.exists():
-        return [gui_path]
-    return None
 
 
 def run_gui_functional_tests(
     component: str = None,
     verbose: bool = False,
 ) -> int:
-    """Run headless GUI functional tests with mocked backends."""
-    base_path = Path("src/airunner/components")
-    test_targets = [base_path]
-    description = "Headless GUI functional tests"
-
-    if component:
-        resolved = _gui_component_targets(base_path, component)
-        if resolved is None:
-            print(f"Error: GUI component '{component}' is not configured")
-            return 1
-        test_targets = resolved
-        description = f"Headless GUI functional tests for {component}"
-
-    cmd = _pytest_command(*[str(path) for path in test_targets])
-    cmd.append("-v" if verbose else "--tb=short")
-    cmd.extend(["--color=yes", "-ra", "-m", "gui_functional"])
-    return run_command(cmd, description, env=_build_pytest_env())
+    """Removed with the desktop GUI; services-only repo has no GUI tests."""
+    print(
+        "GUI functional tests were removed with the desktop client; "
+        "use the services suite instead."
+    )
+    return 1
 
 
 def run_eval_tests(
@@ -628,8 +594,8 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s --unit                    Run all unit tests
-    %(prog)s --eval                    Run eval tests only
+  %(prog)s --unit                    Run all services unit tests
+    %(prog)s --eval                    Run eval tests only (external repo)
         %(prog)s --eval --judge-model qwen3.5-9b
                                                                             Run judged evals with a
                                                                             separate local judge model
@@ -643,7 +609,7 @@ Examples:
   %(prog)s --eval --model /path/to/model    Test with specific model
   %(prog)s --eval --file test_calendar_tool_eval.py --model /path/to/model    Run specific eval test file
   %(prog)s --eval --skip-slow        Run only fast eval tests
-  %(prog)s --all                     Run all tests
+  %(prog)s --all                     Run all services tests (unit + smoke)
   %(prog)s --unit --component llm    Run LLM component tests only
   %(prog)s --unit -v                 Run unit tests with verbose output
         """,
@@ -692,19 +658,23 @@ Examples:
     parser.add_argument(
         "--gui-functional",
         action="store_true",
-        help="Run headless GUI functional tests with mocked backends",
+        help="Removed with the desktop GUI (always exits 1); "
+        "use the services suite instead",
     )
 
     parser.add_argument(
         "--all",
         action="store_true",
-        help="Run all tests (unit + runtime smoke + eval)",
+        help="Run all services-only tests (unit + runtime smoke)",
     )
 
     parser.add_argument(
         "--component",
         type=str,
-        help="Run tests for specific component only (e.g., 'llm', 'art', 'tts')",
+        help=(
+            "Run tests for a component file prefix only "
+            "(llm, art, tts, stt, daemon, release)"
+        ),
     )
 
     parser.add_argument(

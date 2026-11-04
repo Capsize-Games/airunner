@@ -22,4 +22,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    pass
+    """Reject recovery that would silently discard or fabricate data."""
+    raise RuntimeError(
+        "Cannot downgrade: the splitter_settings table was dropped and cannot "
+        "be reconstructed safely. Restore a pre-upgrade database backup to "
+        "recover the lost data; otherwise keep this revision and upgrade forward."
+    )

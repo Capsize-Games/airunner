@@ -20,15 +20,72 @@ _MODEL_EXTENSIONS = (".safetensors", ".ckpt", ".gguf")
 _PIPELINE_ACTIONS = ("txt2img", "img2img", "inpaint", "outpaint")
 
 
+def _safe_segment(value: str) -> bool:
+    """Return whether a user or directory name is one path segment."""
+    return bool(
+        value
+        and value not in {".", ".."}
+        and "/" not in value
+        and "\\" not in value
+        and "\x00" not in value
+    )
+
+
+def _contained_child(root: Path, name: str) -> Optional[Path]:
+    """Resolve one child name and reject symlinks escaping its configured root.
+
+    The configured root is intentionally not constrained to AIRunner's default
+    model directory: operators may point the scanner at another cache. Only
+    children discovered beneath that root are confined to it.
+    """
+    if not _safe_segment(name):
+        return None
+    try:
+        resolved_root = root.resolve()
+        child = root / name
+        resolved_child = child.resolve()
+        if not resolved_child.is_relative_to(resolved_root):
+            return None
+    except (OSError, RuntimeError, ValueError):
+        return None
+    return child
+
+
+def _resolves_within(path: Path, root: Path) -> bool:
+    """Return whether a path, including symlink targets, stays in root."""
+    try:
+        return path.resolve().is_relative_to(root.resolve())
+    except (OSError, RuntimeError, ValueError):
+        return False
+
+
 # Filesystem-backed model selection
 
 
-def choose_from_action_dir(action_dir: Path) -> str:
+def choose_from_action_dir(
+    action_dir: Path, *, allowed_root: Optional[Path] = None
+) -> str:
     """Return the preferred model path from one pipeline action dir."""
-    if (action_dir / "model_index.json").exists():
+    root = allowed_root if allowed_root is not None else action_dir.parent
+    if not _resolves_within(action_dir, root):
+        return ""
+    model_index = action_dir / "model_index.json"
+    if _resolves_within(model_index, root) and model_index.exists():
         return str(action_dir)
     for ext in (".safetensors", ".ckpt", ".gguf"):
-        candidates = sorted(action_dir.glob(f"*{ext}"))
+        candidates = []
+        try:
+            entries = sorted(action_dir.iterdir())
+        except OSError:
+            return ""
+        for entry in entries:
+            if entry.suffix.lower() != ext:
+                continue
+            try:
+                if _resolves_within(entry, root) and entry.is_file():
+                    candidates.append(entry)
+            except (OSError, RuntimeError, ValueError):
+                continue
         if candidates:
             return str(candidates[0])
     return ""
@@ -40,18 +97,29 @@ def version_model_path(
     action: str,
 ) -> str:
     """Return the preferred model path for one version/action pair."""
-    if not version:
+    if not _safe_segment(version) or not _safe_segment(action):
         return ""
-    action_dir = model_base / version / action
-    if action_dir.exists():
-        chosen = choose_from_action_dir(action_dir)
+    version_dir = _contained_child(model_base, version)
+    if version_dir is None:
+        return ""
+    action_dir = _contained_child(version_dir, action)
+    if action_dir is not None and action_dir.is_dir():
+        chosen = choose_from_action_dir(action_dir, allowed_root=model_base)
         if chosen:
             return chosen
-    version_dir = model_base / version
-    if not version_dir.exists():
+    if not version_dir.is_dir():
         return ""
-    for maybe_action in sorted(p for p in version_dir.iterdir() if p.is_dir()):
-        chosen = choose_from_action_dir(maybe_action)
+    try:
+        action_dirs = sorted(
+            child
+            for entry in version_dir.iterdir()
+            if (child := _contained_child(version_dir, entry.name)) is not None
+            and child.is_dir()
+        )
+    except OSError:
+        return ""
+    for maybe_action in action_dirs:
+        chosen = choose_from_action_dir(maybe_action, allowed_root=model_base)
         if chosen:
             return chosen
     return ""
@@ -59,11 +127,29 @@ def version_model_path(
 
 def first_model_path(model_base: Path) -> str:
     """Return the first model path found under the art model base dir."""
-    if not model_base.exists():
+    if not model_base.is_dir():
         return ""
-    for version_dir in sorted(p for p in model_base.iterdir() if p.is_dir()):
-        for action_dir in sorted(p for p in version_dir.iterdir() if p.is_dir()):
-            chosen = choose_from_action_dir(action_dir)
+    try:
+        version_dirs = sorted(
+            child
+            for entry in model_base.iterdir()
+            if (child := _contained_child(model_base, entry.name)) is not None
+            and child.is_dir()
+        )
+    except OSError:
+        return ""
+    for version_dir in version_dirs:
+        try:
+            action_dirs = sorted(
+                child
+                for entry in version_dir.iterdir()
+                if (child := _contained_child(version_dir, entry.name)) is not None
+                and child.is_dir()
+            )
+        except OSError:
+            continue
+        for action_dir in action_dirs:
+            chosen = choose_from_action_dir(action_dir, allowed_root=model_base)
             if chosen:
                 return chosen
     return ""

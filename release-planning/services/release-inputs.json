@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "purpose": "Track sibling source review state and active Linux release-profile lock readiness.",
+  "release_profile": {
+    "services_extra": "linux-release",
+    "aggregates": [
+      "llm-native",
+      "stt-native",
+      "art-python",
+      "tts-python-core",
+      "llm_weather",
+      "search",
+      "nvidia",
+      "linux",
+      "postgresql"
+    ],
+    "active_lock": "package/constraints-linux-nvidia-cu129-linux-release.txt",
+    "lock_status": "ready",
+    "historical_lock": "package/constraints-linux-nvidia-cu129-historical-desktop.txt",
+    "excludes": [
+      "airunner-tts-vendor",
+      "facehuggershield"
+    ],
+    "lock_sha256": "350990b0cb1846a073991872a7147f588f4734aee1fa1bb79aa9044d8ed5d101",
+    "artifact_sources": "package/linux-release-v4-artifact-sources.json",
+    "selected_distribution_count": 244,
+    "validation_record": "release-planning/services/input-reviews/linux-release-v6-input-validation.md"
+  },
+  "inputs": [
+    {
+      "distribution": "airunner-common",
+      "repository": "Capsize-Games/airunner-common",
+      "revision": "733b0f4c8fb38952866e9cf7be2cc69793a46e92",
+      "version": "6.1.8",
+      "requirement": "~=6.1.8",
+      "status": "reviewed",
+      "activation": "approved",
+      "review_record": "release-planning/services/input-reviews/airunner-common-6.1.8.md",
+      "workflow_source_refs": {
+        ".github/workflows/eval-tests.yml": 2
+      }
+    },
+    {
+      "distribution": "facehuggershield",
+      "repository": "Capsize-Games/facehuggershield",
+      "revision": "e17f61cd2a894c71f2e0a2480f1f7d29a8756833",
+      "version": "1.0.0",
+      "requirement": "==1.0.0",
+      "status": "deferred",
+      "activation": "quarantined",
+      "deferred_from_profile": "linux-release",
+      "workflow_source_refs": {}
+    },
+    {
+      "distribution": "airunner-tts-vendor",
+      "repository": "Capsize-Games/airunner-tts-vendor",
+      "revision": "d9228e57a08371e124725dc6a6f32a6c407ac944",
+      "version": "0.1.0",
+      "requirement": "~=0.1",
+      "status": "deferred",
+      "activation": "quarantined",
+      "deferred_from_profile": "linux-release",
+      "workflow_source_refs": {}
+    }
+  ]
+}

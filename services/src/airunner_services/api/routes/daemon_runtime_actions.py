@@ -16,6 +16,9 @@ from airunner_services.ipc.messages import (
 )
 from airunner_services.runtimes.base import RuntimeClient
 from airunner_services.runtimes.contracts import RuntimeAction, RuntimeKind
+from airunner_services.runtimes.tts_capabilities import (
+    TTS_BACKEND_UNAVAILABLE_CODE,
+)
 
 from .daemon_runtime_registry import require_runtime_registry
 
@@ -42,6 +45,8 @@ def runtime_failure_status(response: ResponseEnvelope) -> int:
     error = response.error
     if error is None:
         return 502
+    if error.code == TTS_BACKEND_UNAVAILABLE_CODE:
+        return 503
     if error.code.endswith("_timeout"):
         return 504
     if error.code.endswith("_unsupported"):
@@ -90,7 +95,23 @@ def cancel_runtime_action(
     route_request: RuntimeRouteRequest,
 ) -> ResponseEnvelope:
     """Cancel a runtime request when the client supports it."""
-    request_id = route_request.request_id or str(uuid4())
+    request_id = route_request.request_id
+    descriptor = getattr(client, "descriptor", None)
+    if request_id is None and getattr(descriptor, "runtime", None) is RuntimeKind.ART:
+        cancel_active = getattr(client, "cancel_active", None)
+        if not callable(cancel_active):
+            raise HTTPException(
+                status_code=409,
+                detail="This art runtime does not support administrative cancellation",
+            )
+        request_id = str(uuid4())
+        try:
+            response = cancel_active(request_id)
+        except NotImplementedError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        return ensure_success(response)
+
+    request_id = request_id or str(uuid4())
     try:
         response = client.cancel(request_id)
     except NotImplementedError as exc:

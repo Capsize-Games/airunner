@@ -21,20 +21,71 @@ from airunner_services.llm.managers.request_rag_preparation import (
 )
 
 
+#: Hard cap on caller-supplied system prompts. A rogue or runaway client
+#: must not be able to stuff the context window via ``system_prompt``.
+MAX_SYSTEM_PROMPT_CHARS = 8000
+
+
 class RequestHandlingMixin:
     """Coordinate request-time model, tool, and RAG preparation."""
+
+    def begin_request(self, request_id: Optional[str]) -> None:
+        """Publish one request as active and reset its interruption state."""
+        lock = self._request_state_lock
+        with lock:
+            self._current_request_id = request_id
+            self._interrupted = False
+            if self._chat_model and hasattr(self._chat_model, "set_interrupted"):
+                self._chat_model.set_interrupted(False)
+            if self._workflow_manager and hasattr(
+                self._workflow_manager, "set_interrupted"
+            ):
+                self._workflow_manager.set_interrupted(False)
+
+    def cancel_request(self, request_id: str) -> bool:
+        """Interrupt only the request currently owned by this manager."""
+        with self._request_state_lock:
+            if self._current_request_id != request_id:
+                return False
+            self.do_interrupt()
+            return True
 
     def handle_request(
         self,
         data: Dict,
         extra_context: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
-        """Handle an incoming request for LLM generation."""
+        """Handle one request with a temporary chatbot ownership snapshot."""
+        had_snapshot = hasattr(self, "_request_chatbot")
+        prior_snapshot = getattr(self, "_request_chatbot", None)
+        self._request_chatbot = getattr(self, "chatbot", None)
+        try:
+            return self._handle_request_with_chatbot_snapshot(
+                data,
+                extra_context=extra_context,
+            )
+        finally:
+            if had_snapshot:
+                self._request_chatbot = prior_snapshot
+            else:
+                try:
+                    del self._request_chatbot
+                except AttributeError:
+                    pass
+
+    def _handle_request_with_chatbot_snapshot(
+        self,
+        data: Dict,
+        extra_context: Optional[Dict[str, Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
+        """Run setup, generation, and existing cleanup for one request."""
         self.logger.info("handle_request called on instance %s", id(self))
         self._invalidate_setting_cache(LLMGeneratorSettings)
 
-        self._current_request_id = data.get("request_id")
-        if not self._current_request_id:
+        request_id = data.get("request_id")
+        if self._current_request_id != request_id:
+            self.begin_request(request_id)
+        if not request_id:
             self.logger.warning(
                 "[REQUEST] Missing request_id on incoming request; "
                 "streaming responses will not be routed"
@@ -44,15 +95,6 @@ class RequestHandlingMixin:
                 "[REQUEST] Set _current_request_id=%s",
                 self._current_request_id,
             )
-
-        self._interrupted = False
-        if self._chat_model and hasattr(self._chat_model, "set_interrupted"):
-            self._chat_model.set_interrupted(False)
-        if self._workflow_manager and hasattr(
-            self._workflow_manager,
-            "set_interrupted",
-        ):
-            self._workflow_manager.set_interrupted(False)
 
         llm_request = data["request_data"].get("llm_request")
         self.llm_request = llm_request
@@ -84,16 +126,28 @@ class RequestHandlingMixin:
         tools_filtered, selected_categories, system_prompt = (
             self._prepare_request_tooling(data, llm_request)
         )
-        self._prepare_request_rag(data, llm_request, selected_categories)
-        thinking_patches = self._apply_request_thinking_override(llm_request)
-        reasoning_patches = self._apply_request_reasoning_effort_override(
-            llm_request
-        )
-
-        if request_tool_defaults and self._tool_manager:
-            self._tool_manager.set_request_tool_defaults(request_tool_defaults)
+        thinking_patches = []
+        reasoning_patches = []
 
         try:
+            uploaded_document_ids = self._prepare_request_rag(
+                data, llm_request, selected_categories
+            )
+            rag_document_scope = self._request_rag_document_scope(
+                llm_request, uploaded_document_ids
+            )
+            thinking_patches = self._apply_request_thinking_override(
+                llm_request
+            )
+            reasoning_patches = (
+                self._apply_request_reasoning_effort_override(llm_request)
+            )
+
+            if request_tool_defaults and self._tool_manager:
+                self._tool_manager.set_request_tool_defaults(
+                    request_tool_defaults
+                )
+
             return self._do_generate(
                 prompt=data["request_data"]["prompt"],
                 action=data["request_data"]["action"],
@@ -101,6 +155,7 @@ class RequestHandlingMixin:
                 llm_request=data["request_data"]["llm_request"],
                 extra_context=extra_context,
                 skip_tool_setup=tools_filtered,
+                rag_document_scope=rag_document_scope,
             )
         finally:
             self._restore_thinking_patches(thinking_patches)
@@ -259,6 +314,14 @@ class RequestHandlingMixin:
             )
             if getattr(llm_request, "system_prompt", None):
                 system_prompt = llm_request.system_prompt
+                if len(system_prompt) > MAX_SYSTEM_PROMPT_CHARS:
+                    self.logger.warning(
+                        "Truncating oversized request system prompt "
+                        "(%d chars > %d cap)",
+                        len(system_prompt),
+                        MAX_SYSTEM_PROMPT_CHARS,
+                    )
+                    system_prompt = system_prompt[:MAX_SYSTEM_PROMPT_CHARS]
                 self.logger.info(
                     "Using custom system prompt from request: %s...",
                     system_prompt[:100],
@@ -316,10 +379,69 @@ class RequestHandlingMixin:
         data: Dict[str, Any],
         llm_request: Any,
         selected_categories: List[str],
-    ) -> None:
+    ) -> tuple[str, ...]:
         """Ensure request-provided or inferred RAG files are indexed."""
         del data
-        prepare_request_rag(self, llm_request, selected_categories)
+        return prepare_request_rag(self, llm_request, selected_categories)
+
+    def _request_rag_document_scope(
+        self,
+        llm_request: Any,
+        uploaded_document_ids: tuple[str, ...] = (),
+    ) -> Optional[tuple[str, ...]]:
+        """Snapshot the selected chatbot and request documents for this run.
+
+        ``None`` retains standalone workflow compatibility. A tuple, including
+        an empty tuple, is an explicit request scope and must not widen search.
+        """
+        import hashlib
+        import os
+
+        from airunner_services.database.models.document import Document
+        from airunner_services.database.models.target_files import TargetFiles
+        from airunner_services.database.session import session_scope
+
+        chatbot = (
+            self._request_chatbot
+            if hasattr(self, "_request_chatbot")
+            else getattr(self, "chatbot", None)
+        )
+        chatbot_id = getattr(chatbot, "id", None)
+        request_files = getattr(llm_request, "rag_files", None) or ()
+        if chatbot_id is None and not request_files and not uploaded_document_ids:
+            return None
+
+        paths = set()
+        with session_scope() as session:
+            if chatbot_id is not None:
+                paths.update(
+                    row.file_path
+                    for row in session.query(TargetFiles).filter_by(
+                        chatbot_id=chatbot_id
+                    ).all()
+                    if row.file_path
+                )
+            for item in request_files:
+                if isinstance(item, str):
+                    paths.add(item)
+                elif isinstance(item, dict):
+                    path = item.get("path") or item.get("file_path")
+                    if path:
+                        paths.add(str(path))
+            rows = (
+                session.query(Document).filter(Document.path.in_(paths)).all()
+                if paths
+                else []
+            )
+            persistent_ids = tuple(
+                sorted(
+                    hashlib.md5(
+                        os.path.normpath(os.path.abspath(row.path)).encode()
+                    ).hexdigest()
+                    for row in rows
+                )
+            )
+            return tuple(sorted(set(persistent_ids) | set(uploaded_document_ids)))
 
     def _ensure_request_rag_files(self, rag_files: Any) -> None:
         """Load and index request-provided RAG files."""

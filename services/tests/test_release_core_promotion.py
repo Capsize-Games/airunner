@@ -1,0 +1,253 @@
+from __future__ import annotations
+
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
+
+import check_release_identity as guard  # noqa: E402
+from prepare_core_release_assets import prepare  # noqa: E402
+from verify_core_candidate_run import (  # noqa: E402
+    CandidateRunError,
+    verify_candidate_run,
+)
+
+
+def _fixture(root: Path, *, clean_status: str = "passed") -> tuple[Path, str]:
+    (root / "services").mkdir()
+    (root / "services/setup.py").write_text('_RELEASE_VERSION = "1.2.3"\n')
+    artifact = root / "candidate"
+    artifact.mkdir()
+    deb = artifact / "airunner_1.2.3-1_amd64.deb"
+    deb.write_bytes(b"exact fake Debian bytes")
+    sha = hashlib.sha256(deb.read_bytes()).hexdigest()
+    (artifact / "candidate.json").write_text(json.dumps({
+        "profile": "linux-services-core", "source_sha": "a" * 40,
+        "build_status": "passed", "debian_filename": deb.name,
+        "debian_version": "1.2.3-1", "debian_sha256": sha,
+        "requirements_sha256": "1" * 64, "lock_sha256": "2" * 64,
+    }))
+    (artifact / "candidate-validation.json").write_text(json.dumps({
+        "source_sha": "a" * 40, "debian_sha256": sha,
+        "clean_install_smoke": clean_status,
+    }))
+    (artifact / "candidate-upgrade-validation.json").write_text(json.dumps({
+        "source_sha": "a" * 40, "debian_sha256": sha,
+        "upgrade_smoke": "passed", "interrupted_upgrade_recovery_probe": {"status": "passed"},
+    }))
+    (root / "package").mkdir()
+    (root / "package/requirements-linux-core.in").write_text("core requirements")
+    (root / "package/constraints-linux-core.txt").write_text("core lock")
+    candidate_record = json.loads((artifact / "candidate.json").read_text())
+    candidate_record["requirements_sha256"] = hashlib.sha256(
+        (root / "package/requirements-linux-core.in").read_bytes()
+    ).hexdigest()
+    candidate_record["lock_sha256"] = hashlib.sha256(
+        (root / "package/constraints-linux-core.txt").read_bytes()
+    ).hexdigest()
+    (artifact / "candidate.json").write_text(json.dumps(candidate_record))
+    artifact_names = [
+        "core-debian-candidate-51-2",
+        "core-debian-validation-51-2",
+        "core-debian-upgrade-validation-51-2",
+    ]
+    (root / "candidate-run.json").write_text(json.dumps({
+        "workflow": ".github/workflows/core-debian-candidate.yml", "run_id": 51,
+        "run_attempt": 2, "tag": "v1.2.3", "source_sha": "a" * 40,
+        "run_conclusion": "success",
+        "successful_jobs": ["build-core-debian-candidate", "clean-install-smoke", "published-upgrade-data-smoke"],
+        "artifacts": {
+            name: {"name": name, "id": index, "size_in_bytes": 100}
+            for index, name in enumerate(artifact_names, 1)
+        },
+    }))
+    notices = root / "notices"
+    notices.mkdir()
+    (notices / "LICENSE").write_text("reviewed notice")
+    return artifact, sha
+
+
+def test_core_release_assets_are_deterministic_and_source_bound(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    artifact, _ = _fixture(tmp_path)
+    outputs = []
+    for name in ("out-a", "out-b"):
+        output = tmp_path / name
+        prepare(
+            artifact_dir=artifact, notices_dir=tmp_path / "notices", output_dir=output,
+            source_sha="a" * 40, tag="v1.2.3", workflow_run_id=42,
+            workflow=".github/workflows/core-debian-candidate.yml",
+            candidate_run_id=51, candidate_attempt=2,
+            candidate_run_receipt=tmp_path / "candidate-run.json",
+        )
+        outputs.append(output)
+    for filename in sorted(path.name for path in outputs[0].iterdir()):
+        assert (outputs[0] / filename).read_bytes() == (outputs[1] / filename).read_bytes()
+    guard._require_promotion_groups(
+        list(outputs[0].iterdir()), tag="v1.2.3", source_sha="a" * 40,
+        root=tmp_path, profile="core", expected_run_id=42,
+    )
+    manifest_path = outputs[0] / "airunner-core-release.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["debian_version"] = "1.2.30-1"
+    manifest_path.write_text(json.dumps(manifest))
+    with pytest.raises(guard.ReleaseIdentityError, match="package version differs"):
+        guard._require_promotion_groups(
+            list(outputs[0].iterdir()), tag="v1.2.3", source_sha="a" * 40,
+            root=tmp_path, profile="core", expected_run_id=42,
+        )
+    manifest["debian_version"] = "1.2.3-1"
+    manifest["promotion_workflow_run_id"] = 41
+    manifest_path.write_text(json.dumps(manifest))
+    with pytest.raises(guard.ReleaseIdentityError, match="promotion_workflow_run_id"):
+        guard._require_promotion_groups(
+            list(outputs[0].iterdir()), tag="v1.2.3", source_sha="a" * 40,
+            root=tmp_path, profile="core", expected_run_id=42,
+        )
+    manifest["promotion_workflow_run_id"] = 42
+    manifest_path.write_text(json.dumps(manifest))
+    (outputs[0] / "SHA256SUMS").write_text("0" * 64 + "  airunner-core-release.json\n")
+    with pytest.raises(guard.ReleaseIdentityError, match="checksum"):
+        guard._verify_checksum_manifest(list(outputs[0].iterdir()))
+
+
+def test_core_release_refuses_failed_or_mismatched_install_evidence(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    artifact, _ = _fixture(tmp_path, clean_status="failed")
+    with pytest.raises(ValueError, match="evidence is incomplete"):
+        prepare(
+            artifact_dir=artifact, notices_dir=tmp_path / "notices",
+            output_dir=tmp_path / "out", source_sha="a" * 40, tag="v1.2.3",
+            workflow_run_id=42, workflow=".github/workflows/core-debian-candidate.yml",
+            candidate_run_id=51, candidate_attempt=2,
+            candidate_run_receipt=tmp_path / "candidate-run.json",
+        )
+
+
+def test_core_profile_rejects_extra_assets_and_wrong_workflow_run(tmp_path):
+    files = []
+    clean_receipt = json.dumps({
+        "source_sha": "a" * 40,
+        "debian_sha256": hashlib.sha256(b"deb").hexdigest(),
+        "clean_install_smoke": "passed",
+    }).encode()
+    upgrade_receipt = json.dumps({
+        "source_sha": "a" * 40,
+        "debian_sha256": hashlib.sha256(b"deb").hexdigest(),
+        "upgrade_smoke": "passed",
+        "interrupted_upgrade_recovery_probe": {"status": "passed"},
+    }).encode()
+    for name, data in {
+        "airunner_1.2.3-1_amd64.deb": b"deb",
+        "airunner-core-notices.tar.gz": b"notices",
+        "airunner-core-candidate-run.json": json.dumps({
+            "workflow": ".github/workflows/core-debian-candidate.yml", "run_id": 51,
+            "run_attempt": 2, "tag": "v1.2.3", "source_sha": "a" * 40,
+            "run_conclusion": "success",
+            "successful_jobs": ["build-core-debian-candidate", "clean-install-smoke", "published-upgrade-data-smoke"],
+            "artifacts": {
+                name: {"name": name, "id": index, "size_in_bytes": 100}
+                for index, name in enumerate((
+                    "core-debian-candidate-51-2", "core-debian-validation-51-2",
+                    "core-debian-upgrade-validation-51-2",
+                ), 1)
+            },
+        }).encode(),
+        "airunner-core-clean-install-validation.json": clean_receipt,
+        "airunner-core-upgrade-validation.json": upgrade_receipt,
+        "airunner-core-release.json": json.dumps({
+            "schema_version": 1, "profile": "linux-services-core", "tag": "v1.2.3",
+            "source_sha": "a" * 40,
+            "workflow": ".github/workflows/core-debian-candidate.yml",
+            "promotion_workflow_run_id": 99, "debian_filename": "airunner_1.2.3-1_amd64.deb",
+            "debian_sha256": hashlib.sha256(b"deb").hexdigest(),
+            "debian_version": "1.2.3-1", "requirements_sha256": "1" * 64,
+            "lock_sha256": "2" * 64,
+            "build_status": "passed", "clean_install_smoke": "passed",
+            "upgrade_smoke": "passed", "notices_path": "/usr/lib/airunner/legal",
+            "notices_sha256": hashlib.sha256(b"notices").hexdigest(),
+            "promotion_workflow_run_id": 42, "candidate_workflow_run_id": 51,
+            "candidate_run_attempt": 2,
+            "candidate_run_receipt_sha256": "5" * 64,
+            "clean_install_validation_sha256": hashlib.sha256(clean_receipt).hexdigest(),
+            "upgrade_validation_sha256": hashlib.sha256(upgrade_receipt).hexdigest(),
+        }).encode(),
+        "SHA256SUMS": b"",
+        "extra.txt": b"unexpected",
+    }.items():
+        path = tmp_path / name
+        path.write_bytes(data)
+        files.append(path)
+    with pytest.raises(guard.ReleaseIdentityError, match="exactly the package"):
+        guard._require_promotion_groups(
+            files, tag="v1.2.3", source_sha="a" * 40, root=tmp_path,
+            profile="core", expected_run_id=42,
+        )
+
+
+def test_candidate_run_verifier_binds_workflow_sha_jobs_and_attempt_artifacts(tmp_path):
+    run_id = 87
+    attempt = 3
+    tag = "v1.2.3"
+    source = "a" * 40
+    names = {
+        f"core-debian-candidate-{run_id}-{attempt}",
+        f"core-debian-validation-{run_id}-{attempt}",
+        f"core-debian-upgrade-validation-{run_id}-{attempt}",
+    }
+    payloads = {
+        f"https://api.github.com/repos/Capsize-Games/airunner/actions/runs/{run_id}": {
+            "id": run_id,
+            "path": ".github/workflows/core-debian-candidate.yml@refs/tags/v1.2.3",
+            "repository": {"full_name": "Capsize-Games/airunner"},
+            "head_repository": {"full_name": "Capsize-Games/airunner"},
+            "event": "workflow_dispatch", "head_branch": tag, "head_sha": source,
+            "status": "completed", "conclusion": "success", "run_attempt": attempt,
+        },
+        f"https://api.github.com/repos/Capsize-Games/airunner/actions/runs/{run_id}/jobs?filter=latest&per_page=100": {
+            "jobs": [{"name": name, "status": "completed", "conclusion": "success"} for name in (
+                "build-core-debian-candidate", "clean-install-smoke", "published-upgrade-data-smoke"
+            )]
+        },
+        f"https://api.github.com/repos/Capsize-Games/airunner/actions/runs/{run_id}/artifacts?per_page=100": {
+            "artifacts": [
+                {"id": index, "name": name, "expired": False, "size_in_bytes": 100}
+                for index, name in enumerate(sorted(names), 1)
+            ]
+        },
+    }
+
+    class Response:
+        def __init__(self, value):
+            self.value = value
+        def __enter__(self):
+            return self
+        def __exit__(self, *_args):
+            return False
+        def read(self):
+            return json.dumps(self.value).encode()
+
+    def opener(request, timeout):
+        assert timeout == 15
+        return Response(payloads[request.full_url])
+
+    receipt = tmp_path / "candidate-run.json"
+    proof = verify_candidate_run(
+        repository="Capsize-Games/airunner", run_id=run_id, tag=tag,
+        source_sha=source, token="test-token", output_json=receipt, opener=opener,
+    )
+    assert proof["run_attempt"] == attempt
+    assert set(proof["artifacts"]) == names
+
+    jobs_url = next(url for url in payloads if "/jobs?filter=latest" in url)
+    payloads[jobs_url]["jobs"][0]["conclusion"] = "failure"
+    with pytest.raises(CandidateRunError, match="lacks a successful"):
+        verify_candidate_run(
+            repository="Capsize-Games/airunner", run_id=run_id, tag=tag,
+            source_sha=source, token="test-token", output_json=tmp_path / "bad.json", opener=opener,
+        )

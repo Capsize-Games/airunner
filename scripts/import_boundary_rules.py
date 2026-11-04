@@ -69,6 +69,9 @@ def imported_top_level_names(tree: ast.AST) -> list[tuple[int, str]]:
 
     Walks the whole tree, not just module-level statements, so a
     function-body ``import`` counts exactly like a top-of-file one.
+    Relative imports (``node.level > 0``) resolve inside the importing
+    file's own package, so they can never cross the top-level-package
+    boundary this checker enforces and are skipped.
     """
     found: list[tuple[int, str]] = []
     for node in ast.walk(tree):
@@ -76,8 +79,8 @@ def imported_top_level_names(tree: ast.AST) -> list[tuple[int, str]]:
             for alias in node.names:
                 found.append((node.lineno, alias.name))
         elif isinstance(node, ast.ImportFrom):
-            if node.level and node.module is None:
-                continue  # relative "from . import x": not cross-package
+            if node.level:
+                continue  # relative import: stays inside its own package
             if node.module:
                 found.append((node.lineno, node.module))
     return found
@@ -129,6 +132,62 @@ def check_owned_root(
     return violations
 
 
+def _is_type_checking_guard(node: ast.If) -> bool:
+    """Return True when an `if` body only runs for type checkers."""
+    test = node.test
+    if isinstance(test, ast.Name) and test.id == "TYPE_CHECKING":
+        return True
+    return (
+        isinstance(test, ast.Attribute)
+        and test.attr == "TYPE_CHECKING"
+    )
+
+
+# `except*` blocks (PEP 654) execute at import time exactly like
+# `except` blocks, so they get the same treatment.
+_TRY_NODES = (ast.Try,) + (
+    (ast.TryStar,) if hasattr(ast, "TryStar") else ()
+)
+
+
+def _module_level_import_names(
+    tree: ast.Module,
+) -> list[tuple[int, str]]:
+    """Return (lineno, module) for imports that run at module import.
+
+    Descends into module-level ``try``/``if`` bodies: a ``try: import``
+    or a conditional import still executes when the module is first
+    imported, so scoping the scan to bare ``tree.body`` statements
+    misses them. ``if TYPE_CHECKING:`` bodies are excluded -- they
+    never run outside a type checker.
+    """
+    found: list[tuple[int, str]] = []
+
+    def visit(statements: list[ast.stmt]) -> None:
+        for node in statements:
+            if isinstance(node, ast.Import):
+                found.extend(
+                    (node.lineno, alias.name) for alias in node.names
+                )
+            elif isinstance(node, ast.ImportFrom):
+                if not node.level and node.module:
+                    found.append((node.lineno, node.module))
+            elif isinstance(node, _TRY_NODES):
+                visit(node.body)
+                visit(node.orelse)
+                visit(node.finalbody)
+                for handler in node.handlers:
+                    visit(handler.body)
+            elif isinstance(node, ast.If):
+                if _is_type_checking_guard(node):
+                    continue
+                visit(node.body)
+                visit(node.orelse)
+
+    visit(tree.body)
+    return found
+
+
 def check_pyside6_not_at_module_scope(repo_root: Path) -> list[Violation]:
     """airunner_services must not import PySide6 at module scope.
 
@@ -143,22 +202,29 @@ def check_pyside6_not_at_module_scope(repo_root: Path) -> list[Violation]:
 
     for path in iter_python_files(root):
         rel = path.relative_to(repo_root).as_posix()
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=rel)
-        for node in tree.body:  # module-level statements only
-            names: list[str] = []
-            if isinstance(node, ast.Import):
-                names = [alias.name for alias in node.names]
-            elif isinstance(node, ast.ImportFrom) and node.module:
-                names = [node.module]
-            for name in names:
-                if name.split(".", 1)[0] == "PySide6":
-                    violations.append(
-                        Violation(
-                            Path(rel),
-                            node.lineno,
-                            name,
-                            "airunner_services must not import PySide6 "
-                            "at module scope",
-                        )
+        try:
+            tree = ast.parse(
+                path.read_text(encoding="utf-8"), filename=rel
+            )
+        except SyntaxError as exc:
+            violations.append(
+                Violation(
+                    Path(rel),
+                    exc.lineno or 0,
+                    str(exc),
+                    "syntax-error",
+                )
+            )
+            continue
+        for lineno, name in _module_level_import_names(tree):
+            if name.split(".", 1)[0] == "PySide6":
+                violations.append(
+                    Violation(
+                        Path(rel),
+                        lineno,
+                        name,
+                        "airunner_services must not import PySide6 "
+                        "at module scope",
                     )
+                )
     return violations

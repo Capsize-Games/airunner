@@ -41,8 +41,9 @@ _SENTINEL = "synthetic-sentinel-payload-9c1e"
 
 
 @pytest.fixture(autouse=True)
-def _clean_evaluator():
+def _clean_evaluator(monkeypatch: pytest.MonkeyPatch):
     """Leave no registered evaluator behind for other tests."""
+    monkeypatch.setenv("AIRUNNER_CONTENT_POLICY_MODE", "enforce")
     image_verdict.set_evaluator(None)
     yield
     image_verdict.set_evaluator(None)
@@ -170,12 +171,11 @@ def test_error_log_omits_exception_message() -> None:
     assert _SENTINEL not in " ".join(handler.messages)
 
 
-def test_selection_status_names_approved_evaluator() -> None:
+def test_status_names_optional_adapter() -> None:
     status = image_verdict.EVALUATOR_SELECTION_STATUS
-    assert "SELECTED" in status
+    assert "OPTIONAL ADAPTER AVAILABLE" in status
     assert "Falconsai" in status
-    assert "PENDING" not in status
-    assert "S07" in status
+    assert "not used" in status
 
 
 # --------------------------------------------------------------------------

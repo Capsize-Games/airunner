@@ -1,0 +1,65 @@
+name: libzim candidate validation
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/libzim-candidate-validation.yml"
+      - "package/libzim-candidate-requirements.txt"
+      - "package/source-bundles/libzim-3.7.0-native-9.3.0/**"
+      - "package/wheelhouse/libzim-3.7.0+capsize.2*"
+      - "scripts/libzim_candidate_probe.py"
+      - "scripts/runtime_wheel_hardening.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: libzim-candidate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ubuntu-24-candidate:
+    if: github.event_name == 'pull_request' || github.ref_type == 'branch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Check out exact candidate source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up reviewed Python 3.13.5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.13.5"
+
+      - name: Install the exact candidate wheel without dependencies
+        run: |
+          candidate_env="$RUNNER_TEMP/libzim-candidate"
+          python -m venv "$candidate_env"
+          "$candidate_env/bin/python" -m pip install \
+            --no-index --no-deps --only-binary=:all: --require-hashes \
+            --find-links package/wheelhouse \
+            -r package/libzim-candidate-requirements.txt
+          echo "LIBZIM_CANDIDATE_PYTHON=$candidate_env/bin/python" >> "$GITHUB_ENV"
+
+      - name: Verify and exercise the synthetic candidate
+        run: >-
+          "$LIBZIM_CANDIDATE_PYTHON" scripts/libzim_candidate_probe.py
+          --wheel package/wheelhouse/libzim-3.7.0+capsize.2-cp313-cp313-linux_x86_64.whl
+          --manifest package/wheelhouse/libzim-3.7.0+capsize.2.json
+          --receipt build/libzim-candidate/validation.json
+          --service-source-root services/src
+
+      - name: Upload candidate validation receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: libzim-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/libzim-candidate/validation.json
+          if-no-files-found: ignore
+          retention-days: 7

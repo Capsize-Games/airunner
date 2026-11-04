@@ -1,3 +1,0 @@
-variables.qss
-../master.qss
-styles.qss

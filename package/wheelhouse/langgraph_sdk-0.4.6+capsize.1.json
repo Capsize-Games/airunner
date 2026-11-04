@@ -1,0 +1,122 @@
+{
+  "package": "langgraph-sdk",
+  "version": "0.4.6+capsize.1",
+  "wheel": "langgraph_sdk-0.4.6+capsize.1-py3-none-any.whl",
+  "wheel_sha256": "51008d325af07b706e32f1fb06e99af3779d075e21a63d49fcd77d2e8ad85d9b",
+  "wheel_size_bytes": 162502,
+  "license": {
+    "expression": "MIT",
+    "file": "langgraph-sdk-LICENSE",
+    "sha256": "d9bb52f2e3540d60ff50d8f0f5b6ba649b7fd346948c4c3d086c8afb120763c7",
+    "included_in_wheel": true
+  },
+  "source": {
+    "upstream_revision": "55b0e36c51d2922b11640b980fcfca1064243a96",
+    "private_maintenance_revision": "a6627459f438ed4999e6574edc00e8af9a4a865b",
+    "private_merge_revision": "28e4b0a334570b2c122853b03ce1cd06012b83dc",
+    "private_tag": "sdk==0.4.6+capsize.1"
+  },
+  "changes": {
+    "dependency": "websockets>=17.4,<18",
+    "runtime_transport_code_changed": false
+  },
+  "build": {
+    "command": "uv build --wheel --offline",
+    "backend": "hatchling.build",
+    "backend_version": "1.33.0",
+    "build_dependencies_from_network": false,
+    "dependencies": [
+      {
+        "name": "hatchling",
+        "version": "1.33.0",
+        "wheel_sha256": "415290b84f464d2884303fca8974d38e7b85579069fab02a15db0828fbb1446d",
+        "source_repository": "pypa/hatch",
+        "source_tag": "hatchling-v1.33.0",
+        "source_revision": "c93b5427189f68a1f113b7f282b5ad11cecf00f0",
+        "private_repository": "Capsize-Games/hatchling-maintenance"
+      },
+      {
+        "name": "packaging",
+        "version": "26.3",
+        "wheel_sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+        "source_repository": "pypa/packaging",
+        "source_tag": "26.3",
+        "source_revision": "929fd4b1410ac7ef61ef3f45b2f5d7e87711a9b5",
+        "private_repository": "Capsize-Games/packaging-maintenance"
+      },
+      {
+        "name": "pathspec",
+        "version": "1.1.1",
+        "wheel_sha256": "a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189",
+        "source_repository": "cpburnz/python-pathspec",
+        "source_tag": "v1.1.1",
+        "source_revision": "ecf71a99ca739479d450b9830f43416ea0c519c7",
+        "private_repository": "Capsize-Games/pathspec-maintenance"
+      },
+      {
+        "name": "pluggy",
+        "version": "1.7.0",
+        "wheel_sha256": "7dd7b0d8832ba3cb632c306926ded123429211b83641b35dc5c41ad2d34f9bec",
+        "source_repository": "pytest-dev/pluggy",
+        "source_tag": "1.7.0",
+        "source_revision": "4c7f6365f2dde09c11e72db67d0f615231d64c19",
+        "private_repository": "Capsize-Games/pluggy-maintenance"
+      },
+      {
+        "name": "tomlkit",
+        "version": "0.15.2",
+        "wheel_sha256": "05562412163a3037b94497385fb7f9204c637bc605af7a48199e41cf2272f437",
+        "source_repository": "python-poetry/tomlkit",
+        "source_tag": "0.15.2",
+        "source_revision": "a0b15ebb09167ede584fc36ad5362fc3039b0530",
+        "private_repository": "Capsize-Games/tomlkit-maintenance"
+      },
+      {
+        "name": "trove-classifiers",
+        "version": "2026.9.21.13",
+        "wheel_sha256": "8b1ff4f9c191b1040b71c37f1e445ab99732911e3cd91de52838453a854d7a17",
+        "source_repository": "pypa/trove-classifiers",
+        "source_tag": "2026.9.21.13",
+        "source_revision": "bc832553ebe6114e7682f09bc59bda6552da37cd",
+        "private_repository": "Capsize-Games/trove-classifiers-maintenance"
+      }
+    ],
+    "reviewed_rebuild": {
+      "source_revision": "28e4b0a334570b2c122853b03ce1cd06012b83dc",
+      "python": "3.13.5",
+      "uv": "0.13.4",
+      "command": "hatchling build --target wheel --directory dist --no-hooks",
+      "environment": "env -i; PIP_NO_INDEX=1; UV_OFFLINE=1",
+      "requirements_file": "ignored .headlesscode/service-audit-2026-11-02/build-tool-review/build-requirements.txt",
+      "network_used": false,
+      "wheel_sha256": "51008d325af07b706e32f1fb06e99af3779d075e21a63d49fcd77d2e8ad85d9b",
+      "wheel_size_bytes": 162502,
+      "byte_identical_to_staged_wheel": true
+    },
+    "dependency_lock_method": "local wheel hashes verified from PyPI release metadata and artifacts"
+  },
+  "verification": {
+    "wheel_record_entries_verified": 50,
+    "wheel_runtime_files_match_private_source": true,
+    "runtime_source_changes": [
+      "langgraph_sdk/__init__.py version value only"
+    ],
+    "runtime_python_files_verified": 45,
+    "rebuilt_wheel_byte_identical": true,
+    "license_sha256": "d9bb52f2e3540d60ff50d8f0f5b6ba649b7fd346948c4c3d086c8afb120763c7"
+  },
+  "tests": {
+    "websocket_transport_test_functions_passed": 28,
+    "test_files": [
+      "libs/sdk-py/tests/streaming/test_transport_ws.py",
+      "libs/sdk-py/tests/streaming/test_sync_transport_ws.py"
+    ],
+    "execution": "direct function invocation with in-process fake clients and private websockets 17.4 source",
+    "pytest_runner": "not usable: pytest-asyncio absent and asyncio_mode is an unknown option",
+    "full_suite": "not run",
+    "live_websocket_server": "not used",
+    "network": "not used",
+    "models": "not loaded",
+    "github_actions": "disabled for the private maintenance repository; no CI result"
+  }
+}

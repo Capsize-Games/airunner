@@ -35,6 +35,8 @@ def _token_kind(feature: str, token: str, extras: dict[str, Any]) -> str:
         return "daemon"
     if token == "gui":
         return "gui"
+    if token == "deferred:openvoice":
+        return "deferred"
     assert re.fullmatch(r"tracked:[A-Z]+\d+", token), (feature, token)
     return "tracked"
 
@@ -54,16 +56,16 @@ def test_tool_pin_matches_services_dev_requirement(
     )
 
 
-def test_profile_aggregates_union_to_desktop(
+def test_profile_aggregates_union_to_linux_release(
     spec: dict[str, Any], services_setup: types.ModuleType
 ) -> None:
-    """The spec's profile list is exactly the desktop aggregate."""
+    """The spec's profile list is exactly the active Linux release aggregate."""
     extras = services_setup.build_services_extras_require()
-    assert str(spec["profile"]["services_extra"]) == "desktop"
+    assert str(spec["profile"]["services_extra"]) == "linux-release"
     union: list[str] = []
     for name in spec["profile"]["aggregates"]:
         union.extend(extras[name])
-    assert list(dict.fromkeys(union)) == extras["desktop"]
+    assert list(dict.fromkeys(union)) == extras["linux-release"]
 
 
 def test_r01_coverage_matches_matrix_exactly(
@@ -79,7 +81,7 @@ def test_r01_coverage_matches_matrix_exactly(
 def test_r01_tokens_are_known(
     spec: dict[str, Any], services_setup: types.ModuleType
 ) -> None:
-    """Coverage tokens name real extras, core, gui, or tracked:XXX."""
+    """Coverage tokens name shipped extras or explicit scope dispositions."""
     extras = services_setup.build_services_extras_require()
     kinds: set[str] = set()
     for feature, raw in spec["r01_coverage"].items():
@@ -87,7 +89,7 @@ def test_r01_tokens_are_known(
             kinds.add(_token_kind(feature, token, extras))
     # Guards against mapping everything to daemon extras: the Qt
     # desktop scope and the unimplemented backlog must stay visible.
-    assert {"gui", "tracked"} <= kinds
+    assert {"gui", "tracked", "deferred"} <= kinds
 
 
 def test_r01_daemon_tokens_ship_in_bundle_profile(

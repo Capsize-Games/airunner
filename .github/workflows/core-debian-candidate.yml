@@ -1,0 +1,454 @@
+name: CORE Debian candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_core_release:
+        description: >-
+          Publish the tested CORE Debian package and notices as an immutable
+          GitHub Release from the exact annotated service-version tag.
+        type: boolean
+        required: false
+        default: false
+      candidate_run_id:
+        description: >-
+          Successful CORE candidate workflow run ID from this exact version tag.
+          Promotion reuses that run's package and validation artifacts.
+        type: string
+        required: false
+        default: ""
+  pull_request:
+    paths:
+      - ".github/workflows/core-debian-candidate.yml"
+      - "debian/**"
+      - "package/constraints-linux-core.txt"
+      - "package/core-input-readiness.json"
+      - "package/requirements-linux-core.in"
+      - "packaging/linux/services-core-bundle-spec.toml"
+      - "scripts/assemble_linux_bundle.py"
+      - "scripts/check_core_input_readiness.py"
+      - "scripts/check_release_identity.py"
+      - "scripts/core_debian_candidate_smoke.sh"
+      - "scripts/core_debian_upgrade_smoke.sh"
+      - "scripts/create_core_upgrade_fixture.py"
+      - "scripts/create_core_published_upgrade_fixture.py"
+      - "scripts/probe_core_interrupted_upgrade.py"
+      - "scripts/probe_core_installed_interrupted_upgrade.py"
+      - "scripts/tests/test_core_interrupted_upgrade_probe.py"
+      - "scripts/tests/test_core_debian_candidate_workflow.py"
+      - "scripts/tests/test_core_published_upgrade_fixture.py"
+      - "scripts/prepare_core_release_assets.py"
+      - "services/tests/test_release_core_promotion.py"
+      - "services/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-debian-candidate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-core-debian-candidate:
+    if: >-
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish_core_release != true &&
+      (github.ref_type == 'branch' || github.ref_type == 'tag'))
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    env:
+      CORE_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Check out exact candidate source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify CORE input record
+        run: python3 scripts/check_core_input_readiness.py --mode verify-record
+
+      - name: Verify CORE release tag and source
+        if: ${{ inputs.publish_core_release }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: >-
+          python3 scripts/check_release_identity.py
+          --event "$GITHUB_EVENT_NAME" --ref "$GITHUB_REF"
+          --source-sha "$GITHUB_SHA" --promote-release true
+
+      - name: Check CORE inputs before installation
+        run: python3 scripts/check_core_input_readiness.py --mode activate
+
+      - name: Install Debian build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential debhelper-compat dpkg-dev python3-venv
+
+      - name: Set up reviewed Python 3.13.5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.13.5"
+
+      - name: Install hash-locked binary CORE inputs
+        run: |
+          core_env="$RUNNER_TEMP/airunner-core-build"
+          python -m venv "$core_env"
+          "$core_env/bin/python" -m pip install --require-hashes --only-binary=:all: \
+            -r package/constraints-linux-core.txt
+          "$core_env/bin/python" -m pip install --no-deps --no-build-isolation ./services
+          echo "AIRUNNER_CORE_PYTHON=$core_env/bin/python" >> "$GITHUB_ENV"
+
+      - name: Check candidate workflow contract
+        run: >-
+          "$AIRUNNER_CORE_PYTHON" scripts/tests/test_core_debian_candidate_workflow.py
+      - name: Check published-baseline fixture contract
+        run: >-
+          "$AIRUNNER_CORE_PYTHON" scripts/tests/test_core_published_upgrade_fixture.py
+
+      - name: Build the CORE Debian package
+        run: dpkg-buildpackage --build=binary --no-sign
+
+      - name: Bind candidate artifact to source and lock
+        run: |
+          mapfile -t packages < <(
+            find .. -maxdepth 1 -type f -name 'airunner_*_amd64.deb' -print
+          )
+          if [[ "${#packages[@]}" -ne 1 ]]; then
+            echo "expected exactly one amd64 AIRunner .deb" >&2
+            exit 1
+          fi
+          install -d -m 0755 build/core-debian-candidate
+          install -m 0644 "${packages[0]}" build/core-debian-candidate/
+          baseline_deb=build/core-debian-candidate/airunner_6.1.3-3_all.deb
+          # Unmodified published prior package; original identity:
+          # https://apt.airunner.art/pool/main/a/airunner/airunner_6.1.3-3_all.deb
+          install -m 0644 \
+            packaging/ci-fixtures/published-prior/airunner_6.1.3-3_all.deb \
+            "$baseline_deb"
+          printf '%s  %s\n' \
+            '60c07b5c2e8701b9f07309ee10be0327b5ef5ae908464fc370619bcfe4e4b87c' \
+            "$baseline_deb" | sha256sum --check --status
+          test "$(stat -c '%s' "$baseline_deb")" = 1464816
+          test "$(dpkg-deb --field "$baseline_deb" Version)" = 6.1.3-3
+          test "$(dpkg-deb --field "$baseline_deb" Architecture)" = all
+          PYTHONPATH=services/src:native/src:debian/vendor \
+            "$AIRUNNER_CORE_PYTHON" scripts/create_core_upgrade_fixture.py \
+            --output-dir build/core-debian-candidate/synthetic-upgrade-fixture \
+            --source-sha "$CORE_SOURCE_SHA"
+          CORE_DEB="build/core-debian-candidate/$(basename "${packages[0]}")"
+          CORE_DEB="$CORE_DEB" "$AIRUNNER_CORE_PYTHON" - <<'PY'
+          import hashlib
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          deb = Path(os.environ["CORE_DEB"])
+          baseline = Path("build/core-debian-candidate/airunner_6.1.3-3_all.deb")
+          digest = lambda path: hashlib.sha256(Path(path).read_bytes()).hexdigest()
+          version = subprocess.run(
+              ["dpkg-deb", "--field", str(deb), "Version"],
+              check=True, capture_output=True, text=True,
+          ).stdout.strip()
+          baseline_version = subprocess.run(
+              ["dpkg-deb", "--field", str(baseline), "Version"],
+              check=True, capture_output=True, text=True,
+          ).stdout.strip()
+          baseline_architecture = subprocess.run(
+              ["dpkg-deb", "--field", str(baseline), "Architecture"],
+              check=True, capture_output=True, text=True,
+          ).stdout.strip()
+          assert digest(baseline) == "60c07b5c2e8701b9f07309ee10be0327b5ef5ae908464fc370619bcfe4e4b87c"
+          assert baseline.stat().st_size == 1464816
+          assert baseline_version == "6.1.3-3" and baseline_architecture == "all"
+          record = {
+              "schema_version": 1,
+              "profile": "linux-services-core",
+              "source_sha": os.environ["CORE_SOURCE_SHA"],
+              "requirements_sha256": digest("package/requirements-linux-core.in"),
+              "lock_sha256": digest("package/constraints-linux-core.txt"),
+              "debian_filename": deb.name,
+              "debian_sha256": digest(deb),
+              "debian_version": version,
+              "architecture": "amd64",
+              "build_status": "passed",
+              "clean_install_smoke": "pending",
+              "upgrade_smoke": "pending",
+              "upgrade_baseline": {
+                  "source": "apt.airunner.art stable",
+                  "filename": baseline.name,
+                  "version": baseline_version,
+                  "architecture": baseline_architecture,
+                  "sha256": digest(baseline),
+                  "size_bytes": baseline.stat().st_size,
+                  "source_revision": None,
+                  "source_identity_note": "No source-bound publish marker or Source/Vcs field is present in the published Debian artifact metadata.",
+              },
+          }
+          Path("build/core-debian-candidate/candidate.json").write_text(
+              json.dumps(record, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+          (cd build/core-debian-candidate && find . -type f ! -name SHA256SUMS -print0 \
+            | sort -z | xargs -0 sha256sum > SHA256SUMS)
+
+      - name: Upload non-publishing CORE candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: core-debian-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/core-debian-candidate/
+          if-no-files-found: error
+          retention-days: 7
+
+  clean-install-smoke:
+    needs: build-core-debian-candidate
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    env:
+      CORE_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Check out exact candidate source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify CORE input record before install
+        run: python3 scripts/check_core_input_readiness.py --mode verify-record
+
+      - name: Check CORE inputs before candidate install
+        run: python3 scripts/check_core_input_readiness.py --mode activate
+
+      - name: Download candidate artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: core-debian-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/core-debian-candidate
+
+      - name: Verify candidate source, lock and artifact digests
+        run: |
+          (cd build/core-debian-candidate && sha256sum --check SHA256SUMS)
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          artifact_dir = Path("build/core-debian-candidate")
+          record = json.loads((artifact_dir / "candidate.json").read_text())
+          digest = lambda path: hashlib.sha256(Path(path).read_bytes()).hexdigest()
+          deb = artifact_dir / record["debian_filename"]
+          assert record["source_sha"] == os.environ["CORE_SOURCE_SHA"]
+          assert record["lock_sha256"] == digest("package/constraints-linux-core.txt")
+          assert record["requirements_sha256"] == digest("package/requirements-linux-core.in")
+          assert record["debian_sha256"] == digest(deb)
+          assert record["build_status"] == "passed"
+          PY
+
+      - name: Install candidate and exercise daemon lifecycle
+        run: |
+          sudo env CORE_SOURCE_SHA="$CORE_SOURCE_SHA" \
+            bash scripts/core_debian_candidate_smoke.sh \
+            build/core-debian-candidate
+
+      - name: Upload install validation record
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: core-debian-validation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/core-debian-candidate/candidate-validation.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  published-upgrade-data-smoke:
+    needs: build-core-debian-candidate
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    env:
+      CORE_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Check out exact candidate source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify CORE input record before install
+        run: python3 scripts/check_core_input_readiness.py --mode verify-record
+
+      - name: Check CORE inputs before candidate install
+        run: python3 scripts/check_core_input_readiness.py --mode activate
+
+      - name: Download candidate artifact and synthetic database fixture
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: core-debian-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/core-debian-candidate
+
+      - name: Verify candidate and fixture digests
+        run: |
+          (cd build/core-debian-candidate && sha256sum --check SHA256SUMS)
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("build/core-debian-candidate")
+          candidate = json.loads((root / "candidate.json").read_text())
+          fixture_root = root / "synthetic-upgrade-fixture"
+          fixture = json.loads((fixture_root / "fixture.json").read_text())
+          digest = lambda path: hashlib.sha256(Path(path).read_bytes()).hexdigest()
+          assert candidate["source_sha"] == os.environ["CORE_SOURCE_SHA"]
+          assert candidate["lock_sha256"] == digest("package/constraints-linux-core.txt")
+          assert candidate["requirements_sha256"] == digest("package/requirements-linux-core.in")
+          assert fixture["source_sha"] == os.environ["CORE_SOURCE_SHA"]
+          assert fixture["database_sha256"] == digest(fixture_root / "airunner.db")
+          assert fixture["fixture_kind"] == "synthetic_intermediate_alembic_revision"
+          assert candidate["debian_sha256"] == digest(root / candidate["debian_filename"])
+          baseline = root / "airunner_6.1.3-3_all.deb"
+          assert candidate["upgrade_baseline"]["version"] == "6.1.3-3"
+          assert candidate["upgrade_baseline"]["architecture"] == "all"
+          assert candidate["upgrade_baseline"]["sha256"] == digest(baseline)
+          assert candidate["upgrade_baseline"]["size_bytes"] == baseline.stat().st_size
+          PY
+
+      - name: Upgrade from published prior package and check synthetic data preservation
+        run: |
+          sudo env CORE_SOURCE_SHA="$CORE_SOURCE_SHA" \
+            bash scripts/core_debian_upgrade_smoke.sh \
+            build/core-debian-candidate
+
+      - name: Upload upgrade validation record
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: core-debian-upgrade-validation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/core-debian-candidate/candidate-upgrade-validation.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  publish-core-release:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_core_release == true
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Check out exact release source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify prior successful candidate run
+        id: candidate-run
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
+        run: |
+          test -n "$CANDIDATE_RUN_ID"
+          python3 scripts/verify_core_candidate_run.py \
+            --repository "$GITHUB_REPOSITORY" \
+            --run-id "$CANDIDATE_RUN_ID" \
+            --tag "${GITHUB_REF#refs/tags/}" \
+            --source-sha "$GITHUB_SHA" \
+            --output-json build/core-candidate-run.json \
+            --output-env "$GITHUB_OUTPUT"
+
+      - name: Download exact candidate package and build record
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: core-debian-candidate-${{ steps.candidate-run.outputs.run_id }}-${{ steps.candidate-run.outputs.run_attempt }}
+          run-id: ${{ steps.candidate-run.outputs.run_id }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          path: build/core-release-input
+
+      - name: Download exact clean-install evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: core-debian-validation-${{ steps.candidate-run.outputs.run_id }}-${{ steps.candidate-run.outputs.run_attempt }}
+          run-id: ${{ steps.candidate-run.outputs.run_id }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          path: build/core-release-input
+
+      - name: Download exact upgrade evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: core-debian-upgrade-validation-${{ steps.candidate-run.outputs.run_id }}-${{ steps.candidate-run.outputs.run_attempt }}
+          run-id: ${{ steps.candidate-run.outputs.run_id }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          path: build/core-release-input
+
+      - name: Recheck exact version tag and tested evidence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          CORE_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          python3 scripts/check_release_identity.py \
+            --event "$GITHUB_EVENT_NAME" --ref "$GITHUB_REF" \
+            --source-sha "$GITHUB_SHA" --promote-release true
+          (cd build/core-release-input && sha256sum --check SHA256SUMS)
+          python3 - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          root = Path("build/core-release-input")
+          record = json.loads((root / "candidate.json").read_text())
+          assert record["source_sha"] == __import__("os").environ["CORE_SOURCE_SHA"]
+          assert record["build_status"] == "passed"
+          for name, key in (("candidate-validation.json", "clean_install_smoke"),
+                            ("candidate-upgrade-validation.json", "upgrade_smoke")):
+              evidence = json.loads((root / name).read_text())
+              assert evidence["source_sha"] == record["source_sha"]
+              assert evidence[key] == "passed"
+              assert evidence["debian_sha256"] == record["debian_sha256"]
+          PY
+
+      - name: Extract package notices and prepare source-bound CORE assets
+        env:
+          CANDIDATE_RUN_ID: ${{ steps.candidate-run.outputs.run_id }}
+          CANDIDATE_ATTEMPT: ${{ steps.candidate-run.outputs.run_attempt }}
+        run: |
+          set -euo pipefail
+          package=$(find build/core-release-input -maxdepth 1 -name 'airunner_*_amd64.deb' -type f -print -quit)
+          test -n "$package"
+          mkdir -p build/core-release-extracted
+          dpkg-deb -x "$package" build/core-release-extracted
+          python3 scripts/prepare_core_release_assets.py \
+            --artifact-dir build/core-release-input \
+            --notices-dir build/core-release-extracted/usr/lib/airunner/legal \
+            --output-dir build/core-release-assets \
+            --source-sha "$GITHUB_SHA" --tag "${GITHUB_REF#refs/tags/}" \
+            --workflow-run-id "$GITHUB_RUN_ID" \
+            --candidate-run-id "$CANDIDATE_RUN_ID" \
+            --candidate-attempt "$CANDIDATE_ATTEMPT" \
+            --candidate-run-receipt build/core-candidate-run.json \
+            --workflow .github/workflows/core-debian-candidate.yml
+
+      - name: Create draft, attach CORE assets, and publish immutable release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/check_release_identity.py \
+            --event "$GITHUB_EVENT_NAME" --ref "$GITHUB_REF" \
+            --source-sha "$GITHUB_SHA" --promote-release-assets \
+            --release-profile core --run-id "$GITHUB_RUN_ID" \
+            --repository "$GITHUB_REPOSITORY" \
+            --asset-dir build/core-release-assets

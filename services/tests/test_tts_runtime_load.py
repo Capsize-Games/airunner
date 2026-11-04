@@ -111,7 +111,7 @@ def test_tts_runtime_load_uses_headless_worker(monkeypatch) -> None:
             "provider": "local",
             "deployment_mode": "local_fallback",
             "request_id": "test-tts-load",
-            "metadata": {"model_type": "OpenVoice"},
+            "metadata": {"model_type": "Espeak"},
         },
     )
 
@@ -136,3 +136,38 @@ def test_tts_runtime_load_uses_headless_worker(monkeypatch) -> None:
     assert status_response.status_code == 200
     assert status_response.json()["loaded"] is True
     assert status_response.json()["metadata"]["model_status"] == "Loaded"
+
+
+def test_tts_runtime_load_defers_openvoice_before_worker_load(
+    monkeypatch,
+) -> None:
+    """OpenVoice load requests fail without calling the worker loader."""
+    import airunner_services.api.server as service_server
+    from airunner_services.api.server import create_app
+
+    worker = _FakeTTSWorker()
+    registry = _runtime_registry(worker)
+    monkeypatch.setenv("AIRUNNER_INSECURE_NO_AUTH", "1")
+    monkeypatch.setattr(
+        service_server,
+        "build_runtime_registry",
+        lambda app_instance=None: registry,
+    )
+    app = create_app(allowed_origins=["http://localhost"], enable_cors=True)
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/daemon/runtimes/tts/load",
+        json={
+            "provider": "local",
+            "deployment_mode": "local_fallback",
+            "request_id": "test-openvoice-load",
+            "metadata": {"model_type": "OpenVoice"},
+        },
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == (
+        "OpenVoice is unavailable in this release"
+    )
+    assert worker.load_calls == 0

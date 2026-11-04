@@ -1,0 +1,96 @@
+{
+  "archives": [
+    {
+      "component": "cuda_nvcc",
+      "relative_path": "cuda_nvcc/linux-x86_64/cuda_nvcc-linux-x86_64-12.8.93-archive.tar.xz",
+      "release": "12.8.1",
+      "sha256": "9961b3484b6b71314063709a4f9529654f96782ad39e72bf1e00f070db8210d3",
+      "size_bytes": 79015464,
+      "version": "12.8.93"
+    },
+    {
+      "component": "cuda_nvcc",
+      "relative_path": "cuda_nvcc/linux-x86_64/cuda_nvcc-linux-x86_64-13.1.80-archive.tar.xz",
+      "release": "13.1.0",
+      "sha256": "5ed3b7cfe7f12557199773e7769445357ee048958ff51e623e15f36d3393ca8b",
+      "size_bytes": 30014972,
+      "version": "13.1.80"
+    },
+    {
+      "component": "cuda_cuobjdump",
+      "relative_path": "cuda_cuobjdump/linux-x86_64/cuda_cuobjdump-linux-x86_64-13.1.80-archive.tar.xz",
+      "release": "13.1.0",
+      "sha256": "3de0169fd8d00e8bdd5ec91a6eb89a78229d82e478cb85554f89748107ba928c",
+      "size_bytes": 263548,
+      "version": "13.1.80"
+    },
+    {
+      "component": "cuda_nvdisasm",
+      "relative_path": "cuda_nvdisasm/linux-x86_64/cuda_nvdisasm-linux-x86_64-13.1.80-archive.tar.xz",
+      "release": "13.1.0",
+      "sha256": "b169c329bda674e6f9ae5db9845ea09d40f593c96faf11b7f8d4c0a8a2576f17",
+      "size_bytes": 4153976,
+      "version": "13.1.80"
+    },
+    {
+      "component": "cuda_cudart",
+      "relative_path": "cuda_cudart/linux-x86_64/cuda_cudart-linux-x86_64-13.1.80-archive.tar.xz",
+      "release": "13.1.0",
+      "sha256": "b626f4790f46bc9324a1047f2fbcc9a42bc4a722b053056e61cc00da54ad6f32",
+      "size_bytes": 1549648,
+      "version": "13.1.80"
+    },
+    {
+      "component": "cuda_cupti",
+      "relative_path": "cuda_cupti/linux-x86_64/cuda_cupti-linux-x86_64-12.8.90-archive.tar.xz",
+      "release": "12.8.1",
+      "sha256": "7bf5db86cb82f26a6a3cb9e2fa4dc2a131d25885f59fdbc647938929924405db",
+      "size_bytes": 15383056,
+      "version": "12.8.90"
+    }
+  ],
+  "notices": [
+    {
+      "filename": "CUDA-12.8.1-EULA.pdf",
+      "official_source_url": "https://docs.nvidia.com/cuda/archive/12.8.1/pdf/EULA.pdf",
+      "sha256": "94736434ff4409100167951f4a76c0a6ab9ba98cf75b41bb74fae53610d9940b"
+    },
+    {
+      "filename": "CUDA-12.8.1-EULA.txt",
+      "official_source_url": "https://docs.nvidia.com/cuda/archive/12.8.1/pdf/EULA.pdf",
+      "sha256": "81e73618b62700b5a6b51de9aa4430f8d2dd43c6219c518221f2a8d2cb22a22e"
+    },
+    {
+      "filename": "CUDA-13.1-EULA.pdf",
+      "official_source_url": "https://docs.nvidia.com/cuda/archive/13.1.1/pdf/EULA.pdf",
+      "sha256": "abf3a2de172a41ef2b9bf01a29ebe77b2652034a6bf36b9e0efc72ec621709ae"
+    },
+    {
+      "filename": "CUDA-13.1-EULA.txt",
+      "official_source_url": "https://docs.nvidia.com/cuda/archive/13.1.1/pdf/EULA.pdf",
+      "sha256": "b932008f2a02d7f90f433527f173b8f47f95001f0ab642012a925a5ad07fb8e6"
+    },
+    {
+      "filename": "CUPTI-12.8.1-copyright-and-licenses.html",
+      "official_source_url": "https://docs.nvidia.com/cupti/12.8.1/copyright-and-licenses/index.html",
+      "sha256": "f43d4ab3be8469ae7547c6b84616aea7a3baa603c47258cc57d3f41d7254322a"
+    },
+    {
+      "filename": "CUPTI-12.8.1-copyright-and-licenses.txt",
+      "official_source_url": "https://docs.nvidia.com/cupti/12.8.1/copyright-and-licenses/index.html",
+      "sha256": "ccffc0331d86c4bcb479906913321152a16d08217097e96d381ea3748645822a"
+    }
+  ],
+  "redistributions": {
+    "12.8.1": {
+      "sha256": "249e28a83008d711d5f72880541c8be6253f6d61608461de4fcb715554a6cf17",
+      "url": "https://developer.download.nvidia.com/compute/cuda/redist/redistrib_12.8.1.json"
+    },
+    "13.1.0": {
+      "sha256": "55304d9d831bb095d9594aab276f96d2f0e30919f4cc1b3f6ca78cdb5f643e11",
+      "url": "https://developer.download.nvidia.com/compute/cuda/redist/redistrib_13.1.0.json"
+    }
+  },
+  "schema_version": 1,
+  "scope": "publisher-published NVIDIA metadata SHA-256 values; verified bytes for private local use only, not redistributed"
+}

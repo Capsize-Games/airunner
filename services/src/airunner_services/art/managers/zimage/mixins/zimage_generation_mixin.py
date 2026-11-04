@@ -5,6 +5,12 @@ from typing import Dict, Any
 import torch
 from airunner_services.application_exceptions import InterruptedException
 from airunner_services.art.runtime_memory import clear_memory
+from airunner_services.art.managers.stablediffusion.image_request import (
+    MAX_BATCHES_PER_REQUEST,
+    MAX_N_SAMPLES,
+    MIN_N_SAMPLES,
+    clamp_int,
+)
 from airunner_services.art.schedulers.flow_match_scheduler_factory import (
     is_flow_match_scheduler,
     create_flow_match_scheduler,
@@ -307,18 +313,32 @@ class ZImageGenerationMixin:
         with torch.no_grad(), torch.amp.autocast(
             "cuda", dtype=torch.bfloat16, enabled=True
         ):
+            requested = clamp_int(
+                self.image_request.n_samples,
+                MIN_N_SAMPLES,
+                MAX_N_SAMPLES,
+                1,
+            )
+            # Infinite mode still requires an explicit opt-in flag and is
+            # capped: batches stop after MAX_BATCHES_PER_REQUEST so one
+            # request can never loop forever.
+            budgeted = (
+                MAX_BATCHES_PER_REQUEST
+                if self.image_request.generate_infinite_images
+                else min(requested, MAX_BATCHES_PER_REQUEST)
+            )
             total = 0
-            while total < self.image_request.n_samples:
+            while total < budgeted:
                 if self.do_interrupt_image_generation:
                     raise InterruptedException()
 
                 # Run pipeline
                 pipeline_output = self._pipe(**data)
-                
+
                 # Convert pipeline output to dict format expected by base class
                 results = {"images": pipeline_output.images}
                 yield results
-                
+
                 # Cleanup after each generation
                 del pipeline_output
                 del results
@@ -326,5 +346,4 @@ class ZImageGenerationMixin:
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
 
-                if not self.image_request.generate_infinite_images:
-                    total += 1
+                total += 1

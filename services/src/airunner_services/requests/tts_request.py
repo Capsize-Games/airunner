@@ -6,6 +6,14 @@ from typing import Annotated
 from airunner_common.contract_enums import AvailableLanguage
 
 
+def openvoice_speed_multiplier(request: object, default: float = 1.0) -> float:
+    """Convert OpenVoice request speed (percent) into a model multiplier."""
+    request_speed = getattr(request, "speed", None)
+    if request_speed is None:
+        return default
+    return float(request_speed) / 100.0
+
+
 @dataclass
 class TTSRequest:
     """Base TTS request payload."""
@@ -40,4 +48,9 @@ class OpenVoiceTTSRequest(TTSRequest):
     voice: Annotated[str, "Voice to use for speech"] = "default"
 
 
-__all__ = ["EspeakTTSRequest", "OpenVoiceTTSRequest", "TTSRequest"]
+__all__ = [
+    "EspeakTTSRequest",
+    "OpenVoiceTTSRequest",
+    "TTSRequest",
+    "openvoice_speed_multiplier",
+]

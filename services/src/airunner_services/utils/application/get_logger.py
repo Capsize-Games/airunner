@@ -8,8 +8,6 @@ logging continues to honour the user-configured ``base_path``.
 
 from __future__ import annotations
 
-from typing import Optional
-
 from airunner_common.get_logger import Logger
 from airunner_common.get_logger import get_logger
 from airunner_common.get_logger import set_log_base_path_resolver

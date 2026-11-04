@@ -2,10 +2,11 @@
 
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 
 from airunner_common.contract_enums import SignalCode
 from airunner_services.utils.application.signal_mediator import SignalMediator
+from airunner_services.api.admin_auth import require_admin_key
 
 from .legacy_common import queue_service_llm_unload, schedule_process_shutdown
 from .legacy_contracts import LegacyInterruptRequest
@@ -15,8 +16,8 @@ router = APIRouter()
 
 @router.post("/admin/reset_memory")
 def legacy_admin_reset_memory() -> Dict[str, Any]:
-    """Return the legacy success payload for reset-memory requests."""
-    return {"status": "ok"}
+    """Reject reset-memory: no implementation backs the legacy payload."""
+    raise HTTPException(status_code=501, detail="Not implemented")
 
 
 @router.post("/admin/interrupt")
@@ -49,12 +50,13 @@ def legacy_admin_unload_llm(req: Request) -> Dict[str, Any]:
 
 @router.post("/admin/reset_database")
 def legacy_admin_reset_database() -> Dict[str, Any]:
-    """Return the legacy success payload for reset-database requests."""
-    return {"status": "ok"}
+    """Reject reset-database: no implementation backs the legacy payload."""
+    raise HTTPException(status_code=501, detail="Not implemented")
 
 
 @router.post("/admin/shutdown")
-def legacy_admin_shutdown() -> Dict[str, Any]:
-    """Schedule the current process for shutdown after the response returns."""
+def legacy_admin_shutdown(req: Request) -> Dict[str, Any]:
+    """Schedule the current process for shutdown after the response."""
+    require_admin_key(req)
     schedule_process_shutdown()
     return {"status": "ok", "shutting_down": True}

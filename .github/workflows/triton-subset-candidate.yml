@@ -1,0 +1,164 @@
+name: Triton redistributable subset candidate
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/triton-subset-candidate.yml
+      - scripts/runtime_wheel_hardening.py
+      - scripts/build_triton_external_toolchain_subset.py
+      - scripts/tests/test_runtime_wheel_hardening.py
+      - scripts/tests/test_linux_release_artifact_stager.py
+      - scripts/tests/test_triton_external_toolchain_subset.py
+      - package/runtime-wheel-hardening-inputs.json
+      - package/triton-subset-candidate-input.json
+      - package/triton-external-toolchain-subset.json
+      - package/linux-release-v4-artifact-sources.json
+      - packaging/licenses/triton-3.7.1-supplement/**
+
+permissions:
+  contents: read
+
+jobs:
+  subset:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out exact candidate source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Check the wheel transformation contracts
+        run: |
+          python3 -I -S -m unittest discover -s scripts/tests -p test_runtime_wheel_hardening.py
+          python3 -I -S -m unittest discover -s scripts/tests -p test_triton_external_toolchain_subset.py
+          python3 -I -S -m unittest discover -s scripts/tests -p test_linux_release_artifact_stager.py
+
+      - name: Stage the pinned Triton wheel and Patchelf source
+        env:
+          INPUT_DIR: ${{ runner.temp }}/triton-inputs
+        run: |
+          python3 -I -S - <<'PY'
+          import hashlib, json, os, urllib.error, urllib.request
+          from pathlib import Path
+          from urllib.parse import urlsplit
+
+          inputs = json.loads(Path('package/runtime-wheel-hardening-inputs.json').read_text())
+          candidate = json.loads(Path('package/triton-subset-candidate-input.json').read_text())
+          spec = next(x for x in inputs['artifacts'] if x['distribution'] == 'triton')
+          if (spec['source_filename'] != candidate['source']['filename']
+                  or spec['source_sha256'] != candidate['source']['sha256']
+                  or spec['expected_candidate_sha256'] != candidate['hardening_base']['sha256']):
+              raise SystemExit('Triton candidate input contract differs from the reviewed hardening manifest')
+          destination = Path(os.environ['INPUT_DIR'])
+          destination.mkdir()
+          source = inputs['source_repository']
+          downloads = [(candidate['source']['url'], candidate['source']['filename'], candidate['source']['sha256'], candidate['source']['size_bytes'])]
+          downloads += [(f"https://raw.githubusercontent.com/NixOS/patchelf/{source['commit']}/{x['path']}", Path(x['path']).name, x['sha256'], 4 * 1024 * 1024) for x in source['source_files']]
+          class RejectRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, request, response, code, message, headers, new_url):
+                  raise RuntimeError('source redirects are prohibited')
+          opener = urllib.request.build_opener(RejectRedirect())
+          for url, filename, expected, max_bytes in downloads:
+              parsed = urlsplit(url)
+              if parsed.scheme != 'https' or parsed.hostname not in {'download-r2.pytorch.org', 'raw.githubusercontent.com'}:
+                  raise SystemExit(f'unapproved input origin: {url}')
+              if Path(filename).name != filename:
+                  raise SystemExit('unsafe staged filename')
+              target = destination / filename
+              request = urllib.request.Request(url, headers={'User-Agent': 'triton-subset-candidate/1'})
+              digest = hashlib.sha256()
+              size = 0
+              try:
+                  response = opener.open(request, timeout=310)
+              except (urllib.error.URLError, RuntimeError) as error:
+                  raise SystemExit(f'pinned input fetch failed: {filename}') from error
+              with response:
+                  content_length = response.headers.get('Content-Length')
+                  if content_length is not None and int(content_length) != max_bytes:
+                      if filename == candidate['source']['filename']:
+                          raise SystemExit('Triton source Content-Length differs from the pinned size')
+                  with target.open('xb') as output:
+                      while block := response.read(1024 * 1024):
+                          size += len(block)
+                          if size > max_bytes:
+                              raise SystemExit(f'pinned input exceeds size bound: {filename}')
+                          digest.update(block)
+                          output.write(block)
+              actual = digest.hexdigest()
+              if filename == candidate['source']['filename'] and size != max_bytes:
+                  raise SystemExit('Triton source size differs from the pinned size')
+              if actual != expected:
+                  raise SystemExit(f'input digest mismatch: {filename}')
+          PY
+
+      - name: Build hardening base and redistributable subset offline
+        run: |
+          mkdir -p "$RUNNER_TEMP/triton-base" "$RUNNER_TEMP/triton-subset"
+          sudo unshare --net -- env -i PATH=/usr/bin:/bin LC_ALL=C \
+            python3 -I -S scripts/runtime_wheel_hardening.py \
+            --inputs package/runtime-wheel-hardening-inputs.json \
+            --input-dir "$RUNNER_TEMP/triton-inputs" \
+            --output-dir "$RUNNER_TEMP/triton-base" \
+            --distribution triton --patchelf-source "$RUNNER_TEMP/triton-inputs/patchelf.cc" \
+            --report "$RUNNER_TEMP/triton-base/build-report.json"
+          sudo unshare --net -- env -i PATH=/usr/bin:/bin LC_ALL=C \
+            python3 -I -S -c 'import hashlib,json,sys; from pathlib import Path; p=Path(sys.argv[1]); s=json.loads(Path(sys.argv[2]).read_text())["hardening_base"]; d=hashlib.file_digest(p.open("rb"),"sha256").hexdigest(); assert p.name==s["filename"] and p.stat().st_size==s["size_bytes"] and d==s["sha256"], "hardening base differs from reviewed pin"' \
+            "$RUNNER_TEMP/triton-base/triton-3.7.1+capsize.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" \
+            package/triton-subset-candidate-input.json
+          sudo unshare --net -- env -i PATH=/usr/bin:/bin LC_ALL=C \
+            python3 -I -S scripts/build_triton_external_toolchain_subset.py \
+            --input "$RUNNER_TEMP/triton-base/triton-3.7.1+capsize.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" \
+            --output-dir "$RUNNER_TEMP/triton-subset"
+          sudo unshare --net -- env -i PATH=/usr/bin:/bin LC_ALL=C \
+            python3 -I -S -c 'import hashlib,json,sys; from pathlib import Path; p=Path(sys.argv[1]); s=json.loads(Path(sys.argv[2]).read_text())["subset_output"]; d=hashlib.file_digest(p.open("rb"),"sha256").hexdigest(); assert p.name==s["filename"] and p.stat().st_size==s["size_bytes"] and d==s["sha256"], "subset differs from reviewed pin"' \
+            "$RUNNER_TEMP/triton-subset/triton-3.7.1+capsize.2-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" \
+            package/triton-subset-candidate-input.json
+          sudo chown "$(id -u):$(id -g)" \
+            "$RUNNER_TEMP/triton-subset/triton-3.7.1+capsize.2-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
+
+      - name: Bind the safe output to this workflow run
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python3 -I -S - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP'])
+          recipe = Path('package/triton-external-toolchain-subset.json')
+          input_manifest = Path('package/triton-subset-candidate-input.json')
+          expected_input = json.loads(input_manifest.read_text())
+          wheel = root / 'triton-subset' / expected_input['subset_output']['filename']
+          expected = expected_input['subset_output']['sha256']
+          actual = hashlib.file_digest(wheel.open('rb'), 'sha256').hexdigest()
+          if wheel.stat().st_size != expected_input['subset_output']['size_bytes'] or actual != expected:
+              raise SystemExit('subset digest differs from the reviewed candidate')
+          receipt = {
+              'schema_version': 1,
+              'source_revision': os.environ['SOURCE_SHA'],
+              'hardening_inputs_sha256': hashlib.file_digest(Path('package/runtime-wheel-hardening-inputs.json').open('rb'), 'sha256').hexdigest(),
+              'candidate_input_sha256': hashlib.file_digest(input_manifest.open('rb'), 'sha256').hexdigest(),
+              'subset_recipe_sha256': hashlib.file_digest(recipe.open('rb'), 'sha256').hexdigest(),
+              'subset_helper_sha256': hashlib.file_digest(Path('scripts/build_triton_external_toolchain_subset.py').open('rb'), 'sha256').hexdigest(),
+              'output_filename': wheel.name,
+              'output_sha256': actual,
+              'status': 'safe subset candidate; no import, install, GPU execution, or release publication',
+              'excluded_from_artifact': ['NVIDIA bundled executable tools', 'NVIDIA toolkit header tree', 'CUPTI payload'],
+          }
+          (root / 'triton-subset/receipt.json').write_text(json.dumps(receipt, indent=2, sort_keys=True) + '\n')
+          PY
+
+      - name: Upload only the reviewed redistributable subset
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: triton-subset-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/triton-subset/triton-3.7.1+capsize.2-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+            ${{ runner.temp }}/triton-subset/triton-3.7.1+capsize.2-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.report.json
+            ${{ runner.temp }}/triton-subset/receipt.json
+            package/triton-external-toolchain-subset.json
+            package/triton-subset-candidate-input.json
+          if-no-files-found: error
+          retention-days: 14

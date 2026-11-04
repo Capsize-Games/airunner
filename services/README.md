@@ -1,98 +1,117 @@
 # Services
 
-The `services/` package is AIRunner's headless orchestration layer. It
-owns the daemon entry points, FastAPI server wiring, runtime registry,
-downloads, persistence, lifecycle control, and the modality services that
-coordinate LLM, STT, TTS, and art workloads.
+`services/` contains AI Runner's headless daemon and API implementation. It owns request routing, runtime coordination, downloads, persistence, and service lifecycle behavior for the model workers used by other applications.
 
-```mermaid
-flowchart LR
-    GUI[src/ GUI client] --> Daemon[services/ daemon routes]
-    Daemon --> Registry[runtime registry]
-    Daemon --> Client[canonical daemon HTTP client]
-    Registry --> Sidecars[llama.cpp or whisper.cpp sidecars]
-    Daemon --> Data[(AIRUNNER_BASE_PATH)]
-    Daemon --> Scripts[scripts/ tooling]
-```
+Importable Python code is under `services/src/airunner_services/`. The main console entry points are declared in [`setup.py`](setup.py): `airunner-daemon`, `airunner-headless`, and `airunner-service`, along with download and maintenance commands.
 
-## What This Package Owns
+## Package profiles and dependencies
 
-- FastAPI server bootstrap and daemon entry points
-- runtime routing, runtime load or unload control, and health checks
-- service-level downloads, migrations, persistence, and settings
-- orchestration for daemon-backed LLM, TTS, STT, and art requests
-- the canonical daemon HTTP client (`airunner_services.daemon_client`),
-  which the desktop client imports through the thin `airunner.daemon_client`
-  re-export layer
+`services/setup.py` declares the `core`, `llm-native`, `stt-native`, `art-python`, `tts-python`, `tts-python-core`, `headless`, `desktop`, `linux-release`, and `development` extras, among others. `desktop` is a legacy package-extra name for a broader service profile; it does not include the retired Qt interface.
 
-Importable service code lives under `services/src/airunner_services/`.
+The base package requires `airunner-common~=6.1.8`. Its reviewed wheel is published in the [common v6.1.8 GitHub release](https://github.com/Capsize-Games/airunner-common/releases/tag/v6.1.8); PyPI publication remains paused. FacehuggerShield is optional through the `legacy-shield` extra.
 
-The package split contract is documented in
-[docs/architecture/package_split_contract.md](../docs/architecture/package_split_contract.md),
-the package map lives in
-[docs/architecture/layered_product_architecture.md](../docs/architecture/layered_product_architecture.md),
-and the architecture audit is tracked in
-[docs/architecture/architecture-complexity-audit.md](../docs/architecture/architecture-complexity-audit.md).
+The legacy `tts-python` extra requires `airunner-tts-vendor`; the `headless`,
+`desktop`, `all`, `all_dev`, `all_native`, `all_dev_native`, and `windows`
+aggregates inherit it. [Issue #2413](https://github.com/Capsize-Games/airunner/issues/2413)
+records unresolved PyPI availability, so these vendor-bearing profiles are not
+available from the configured public indexes. The current `linux-release`
+profile selects `tts-python-core`, which omits OpenVoice/Melo and the legacy
+pyttsx3 local-playback dependency. The headless eSpeak HTTP path uses the
+bounded eSpeak NG CLI renderer described below. Legacy `llm` and `tts-python`
+extras retain their playback dependency; they are not the Linux release profile.
+The V6 Linux release lock covers 244 reviewed inputs and passed offline
+installation, metadata, and notice checks; see the
+[V6 input validation record](../release-planning/services/input-reviews/linux-release-v6-input-validation.md).
+Source PostgreSQL acceptance has passed, but frozen PostgreSQL, final artifact,
+and model acceptance remain unfinished.
 
-## Installation
-
-For normal repo development, use the developer installer. It installs the
-split packages in editable mode and builds the pinned native sidecars used
-by daemon-backed functional tests:
+For a local development environment, first confirm that the required dependencies are available from an approved source. Then create an isolated environment with `uv` and install the service package and development tools:
 
 ```bash
-./scripts/install.sh
+uv venv --python 3.13.5 .venv
+uv pip install --python .venv/bin/python -e "./services[development]"
 ```
 
-For an isolated service environment, install the local package stack and a
-service extra that matches the workload you are validating:
+This command uses the current package metadata; it cannot supply dependencies that are unavailable from the configured indexes.
+
+## Run the service
+
+The `airunner-headless` console command supervises a daemon and exposes its HTTP API. It binds to loopback by default. A non-loopback bind requires `AIRUNNER_API_KEY`; `--insecure-no-auth` disables that requirement and should not be used for a network-facing deployment.
+
+### Application content policy
+
+Application content moderation is disabled by default. Set `AIRUNNER_CONTENT_POLICY_MODE=enforce` before starting the service to enable the existing text and image policy integration. The accepted values are exactly `disabled` and `enforce`; if the variable is set to any other value, service startup rejects the configuration. With enforcement enabled, unavailable policy data or image evaluators continue to fail closed. Set `AIRUNNER_CONTENT_SAFETY_ENFORCE_SIGNED=1` when the deployment requires a signed bundled policy corpus and trust store; packaged execution alone does not require them. This signing setting accepts `1`, `true`, `yes`, or `on` as true and `0`, `false`, `no`, or `off` as false, ignoring case and surrounding whitespace; other values are rejected.
+
+For a container-based checkout, use the development compose file. It builds from the repository and mounts the local service and native source. For the published-image configuration, use the release compose file, which has no source bind mounts:
 
 ```bash
-python -m venv venv
-source venv/bin/activate
-pip install --upgrade pip setuptools wheel
-pip install -e './services[headless,development]'
+docker compose -f docker-compose.dev.yml run --rm --service-ports airunner
+docker compose -f docker-compose.release.yml run --rm --service-ports airunner
 ```
 
-Use `services[desktop]` when you want the broader desktop-oriented extra
-set, and use `./deployment/install_distributed.sh` when you are installing
-the daemon or GUI client into separate roots.
+Both definitions bind port `127.0.0.1:8080` and mount the configured data and Hugging Face cache directories. The release compose file references `ghcr.io/capsize-games/airunner/airunner:linux-headless`; image publication and startup are not verified here. The repository's dependency publication gaps may also affect builds that request the `tts-python` extra.
 
-Worktrees: pytest pins imports to the checkout under test (issue #2246),
-so running the suite from a worktree with another checkout's venv still
-exercises the worktree's sources. That pin only applies under pytest;
-running the daemon itself from a worktree needs that checkout's own
-editable install (or its own venv as above).
+## Native LLM backend selection
 
-## Test Running
+`AIRUNNER_LLAMA_BACKEND` accepts `auto` (the default), `cpu`, or `cuda-sm120a`.
+Backend selection is separate from the GGUF model's context and sampling
+profile. `auto` uses CPU for a zero GPU-layer request; a request for GPU layers
+requires a verified CUDA profile. Selecting `cpu` explicitly sets GPU layers to
+zero. An unavailable or malformed requested GPU profile returns
+`native_backend_unavailable`; it does not start the CPU executable instead.
 
-The quickest service checks are the daemon runtime smoke commands exposed
-by the repo test runner:
+The CUDA profile belongs under
+`$AIRUNNER_BUNDLE_ROOT/share/airunner/native-runtimes/cuda-sm120a/` with its
+`profile-manifest.json`, wrapper, server, libraries and notices. The selector
+checks its file inventory, hashes, modes and declared source/producer identities
+before launch. Registry construction defers optional GPU verification, so a
+missing profile does not prevent CORE startup or health queries. Health metadata
+reports whether selection is deferred or unavailable. Selected artifact
+capabilities do not prove physical device use; observed device and offloaded
+layer fields remain unknown until measured.
+
+This profile targets Linux x86_64 and compute capability 12.0. The selector
+maps NVIDIA devices in PCI order and sets the child to that order; it currently
+rejects `CUDA_VISIBLE_DEVICES` overrides. The CUDA launch pins its device and
+disables automatic model fitting, preserving the requested model and context.
+The candidate artifact has not yet passed packaged GPU acceptance or been
+published as a verified profile.
+
+## TTS HTTP API
+
+`POST /api/v1/tts/synthesize` accepts `text`, `model_type`, `voice`, and `speed`. To use the headless eSpeak CLI renderer, select it explicitly:
+
+```json
+{"text":"Hello.","model_type":"Espeak","voice":"en-us","speed":1.0}
+```
+
+Use `GET /api/v1/tts/voices?model_type=Espeak` to read the voice IDs reported by the installed eSpeak executable. This request runs its bounded voice-catalog command; it does not start the playback worker or synthesize audio. The returned IDs depend on the installed voice data. `GET /api/v1/tts/voices` without `model_type` reads metadata from an already-ready runtime and does not start one.
+
+The eSpeak renderer accepts speeds from `0.5` through `4.0`, where `1.0` maps to eSpeak rate `100`. The shared HTTP request schema accepts `0.25` through `4.0`; eSpeak returns `422` for values below its supported rate. An unknown voice or model type returns `422`. An unavailable voice catalog or executable returns `503`, and a synthesis timeout returns `504`. OpenVoice is unavailable in this release and returns `503` when selected.
+
+## Checks
+
+Run focused tests after setting up the documented dependencies:
 
 ```bash
-./venv/bin/python scripts/run_tests.py --llm-runtime-smoke
-./venv/bin/python scripts/run_tests.py --stt-runtime-smoke
-./venv/bin/python scripts/run_tests.py --art-runtime-smoke
-./venv/bin/python scripts/run_tests.py --tts-runtime-smoke
+.venv/bin/python -m pytest services/tests/test_service_bootstrap.py -q
 ```
 
-The bootstrap sanity check for the server surface is:
+The test suite includes runtime smoke and functional checks that can require sidecars, model files, or GPU capacity. Report skips and missing runtime resources as unverified; they are not evidence that a workload ran.
 
-```bash
-./venv/bin/python -m pytest services/tests/test_service_bootstrap.py -v
-```
+See the [repository README](../README.md) for dependency and Docker context, [CONTRIBUTING.md](../CONTRIBUTING.md) for contributor guidance, and [SECURITY.md](../SECURITY.md) for the security reporting process.
 
-When a change touches daemon routes, workers, or runtime coordination,
-pair those smoke checks with the relevant daemon-backed functional suites
-in `services/tests/`, especially:
+## LLM stream cancellation
 
-```bash
-./venv/bin/python -m pytest services/tests/test_tts_synthesize_functional.py -v --timeout=120
-./venv/bin/python -m pytest services/tests/test_llm_functional.py -v --timeout=900
-./venv/bin/python -m pytest services/tests/test_llm_tts_functional.py -v --timeout=1200
-./venv/bin/python -m pytest services/tests/test_stt_transcribe_functional.py -v --timeout=1200
-```
+Both message forms on `/api/v1/llm/stream` accept an optional `request_id`.
+Use 1–128 ASCII letters, digits, periods, underscores, colons or hyphens,
+starting with a letter or digit. The server generates a UUID when omitted
+and includes the selected ID in stream frames.
 
-The functional tests live under `services/tests/` because they validate the
-composed product boundary, even when the behavior under test is primarily
-owned by `services/`.
+Cancel an active stream with `POST /api/v1/daemon/runtimes/llm/cancel` and
+`{"request_id": "your-id"}`, using the same authentication and namespace.
+Unknown IDs and requests owned by another caller or namespace return 404.
+An ID cannot replace an already active request. Disconnecting also triggers
+cancellation, including while waiting for the first token. Each connection
+buffers at most eight subsequent messages during a stream; exceeding that
+limit closes the connection and cancels its active request.

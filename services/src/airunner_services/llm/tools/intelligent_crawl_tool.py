@@ -16,6 +16,7 @@ from airunner_services.tools.scrapy.spiders.llm_guided_spider import (
 from airunner_services.tools.scrapy.llm_crawler_controller import (
     LLMCrawlerController,
 )
+from airunner_services.tools.scrapy.settings import DOWNLOAD_MAXSIZE
 from airunner_services.url_safety import (
     OfflineModeBlocked,
     SSRFBlocked,
@@ -211,6 +212,8 @@ def intelligent_crawl(
             "LOG_LEVEL": "WARNING",  # Reduce Scrapy noise
             "ROBOTSTXT_OBEY": True,
             "CONCURRENT_REQUESTS": 1,
+            # Cap untrusted wire and decompressed bodies for this crawl.
+            "DOWNLOAD_MAXSIZE": DOWNLOAD_MAXSIZE,
             "DOWNLOAD_DELAY": 1.0,
             "DEPTH_LIMIT": max_depth,
             "CLOSESPIDER_PAGECOUNT": max_pages,

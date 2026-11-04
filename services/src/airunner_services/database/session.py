@@ -8,10 +8,13 @@ directly; the bridge layer wraps calls through HTTP instead.
 from __future__ import annotations
 
 import os
+import re
+import threading
 from contextlib import contextmanager
+from typing import Iterator
 
 from sqlalchemy import pool
-from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from airunner_services.database.db.engine import create_configured_engine
 from airunner_common.settings import AIRUNNER_DB_URL as DEFAULT_AIRUNNER_DB_URL
@@ -50,8 +53,24 @@ def _tenant_key() -> str:
     return tenant_schema_for_key(get_tenant_key())
 
 
+def _connection_url_and_args(db_url: str) -> tuple[str, dict]:
+    """Split one DB URL into a passwordless URL plus connect args.
+
+    The rendered URL string never embeds the secret; the password
+    travels to the driver via ``connect_args`` instead.
+    """
+    from sqlalchemy.engine import make_url
+
+    url = make_url(db_url)
+    connect_args: dict = {}
+    if url.password:
+        connect_args["password"] = url.password
+        url = url.set(password=None)
+    return url.render_as_string(hide_password=True), connect_args
+
+
 def _tenant_db_url(base_url: str, tenant_schema: str) -> str:
-    """Build one per-tenant database URL."""
+    """Build one per-tenant database URL without any embedded secret."""
     from sqlalchemy.engine import make_url
     from sqlalchemy.engine.url import URL
 
@@ -61,13 +80,21 @@ def _tenant_db_url(base_url: str, tenant_schema: str) -> str:
     new_url = URL.create(
         drivername=url.drivername,
         username=url.username,
-        password=url.password,
+        password=None,
         host=url.host,
         port=url.port,
         database=url.database,
         query=query,
     )
-    return new_url.render_as_string(hide_password=False)
+    rendered = new_url.render_as_string(hide_password=True)
+    assert url.password is None or url.password not in rendered
+    return rendered
+
+
+def _tenant_connect_args(base_url: str) -> dict:
+    """Return driver connect args carrying the base URL password."""
+    _, connect_args = _connection_url_and_args(base_url)
+    return connect_args
 
 
 # ---------------------------------------------------------------------------
@@ -76,6 +103,22 @@ def _tenant_db_url(base_url: str, tenant_schema: str) -> str:
 _engines: dict[str, object] = {}
 _sessions: dict[str, scoped_session] = {}
 _migrated_tenants: set[str] = set()
+_tenant_lock = threading.Lock()
+
+# PostgreSQL identifiers: at most 63 bytes.  The tenant value is
+# interpolated into ``text()`` SQL, so it must match this charset
+# exactly -- never pass user input through unvalidated.
+_TENANT_RE = re.compile(r"^[A-Za-z0-9_]{1,63}$")
+
+
+def _validate_tenant_identifier(tenant: str) -> str:
+    """Return ``tenant`` when it is safe to interpolate into SQL."""
+    if not isinstance(tenant, str) or not _TENANT_RE.match(tenant):
+        raise ValueError(
+            f"Invalid tenant identifier: {tenant!r}. "
+            "Expected 1-63 ASCII letters, digits, or underscores."
+        )
+    return tenant
 
 
 def _ensure_sqlite_parent_dir(url: str) -> None:
@@ -94,26 +137,40 @@ def _ensure_tenant_ready(tenant: str) -> None:
         return
 
     db_url = _db_url()
-    if not _is_postgres(db_url) or tenant in _migrated_tenants:
+    if not _is_postgres(db_url):
         return
+
+    # Fail fast on hostile tenants before any engine is created; the
+    # adjacent gate below re-validates immediately before interpolation.
+    _validate_tenant_identifier(tenant)
 
     from sqlalchemy import text
     from airunner_services.database.setup_database import (  # noqa: PLC0415
         setup_database,
     )
 
-    base_engine = create_configured_engine(
-        db_url,
-        poolclass=pool.NullPool,
-    )
-    with base_engine.begin() as connection:
-        connection.execute(
-            text(f"CREATE SCHEMA IF NOT EXISTS {tenant}")
+    with _tenant_lock:
+        if tenant in _migrated_tenants:
+            return
+        clean_url, connect_args = _connection_url_and_args(db_url)
+        base_engine = create_configured_engine(
+            clean_url,
+            poolclass=pool.NullPool,
+            connect_args=connect_args,
         )
+        with base_engine.begin() as connection:
+            # Adjacent gate: ``tenant`` is interpolated into SQL below,
+            # so it must pass the allowlist immediately before use.
+            _validate_tenant_identifier(tenant)
+            connection.execute(
+                text(f"CREATE SCHEMA IF NOT EXISTS {tenant}")
+            )
 
-    tenant_url = _tenant_db_url(db_url, tenant)
-    setup_database(db_url=tenant_url)
-    _migrated_tenants.add(tenant)
+        tenant_url = _tenant_db_url(db_url, tenant)
+        setup_database(
+            db_url=tenant_url, connect_args=_tenant_connect_args(db_url)
+        )
+        _migrated_tenants.add(tenant)
 
 
 def _get_engine(tenant: str):
@@ -124,6 +181,9 @@ def _get_engine(tenant: str):
         engine_key = "__shared__"
 
     if engine_key not in _engines:
+        # Passwords never live in the stored URL string; the driver
+        # receives them via connect_args.
+        db_url, db_connect_args = _connection_url_and_args(db_url)
         _ensure_sqlite_parent_dir(db_url)
 
         pool_size = int(os.environ.get("AIRUNNER_DB_POOL_SIZE", "20"))
@@ -143,6 +203,8 @@ def _get_engine(tenant: str):
             "max_overflow": max_overflow,
             "pool_timeout": pool_timeout,
         }
+        if db_connect_args:
+            engine_kwargs["connect_args"] = db_connect_args
         if pool_recycle > 0:
             engine_kwargs["pool_recycle"] = pool_recycle
 
@@ -167,7 +229,7 @@ def _get_session(tenant: str):
     return _sessions[tenant]
 
 
-def reset_engine():
+def reset_engine() -> None:
     """Reset engines and sessions so later calls recreate them."""
     global _engines, _sessions, _migrated_tenants
 
@@ -188,7 +250,7 @@ def reset_engine():
 
 
 @contextmanager
-def session_scope():
+def session_scope() -> Iterator[Session]:
     """Provide one transactional scope around a series of operations."""
     tenant = _tenant_key()
     Session = _get_session(tenant)
@@ -199,6 +261,9 @@ def session_scope():
 
             from sqlalchemy import text
 
+            # Adjacent gate: ``tenant`` is interpolated into SQL below,
+            # so it must pass the allowlist immediately before use.
+            _validate_tenant_identifier(tenant)
             session.execute(text(f"SET LOCAL search_path TO {tenant}"))
         yield session
         session.commit()

@@ -20,7 +20,11 @@ from artifact_runtime_gate import (
     ALLOWED_PACKAGE_TOKENS,
     CANDIDATE_DISTRIBUTIONS,
     UnsupportedSelection,
+    local_candidate_install_command,
+    locked_dependency_install_command,
+    optional_boundary_is_failure,
     plan_validation,
+    release_version_from_setup,
 )
 
 
@@ -80,6 +84,34 @@ class TestPackageSelection:
         )
 
 
+class TestStaticSetupMetadata:
+    """CI metadata checks must not execute setup.py or need setuptools."""
+
+    def test_reads_literal_release_version_without_importing_build_tools(
+        self, tmp_path
+    ):
+        setup = tmp_path / "setup.py"
+        setup.write_text(
+            "from setuptools import setup\n"
+            "_RELEASE_VERSION = '9.8.7'\n"
+            "setup()\n",
+            encoding="utf-8",
+        )
+        assert release_version_from_setup(setup) == "9.8.7"
+
+    def test_rejects_missing_or_nonliteral_release_version(self, tmp_path):
+        setup = tmp_path / "setup.py"
+        setup.write_text("VERSION = '1.0'\n", encoding="utf-8")
+        with pytest.raises(ValueError, match="_RELEASE_VERSION assignment"):
+            release_version_from_setup(setup)
+
+        setup.write_text(
+            "_RELEASE_VERSION = compute_version()\n", encoding="utf-8"
+        )
+        with pytest.raises(ValueError):
+            release_version_from_setup(setup)
+
+
 class TestProvenanceDecision:
     """Version equality alone must not satisfy candidate identity."""
 
@@ -108,11 +140,7 @@ class TestProvenanceDecision:
         assert self._first_party_origins(report, tmp_path) == []
 
     def test_same_version_artifact_from_the_index_is_rejected(self, tmp_path):
-        """The substitution this check exists to catch.
-
-        The version matches exactly, so a version-equality check would pass it,
-        but the wheel came from PyPI rather than the candidate directory.
-        """
+        """Same-version wheels must still come from the candidate directory."""
         report = {
             "install": [
                 {
@@ -150,3 +178,52 @@ class TestProvenanceDecision:
             ]
         }
         assert self._first_party_origins(report, tmp_path) == []
+
+
+class TestLockedInstallPlan:
+    """Candidate acceptance resolves locked deps locally and adds no deps."""
+
+    def test_dependency_install_requires_hashes_binary_wheels_and_no_index(self, tmp_path):
+        pip = tmp_path / "venv/bin/pip"
+        lock = tmp_path / "core/requirements.txt"
+        wheelhouse = tmp_path / "core"
+        command = locked_dependency_install_command(pip, lock, wheelhouse)
+        assert command[0] == str(pip)
+        assert "--no-index" in command
+        assert "--require-hashes" in command
+        assert "--only-binary=:all:" in command
+        assert command[-2:] == ["-r", str(lock.resolve())]
+
+    def test_candidate_install_uses_local_artifact_without_dependency_resolution(
+        self, tmp_path
+    ):
+        pip = tmp_path / "venv/bin/pip"
+        candidate = tmp_path / "dist"
+        report = tmp_path / "candidate-report.json"
+        command = local_candidate_install_command(
+            pip, candidate, report, "airunner-services==6.1.9"
+        )
+        assert "--no-index" in command
+        assert "--no-deps" in command
+        assert "--force-reinstall" in command
+        assert "--find-links" in command
+        assert command[-1] == "airunner-services==6.1.9"
+        assert str(report) in command
+
+class TestOptionalBoundaryStrictness:
+    """A skipped no-ML capability check is not a strict-gate pass."""
+
+    def test_pass_never_fails(self):
+        assert optional_boundary_is_failure(0, False) is False
+        assert optional_boundary_is_failure(0, True) is False
+
+    def test_skip_passes_without_strict_flag(self):
+        assert optional_boundary_is_failure(2, False) is False
+
+    def test_skip_fails_with_strict_flag(self):
+        assert optional_boundary_is_failure(2, True) is True
+
+    @pytest.mark.parametrize("returncode", [1, 3, 4, 5, 127])
+    def test_any_other_rc_always_fails(self, returncode):
+        assert optional_boundary_is_failure(returncode, False) is True
+        assert optional_boundary_is_failure(returncode, True) is True

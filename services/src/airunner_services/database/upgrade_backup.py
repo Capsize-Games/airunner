@@ -1,8 +1,12 @@
 """P07 SQLite backup and compatibility-aware recovery planning.
 
-Snapshots the database before migration; permits a restore only at
-identical migration heads, so a migrated database is never blindly
-downgraded. Only local ``sqlite:///`` URLs are supported.
+Snapshots the database synchronously before migration; startup waits for the
+complete snapshot before Alembic runs. SQLite may make concurrent writers wait
+during the copy depending on journal mode and contention. The connection uses
+SQLite's default five-second busy timeout, but the whole snapshot has no
+duration deadline or progress callback. Restore is permitted only at identical
+migration heads, so a migrated database is never blindly downgraded. Only
+local ``sqlite:///`` URLs are supported.
 """
 
 from __future__ import annotations
@@ -16,8 +20,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from alembic.runtime.migration import MigrationContext
-from sqlalchemy import create_engine
 from sqlalchemy.engine import url as sa_url
+from airunner_services.database.db.engine import create_metadata_engine
 
 
 class UpgradeBackupError(RuntimeError):
@@ -51,7 +55,7 @@ def _sqlite_path(db_url: str) -> Path:
     parsed = sa_url.make_url(db_url)
     name = parsed.database or ""
     if parsed.drivername != "sqlite" or not name or name == ":memory:":
-        raise UpgradeBackupError(f"only local sqlite URLs: {db_url}")
+        raise UpgradeBackupError("only local sqlite URLs are supported")
     return Path(name)
 
 
@@ -72,7 +76,7 @@ def _sha256_of(path: Path) -> str:
 
 def current_heads(db_url: str) -> tuple[str, ...]:
     """Return the sorted Alembic heads recorded in one database."""
-    engine = create_engine(db_url)
+    engine = create_metadata_engine(db_url)
     try:
         with engine.connect() as connection:
             context = MigrationContext.configure(connection)
@@ -106,7 +110,14 @@ def read_manifest(manifest: str | Path) -> BackupRecord:
 
 
 def _snapshot_sqlite(source: Path, dest: Path) -> None:
-    """Copy one SQLite file consistently via VACUUM INTO."""
+    """Synchronously copy one SQLite file consistently via VACUUM INTO.
+
+    Upgrade setup calls this before Alembic and waits until the full copy
+    finishes; restore uses the same copy path. VACUUM INTO has no progress
+    callback or total-duration deadline here. The SQLite connection retains its
+    default five-second busy timeout, and writer contention depends on journal
+    mode.
+    """
     quoted = str(dest).replace("'", "''")
     connection = sqlite3.connect(str(source))
     try:
@@ -163,11 +174,11 @@ def backup_database_for_upgrade(
 
 def default_backup_dir(db_url: str) -> str | None:
     """Return the backup dir for one URL, or None when not SQLite."""
+    if not db_url.startswith("sqlite:///"):
+        return None
     override = os.environ.get("AIRUNNER_UPGRADE_BACKUP_DIR")
     if override:
         return override
-    if not db_url.startswith("sqlite:///"):
-        return None
     parent = os.path.dirname(db_url.replace("sqlite:///", "", 1))
     return os.path.join(parent, "backups") if parent else None
 

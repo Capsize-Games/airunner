@@ -1,10 +1,8 @@
-"""Packaging constraint tests (GitHub issue #2057).
+"""Build backend pin and historical P02 lock evidence.
 
-The pinned ``torch==2.13.0+cu129`` wheel's runtime metadata requires
-``setuptools<82``. Every build-system file that carries a setuptools
-requirement must therefore stay below 82, or ``pip check`` fails on any
-install that includes the ML runtime. This file source-scans the packaging
-files so a future bump (e.g. PR #2022 wanting ``>=84``) is caught in CI.
+The active isolated build requirements use the reviewed setuptools 84.2.1
+backend. The preserved historical desktop runtime lock still records
+setuptools 81.0.0 and is not an active release lock.
 """
 
 from __future__ import annotations
@@ -20,29 +18,20 @@ _BUILD_SYSTEM_FILES = (
     _PROJECT_ROOT / "services" / "pyproject.toml",
     _PROJECT_ROOT / "native" / "pyproject.toml",
 )
+_HISTORICAL_RUNTIME_LOCK = (
+    _PROJECT_ROOT
+    / "package"
+    / "constraints-linux-nvidia-cu129-historical-desktop.txt"
+)
 
-def test_build_system_setuptools_below_82() -> None:
-    """Every build-system file must keep setuptools below 82 while torch is
-    pinned below 2.14 (issue #2057)."""
+def test_build_system_uses_reviewed_setuptools_backend() -> None:
+    """Pin every active build system to the reviewed backend revision."""
     assert _build_system_files_exist()
 
     for path in _BUILD_SYSTEM_FILES:
         source = path.read_text(encoding="utf-8")
-        match = re.search(r'setuptools\s*>=?\s*([0-9]+(?:\.[0-9]+)*)', source)
-        assert match is not None, (
-            f"{path.name} carries no setuptools requirement"
-        )
-        version_str = match.group(1)
-        major = int(version_str.split(".")[0])
-        assert major < 82, (
-            f"{path.name} requests setuptools>={version_str} (>=82) which "
-            "conflicts with the pinned torch wheel requiring setuptools<82 "
-            "(issue #2057)"
-        )
-        # The requirement must also carry an explicit upper bound <82.
-        assert re.search(r'setuptools\s*>=?\s*[0-9]+(?:\.[0-9]+)*\s*,\s*<82', source), (
-            f"{path.name} must pin setuptools with an explicit <82 upper "
-            "bound (issue #2057)"
+        assert '"setuptools==84.2.1"' in source, (
+            f"{path.name} must pin the reviewed setuptools 84.2.1 backend"
         )
 
 
@@ -50,28 +39,39 @@ def test_build_system_setuptools_below_82() -> None:
 #: copy (issue #2038/#2197 -- no more single canonical
 #: shared/airunner_common/package_metadata.py source to scan instead).
 _DEV_REQUIREMENTS_FILES = (
-    _PROJECT_ROOT / "setup.py",
     _PROJECT_ROOT / "services" / "setup.py",
     _PROJECT_ROOT / "native" / "setup.py",
 )
 
 
-def test_no_setuptools_pin_above_82_in_dev_requirements() -> None:
-    """DEVELOPMENT_REQUIREMENTS must not request setuptools>=82 either."""
+def test_setup_scripts_do_not_add_setuptools_runtime_requirement() -> None:
+    """Setup scripts must leave the backend out of runtime dependencies."""
     for path in _DEV_REQUIREMENTS_FILES:
         source = path.read_text(encoding="utf-8")
         for line in source.splitlines():
             if "setuptools" not in line:
                 continue
-            match = re.search(
-                r'setuptools\s*>=?\s*([0-9]+(?:\.[0-9]+)*)', line
+            assert not re.search(r"setuptools\s*[<=>~!]", line), (
+                f"{path}: build backend appears as a runtime requirement"
             )
-            if match and int(match.group(1).split(".")[0]) >= 82:
-                raise AssertionError(
-                    f"{path}: DEVELOPMENT_REQUIREMENTS pins "
-                    f"setuptools>={match.group(1)} which conflicts with "
-                    "torch's setuptools<82 requirement (issue #2057)"
-                )
+
+
+def test_historical_desktop_lock_keeps_its_hashed_snapshot() -> None:
+    """Keep historical lock evidence without treating it as active config."""
+    source = _HISTORICAL_RUNTIME_LOCK.read_text(encoding="utf-8")
+    match = re.search(r"(?m)^setuptools==([0-9]+(?:\.[0-9]+)*) \\", source)
+    assert match is not None, "Linux runtime lock must pin setuptools exactly"
+    locked = tuple(int(part) for part in match.group(1).split("."))
+    assert locked == (81, 0, 0), (
+        "historical desktop lock should retain its original setuptools pin"
+    )
+    start = match.start()
+    end = re.search(r"(?m)^[A-Za-z0-9_.-]+==", source[match.end():])
+    block = source[start:]
+    if end is not None:
+        block = source[start:match.end() + end.start()]
+    hashes = re.findall(r"--hash=sha256:[0-9a-f]{64}", block)
+    assert len(hashes) >= 2, "setuptools lock entry needs wheel and sdist hashes"
 
 
 def _build_system_files_exist() -> bool:

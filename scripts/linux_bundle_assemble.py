@@ -37,7 +37,7 @@ _bundle_root()
 
 from {module} import {function}
 
-{function}()
+raise SystemExit({function}())
 '''
 
 
@@ -66,11 +66,15 @@ def _tool_args(
     return command
 
 
-def _data_args(spec: dict[str, Any], repo_root: Path) -> list[str]:
+def _data_args(
+    spec: dict[str, Any], repo_root: Path, include_content_policy: bool = False
+) -> list[str]:
     """Return the --add-data flags for collect-staged entries."""
     args: list[str] = []
     for entry in spec.get("data", []):
         if str(entry.get("stage")) != "collect":
+            continue
+        if entry.get("content_policy") and not include_content_policy:
             continue
         for path, dest in expand_data(entry, repo_root):
             args.extend(["--add-data", f"{path}:{dest}"])
@@ -134,12 +138,17 @@ def build_command(
     distpath: Path,
     workpath: Path,
     pyinstaller: str,
+    include_content_policy: bool = False,
 ) -> list[str]:
     """Return the exact PyInstaller command for this spec."""
     command = _tool_args(pyinstaller, spec["bundle"], distpath, workpath)
-    for extra in ("services/src", "native/src"):
+    for extra in (
+        "services/src",
+        "native/src",
+        *[str(path) for path in spec.get("profile", {}).get("extra_paths", [])],
+    ):
         command.extend(["--paths", str(repo_root / extra)])
-    command.extend(_data_args(spec, repo_root))
+    command.extend(_data_args(spec, repo_root, include_content_policy))
     command.extend(_code_args(spec))
     command.extend(_hook_args(spec, repo_root))
     command.extend(_additional_hooks_args(spec, repo_root))

@@ -14,6 +14,9 @@ from .persistence_query import apply_eager_load, apply_order_by
 from .persistence_registry import model_class
 from .persistence_serialization import normalized_values, serialize_record
 
+_DEFAULT_QUERY_LIMIT = 100
+_MAX_QUERY_LIMIT = 1000
+
 
 def query_options(query, model_cls: type[Any], body: QueryRequest):
     """Apply shared query options for one domain resource request."""
@@ -40,9 +43,18 @@ def query_records(
             if record is not None:
                 payload = serialize_record(record, eager_load=body.eager_load)
             return {"record": payload}
-        if body.limit is not None and body.limit >= 0:
-            query = query.limit(body.limit)
-        records = query.all()
+        limit = (
+            _DEFAULT_QUERY_LIMIT if body.limit is None else body.limit
+        )
+        if (
+            body.offset < 0
+            or limit < 1
+            or limit > _MAX_QUERY_LIMIT
+        ):
+            raise HTTPException(
+                status_code=400, detail="invalid_pagination"
+            )
+        records = query.offset(body.offset).limit(limit).all()
         return {
             "records": [
                 serialize_record(item, eager_load=body.eager_load)
@@ -114,6 +126,16 @@ def delete_records(
             session.delete(record)
         session.flush()
     return {"deleted": True, "count": count}
+
+
+def records_to_delete(domain: str, resource: str, filters: dict[str, Any]) -> list[int]:
+    """Snapshot primary keys for a bulk delete before worker dispatch."""
+    resource_model = model_class(domain, resource)
+    with session_scope() as session:
+        query = session.query(resource_model)
+        if filters:
+            query = query.filter_by(**filters)
+        return [int(record.id) for record in query.all()]
 
 
 def get_singleton(

@@ -17,6 +17,7 @@ settings.pickle
 .run
 *egg-info*
 .venv
+.ci-inputs/
 src/airunner/scripts/weights
 gfpgan
 test.json

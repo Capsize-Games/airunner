@@ -1,0 +1,122 @@
+{
+  "artifact_sources": [
+    {
+      "filename": "altgraph-0.17.5-py2.py3-none-any.whl",
+      "name": "altgraph",
+      "sha256": "f3a22400bce1b0c701683820ac4f3b159cd301acab067c51c653e06961600597",
+      "size_bytes": 21228,
+      "source": {
+        "filename": "altgraph-0.17.5-py2.py3-none-any.whl",
+        "kind": "https",
+        "sha256": "f3a22400bce1b0c701683820ac4f3b159cd301acab067c51c653e06961600597",
+        "size_bytes": 21228,
+        "url": "https://files.pythonhosted.org/packages/a9/ba/000a1996d4308bc65120167c21241a3b205464a2e0b58deda26ae8ac21d1/altgraph-0.17.5-py2.py3-none-any.whl"
+      },
+      "version": "0.17.5",
+      "wheel_tags": [
+        "py2.py3-none-any"
+      ]
+    },
+    {
+      "filename": "packaging-26.3-py3-none-any.whl",
+      "name": "packaging",
+      "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+      "size_bytes": 129956,
+      "source": {
+        "filename": "packaging-26.3-py3-none-any.whl",
+        "kind": "https",
+        "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+        "size_bytes": 129956,
+        "url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl"
+      },
+      "version": "26.3",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "filename": "pyinstaller-6.12.0-py3-none-manylinux2014_x86_64.whl",
+      "name": "pyinstaller",
+      "sha256": "a2abf5fde31a8b38b6df7939bcef8ac1d0c51e97e25317ce3555cd675259750f",
+      "size_bytes": 716959,
+      "source": {
+        "filename": "pyinstaller-6.12.0-py3-none-manylinux2014_x86_64.whl",
+        "kind": "https",
+        "sha256": "a2abf5fde31a8b38b6df7939bcef8ac1d0c51e97e25317ce3555cd675259750f",
+        "size_bytes": 716959,
+        "url": "https://files.pythonhosted.org/packages/80/2b/14404f2dc95d1ec94d08879c62a76d5f26a176fab99fb023c2c70d2ff500/pyinstaller-6.12.0-py3-none-manylinux2014_x86_64.whl"
+      },
+      "version": "6.12.0",
+      "wheel_tags": [
+        "py3-none-manylinux2014_x86_64"
+      ]
+    },
+    {
+      "filename": "pyinstaller_hooks_contrib-2026.9-py3-none-any.whl",
+      "name": "pyinstaller-hooks-contrib",
+      "sha256": "fb3e67dd64122561724c48ad0366ac9e8c16e638b63bf7d85de03bf3fdbf06c3",
+      "size_bytes": 462931,
+      "source": {
+        "filename": "pyinstaller_hooks_contrib-2026.9-py3-none-any.whl",
+        "kind": "https",
+        "sha256": "fb3e67dd64122561724c48ad0366ac9e8c16e638b63bf7d85de03bf3fdbf06c3",
+        "size_bytes": 462931,
+        "url": "https://files.pythonhosted.org/packages/93/fe/ded0e20de0580257d97dbabb4db7ab4d96ad8ade7d41149e66308057cf52/pyinstaller_hooks_contrib-2026.9-py3-none-any.whl"
+      },
+      "version": "2026.9",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "filename": "setuptools-84.2.1-py3-none-any.whl",
+      "name": "setuptools",
+      "sha256": "ca140b45d5325a9478f880e351484f62fef15f336462e449ca0c03c873d589c2",
+      "size_bytes": 876263,
+      "source": {
+        "filename": "setuptools-84.2.1-py3-none-any.whl",
+        "kind": "https",
+        "sha256": "ca140b45d5325a9478f880e351484f62fef15f336462e449ca0c03c873d589c2",
+        "size_bytes": 876263,
+        "url": "https://files.pythonhosted.org/packages/ef/55/6dc6d6bb953bdfc52519a0059592c52b6e3b8ad51cf8256dffceb55b0610/setuptools-84.2.1-py3-none-any.whl"
+      },
+      "version": "84.2.1",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "filename": "wheel-0.48.0-py3-none-any.whl",
+      "name": "wheel",
+      "sha256": "3217dcc807155e45db462d7ef2431f5ddda0d7273b700d05a67b271ceb1287ab",
+      "size_bytes": 33320,
+      "source": {
+        "filename": "wheel-0.48.0-py3-none-any.whl",
+        "kind": "https",
+        "sha256": "3217dcc807155e45db462d7ef2431f5ddda0d7273b700d05a67b271ceb1287ab",
+        "size_bytes": 33320,
+        "url": "https://files.pythonhosted.org/packages/2e/29/69cfbb602cd91690c55d38ba9fe53e6a7e76a6fa647bf38f19c138d25449/wheel-0.48.0-py3-none-any.whl"
+      },
+      "version": "0.48.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    }
+  ],
+  "prohibitions": [
+    "Do not install build tools before the selected 243-pin V4 runtime lock.",
+    "Do not resolve dependencies from an index.",
+    "Install this exact closure using --no-deps --require-hashes after the runtime profile.",
+    "These packages are build inputs, not runtime dependencies."
+  ],
+  "schema_version": 1,
+  "selected_count": 6,
+  "selected_lock_sha256": "4345ab3cec69c0afe5053fd4c10e57f811d62f5be810ff4c2c57b2cbcee6a64b",
+  "source_review": {
+    "core_freeze_review": "release-planning/services/input-reviews/core-linux-freeze-inputs.md",
+    "core_inventory": "release-planning/services/input-reviews/core-linux-dependency-inventory.json",
+    "status": "CORE source and license review is recorded for all six exact pins. The staged Linux wheels passed pinned size/SHA-256, safe archive path, unique-member, WHEEL/METADATA identity, RECORD, and license-member checks before the isolated candidate install. Static review did not run source or build hooks; after review, the layered candidate invoked only pytest --version, PyInstaller --version, and pip consistency/tests."
+  },
+  "status": "candidate-only; not activated",
+  "target": "Linux x86_64, CPython 3.13; PyInstaller build inputs only"
+}

@@ -1,28 +1,23 @@
-"""Coverage report helper for AI Runner test suites."""
+"""Coverage report helper for the services-only test suite."""
 
 from __future__ import annotations
 
 import argparse
 import subprocess
-import sys
 from pathlib import Path
 
 
-def _pytest_args(gui_functional: bool, component: str | None) -> list[str]:
+def _pytest_args(component: str | None) -> list[str]:
     """Build one pytest target list for coverage runs."""
-    if not gui_functional:
-        return []
-
-    base_path = Path("src/airunner/components")
+    base_path = Path("services") / "tests"
     if component:
-        gui_path = base_path / component / "gui"
-        if not gui_path.exists():
+        component_path = base_path / component
+        if not component_path.exists():
             raise SystemExit(
-                f"GUI component '{component}' is not configured for coverage"
+                f"Component '{component}' is not configured for coverage"
             )
-        return [str(gui_path), "-m", "gui_functional"]
-
-    return [str(base_path), "-m", "gui_functional"]
+        return [str(component_path)]
+    return [str(base_path)]
 
 
 def _run_command(cmd: list[str], report_file) -> None:
@@ -37,21 +32,16 @@ def _run_command(cmd: list[str], report_file) -> None:
 
 
 def main() -> None:
-    """Run coverage for the default or GUI functional test suite."""
+    """Run coverage for the services test suite."""
     parser = argparse.ArgumentParser(description="Run AI Runner coverage")
-    parser.add_argument(
-        "--gui-functional",
-        action="store_true",
-        help="Run coverage for headless GUI functional tests only",
-    )
     parser.add_argument(
         "--component",
         type=str,
-        help="Optional component name for GUI functional coverage",
+        help="Optional services test subdirectory for coverage",
     )
     args = parser.parse_args()
 
-    pytest_args = _pytest_args(args.gui_functional, args.component)
+    pytest_args = _pytest_args(args.component)
     commands = [
         ["coverage", "erase"],
         ["coverage", "run", "-m", "pytest", *pytest_args],

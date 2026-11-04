@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import base64
 import io
-import json
 import os
+import threading
 from queue import Empty, Queue
 from typing import Any, Callable, Iterable, Optional
 
@@ -23,50 +23,61 @@ from airunner_services.runtimes.contracts import (
     ArtInvocationRequest,
     LLMInvocationRequest,
     RuntimeAction,
-    RuntimeDescriptor,
-    RuntimeHealth,
-    RuntimeHealthStatus,
     RuntimeKind,
     RuntimeMode,
-    STTInvocationRequest,
+    RuntimeHealthStatus,
     TTSInvocationRequest,
-    TransportKind,
 )
 from airunner_services.runtimes.registry import RuntimeRegistry, RuntimeRoute
 from airunner_services.runtimes.art_daemon_runtime_settings import (
     resolve_art_daemon_runtime_settings,
 )
 from airunner_services.utils.application.get_logger import get_logger
+from airunner_services.runtimes.local_fallback_art_helpers import (
+    _resolve_art_active_rect,
+    _resolve_art_generator_section,
+    _resolve_art_operation,
+    _resolve_art_pipeline_action,
+    _resolve_art_request_image,
+    _resolve_art_request_mask,
+    _resolve_art_request_outpaint_mask_blur,
+    _resolve_art_request_scheduler,
+    _resolve_art_request_strength,
+    _resolve_art_request_version,
+)
+from airunner_services.runtimes.local_fallback_stt_client import (
+    MAX_LOCAL_FALLBACK_AUDIO_BYTES,
+    LocalFallbackSTTClient,
+    _build_stt_service,
+)
+from airunner_services.runtimes.signal_runtime_client import (
+    DEFAULT_TIMEOUT_SECONDS,
+    HealthProvider,
+    LoadedModelProvider,
+    _SignalRuntimeClient,
+    _model_status_value,
+    _resolve_model_type,
+)
+from airunner_services.runtimes.tts_capabilities import (
+    OPENVOICE_DEFERRED_DETAILS,
+    TTS_BACKEND_UNAVAILABLE_CODE,
+    deferred_tts_metadata,
+    is_deferred_tts_model_type,
+    normalize_tts_model_type,
+)
+from airunner_services.runtimes.espeak_cli_renderer import (
+    EspeakCliRenderer,
+    EspeakRenderError,
+)
 
 logger = get_logger(__name__)
 
 DEFAULT_PROVIDER = "local"
 ProgressCallback = Callable[[dict[str, Any]], None]
+_UNRESOLVED_WORKER = object()
 
 LLMRequestFactory = Callable[[LLMInvocationRequest], Any]
-HealthProvider = Callable[[], RuntimeHealthStatus]
 
-
-def _default_timeout_seconds() -> float:
-    """Return the local-fallback runtime timeout in seconds."""
-    configured = os.environ.get(
-        "AIRUNNER_LOCAL_FALLBACK_TIMEOUT_SECONDS",
-        "120",
-    )
-    try:
-        return float(configured)
-    except (TypeError, ValueError):
-        return 120.0
-
-
-DEFAULT_TIMEOUT_SECONDS = _default_timeout_seconds()
-
-
-def _build_signal_mediator() -> Any:
-    """Create the default signal mediator lazily."""
-    from airunner_services.utils.application.signal_mediator import SignalMediator
-
-    return SignalMediator()
 
 
 def _build_llm_service() -> Any:
@@ -75,12 +86,6 @@ def _build_llm_service() -> Any:
 
     return LLMAPIService()
 
-
-def _build_stt_service() -> Any:
-    """Create the default STT API service lazily."""
-    from airunner_services.api.services.stt_services import STTAPIService
-
-    return STTAPIService()
 
 
 def _build_tts_service() -> Any:
@@ -97,122 +102,6 @@ def _build_art_service() -> Any:
     return ARTAPIService()
 
 
-def _resolve_art_request_version(metadata: dict[str, Any]) -> str:
-    """Return the model version carried by one art invocation."""
-    from airunner_common.contract_enums import normalize_art_version
-
-    version = str(metadata.get("version") or "").strip()
-    if version:
-        return normalize_art_version(version)
-    from airunner_common.contract_enums import DEFAULT_ART_VERSION
-
-    return DEFAULT_ART_VERSION.value
-
-
-def _resolve_art_request_scheduler(metadata: dict[str, Any]) -> str:
-    """Return the scheduler carried by one art invocation."""
-    scheduler = str(metadata.get("scheduler") or "").strip()
-    if scheduler:
-        return scheduler
-
-    from airunner_common.settings import AIRUNNER_DEFAULT_SCHEDULER
-
-    return AIRUNNER_DEFAULT_SCHEDULER
-
-
-def _resolve_art_pipeline_action(metadata: dict[str, Any]) -> str:
-    """Return the requested art pipeline action."""
-    pipeline_action = str(metadata.get("pipeline") or "").strip()
-    if pipeline_action:
-        return pipeline_action
-    return "txt2img"
-
-
-def _resolve_art_generator_section(metadata: dict[str, Any]) -> Any:
-    """Return the requested generator section for one art job."""
-    from airunner_common.contract_enums import GeneratorSection
-
-    pipeline_action = _resolve_art_pipeline_action(metadata)
-    try:
-        return GeneratorSection(pipeline_action)
-    except ValueError:
-        return GeneratorSection.TXT2IMG
-
-
-def _resolve_art_request_strength(metadata: dict[str, Any]) -> float:
-    """Return one normalized strength value for image-conditioned jobs."""
-    try:
-        return float(metadata.get("strength"))
-    except (TypeError, ValueError):
-        return 0.5
-
-
-def _decode_art_metadata_image(encoded_image: Any) -> Any:
-    """Return one decoded PIL image from art request metadata."""
-    if not encoded_image:
-        return None
-    try:
-        image_bytes = base64.b64decode(encoded_image)
-        with Image.open(io.BytesIO(image_bytes)) as image:
-            return image.convert("RGB")
-    except Exception:
-        return None
-
-
-def _resolve_art_request_image(metadata: dict[str, Any]) -> Any:
-    """Return one decoded PIL image carried by the art invocation."""
-    return _decode_art_metadata_image(metadata.get("image_b64"))
-
-
-def _resolve_art_request_mask(metadata: dict[str, Any]) -> Any:
-    """Return one decoded mask image carried by the art invocation."""
-    return _decode_art_metadata_image(metadata.get("mask_b64"))
-
-
-def _resolve_art_request_outpaint_mask_blur(
-    metadata: dict[str, Any],
-) -> int:
-    """Return the requested outpaint blur radius."""
-    try:
-        return int(metadata.get("outpaint_mask_blur") or 0)
-    except (TypeError, ValueError):
-        return 0
-
-
-def _resolve_art_active_rect(metadata: dict[str, Any]) -> Any:
-    """Return one decoded active rectangle for outpaint requests."""
-    raw_rect = metadata.get("active_rect")
-    if not raw_rect:
-        return None
-
-    if isinstance(raw_rect, str):
-        try:
-            raw_rect = json.loads(raw_rect)
-        except ValueError:
-            return None
-
-    if not isinstance(raw_rect, dict):
-        return None
-
-    try:
-        from airunner_services.art.managers.stablediffusion.rect import Rect
-
-        return Rect(
-            int(raw_rect.get("x", 0)),
-            int(raw_rect.get("y", 0)),
-            int(raw_rect.get("width", 0)),
-            int(raw_rect.get("height", 0)),
-        )
-    except Exception:
-        return None
-
-
-def _resolve_art_operation(metadata: dict[str, Any]) -> str:
-    """Return the requested art operation."""
-    operation = str(metadata.get("operation") or "generate").strip()
-    return operation or "generate"
-
-
 def _build_llm_request(invocation: LLMInvocationRequest) -> Any:
     """Create an LLM request object for the legacy signal path."""
     from airunner_services.llm.llm_request import LLMRequest
@@ -226,191 +115,15 @@ def _build_llm_request(invocation: LLMInvocationRequest) -> Any:
     return request
 
 
-def _resolve_model_type(name: str) -> Any:
-    """Resolve a model type lazily to avoid eager imports."""
-    from airunner_common.contract_enums import ModelType
 
-    return getattr(ModelType, name)
+def _resolve_served_model_id(model_path: str) -> str:
+    """Resolve a known local model id from one loaded model path."""
+    from airunner_services.llm.provider_config import LLMProviderConfig
 
-
-def _model_health_status(model_status: Any) -> RuntimeHealthStatus:
-    """Translate application model status into runtime health status."""
-    from airunner_common.contract_enums import ModelStatus
-
-    status_map = {
-        None: RuntimeHealthStatus.UNKNOWN,
-        ModelStatus.LOADING: RuntimeHealthStatus.STARTING,
-        ModelStatus.LOADED: RuntimeHealthStatus.READY,
-        ModelStatus.READY: RuntimeHealthStatus.READY,
-        ModelStatus.FAILED: RuntimeHealthStatus.FAILED,
-        ModelStatus.UNLOADED: RuntimeHealthStatus.STOPPED,
-    }
-    return status_map.get(model_status, RuntimeHealthStatus.UNKNOWN)
-
-
-def _model_status_value(model_status: Any) -> str:
-    """Return a stable string representation of a model status."""
-    return getattr(model_status, "value", "")
-
-
-class _SignalRuntimeClient(RuntimeClient):
-    """Common helpers for signal-backed local fallback clients."""
-
-    def __init__(
-        self,
-        runtime: RuntimeKind,
-        provider: str,
-        *,
-        signal_source: Any = None,
-        mediator: Any = None,
-        timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
-        health_provider: Optional[HealthProvider] = None,
-        supports_streaming: bool = False,
-        allows_model_control: bool = True,
-        model_type: Any = None,
-    ) -> None:
-        self.descriptor = RuntimeDescriptor(
-            runtime=runtime,
-            provider=provider,
-            mode=RuntimeMode.LOCAL_FALLBACK,
-            transport=TransportKind.IN_PROCESS,
-            supports_streaming=supports_streaming,
-            allows_model_control=allows_model_control,
-        )
-        self._signal_source = signal_source or _build_signal_mediator()
-        self._mediator = mediator or _build_signal_mediator()
-        self._timeout_seconds = timeout_seconds
-        self._health_provider = health_provider
-        self._last_model_status = None
-        self._model_type = model_type
-
-    def healthcheck(self) -> RuntimeHealth:
-        """Return current health state for the runtime client."""
-        if self._health_provider is not None:
-            return RuntimeHealth(
-                descriptor=self.descriptor,
-                status=self._health_provider(),
-            )
-        return RuntimeHealth(
-            descriptor=self.descriptor,
-            status=_model_health_status(self._last_model_status),
-            details=_model_status_value(self._last_model_status),
-            metadata=self._status_metadata(),
-        )
-
-    def _emit_signal(self, code: Any, data: Optional[dict[str, Any]] = None):
-        """Emit a signal through the configured source."""
-        emitter = getattr(self._signal_source, "emit_signal", None)
-        if emitter is not None:
-            emitter(code, data or {})
-            return
-        self._mediator.emit_signal(code, data or {})
-
-    def _status_response(self, request_id: str) -> ResponseEnvelope:
-        """Return a response envelope for the current client status."""
-        health = self.healthcheck()
-        return ResponseEnvelope(
-            request_id=request_id,
-            status=EnvelopeStatus.SUCCEEDED,
-            payload={"status": health.status.value},
-            metadata=health.metadata,
-        )
-
-    def _status_metadata(self) -> dict[str, Any]:
-        """Return cached model metadata when available."""
-        if self._last_model_status is None:
-            return {}
-        return {"model_status": _model_status_value(self._last_model_status)}
-
-    def _cache_status(self, model_status: Any) -> None:
-        """Track the most recent model status for health checks."""
-        self._last_model_status = model_status
-
-    def _matches_model(self, model: Any) -> bool:
-        """Return True when a status event targets this client's model."""
-        if self._model_type is None:
-            return True
-        expected = getattr(self._model_type, "value", self._model_type)
-        actual = getattr(model, "value", model)
-        return actual == expected
-
-    def _wait_for_model_status(
-        self,
-        request_id: str,
-        *,
-        emit_code: Any,
-        emit_data: Optional[dict[str, Any]],
-        success_statuses: tuple[Any, ...],
-        timeout_code: str,
-        failure_code: str,
-        action_name: str,
-    ) -> ResponseEnvelope:
-        """Emit a control signal and wait for the matching model status."""
-        from airunner_common.contract_enums import ModelStatus, SignalCode
-
-        status_queue: Queue[Any] = Queue()
-
-        def on_status_changed(data: dict[str, Any]) -> None:
-            model = data.get("model")
-            if not self._matches_model(model):
-                return
-            status = data.get("status")
-            self._cache_status(status)
-            if status in success_statuses or status is ModelStatus.FAILED:
-                status_queue.put(status)
-
-        self._mediator.register(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
-            on_status_changed,
-        )
-        try:
-            self._emit_signal(emit_code, emit_data)
-            try:
-                status = status_queue.get(timeout=self._timeout_seconds)
-            except Empty:
-                return self._failure_response(
-                    request_id,
-                    timeout_code,
-                    f"{action_name} timed out",
-                    retryable=True,
-                )
-        finally:
-            self._mediator.unregister(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
-                on_status_changed,
-            )
-
-        if status is ModelStatus.FAILED:
-            return self._failure_response(
-                request_id,
-                failure_code,
-                f"{action_name} failed",
-            )
-        return ResponseEnvelope(
-            request_id=request_id,
-            status=EnvelopeStatus.SUCCEEDED,
-            payload={"model_status": _model_status_value(status)},
-            metadata=self._status_metadata(),
-        )
-
-    @staticmethod
-    def _failure_response(
-        request_id: str,
-        code: str,
-        message: str,
-        *,
-        retryable: bool = False,
-    ) -> ResponseEnvelope:
-        """Create a failure response envelope."""
-        return ResponseEnvelope(
-            request_id=request_id,
-            status=EnvelopeStatus.FAILED,
-            error=ErrorEnvelope(
-                code=code,
-                message=message,
-                retryable=retryable,
-            ),
-        )
+    resolved = LLMProviderConfig.resolve_model_id(
+        "local", os.path.basename(model_path)
+    )
+    return resolved or ""
 
 
 class LocalFallbackLLMClient(_SignalRuntimeClient):
@@ -424,6 +137,7 @@ class LocalFallbackLLMClient(_SignalRuntimeClient):
         mediator: Any = None,
         llm_request_factory: Optional[LLMRequestFactory] = None,
         health_provider: Optional[HealthProvider] = None,
+        loaded_model_provider: Optional[LoadedModelProvider] = None,
     ) -> None:
         llm_service = llm_service or _build_llm_service()
         super().__init__(
@@ -435,9 +149,94 @@ class LocalFallbackLLMClient(_SignalRuntimeClient):
             health_provider=health_provider,
             allows_model_control=True,
             model_type=_resolve_model_type("LLM"),
+            loaded_model_provider=loaded_model_provider,
         )
         self._llm_service = llm_service
         self._llm_request_factory = llm_request_factory or _build_llm_request
+
+    def _probe_loaded_model(self) -> dict[str, Any]:
+        """Return the model the LLM worker currently has loaded."""
+        provided = super()._probe_loaded_model()
+        if provided:
+            return provided
+        return self._worker_loaded_model()
+
+    def _worker_loaded_model(self) -> dict[str, Any]:
+        """Build served-model metadata from real worker state."""
+        model_path = self._current_worker_model_path()
+        if not model_path:
+            return {}
+        metadata: dict[str, Any] = {}
+        model_id = _resolve_served_model_id(model_path)
+        if model_id:
+            metadata["model_id"] = model_id
+        metadata["model_path"] = model_path
+        return metadata
+
+    def _current_worker_model_path(self) -> str:
+        """Read the loaded path without creating a worker/manager."""
+        return self._reachable_worker_model_path() or ""
+
+    def _reachable_worker_model_path(self) -> Optional[str]:
+        """Return worker path, "" if none, None if unknown.
+
+        None is no evidence; "" proves no model is loaded."""
+        manager = self._reachable_model_manager()
+        if manager is None:
+            return None
+        missing = object()
+        try:
+            model_path = getattr(manager, "_current_model_path", missing)
+        except Exception:
+            return None
+        if model_path is missing:
+            return None
+        if model_path is None:
+            return ""
+        if isinstance(model_path, str):
+            return model_path.strip()
+        return None
+
+    def _reachable_model_manager(self) -> Any:
+        """Return the live model manager without creating one."""
+        try:
+            worker_manager = getattr(
+                self._signal_source, "_worker_manager", None
+            )
+            if callable(worker_manager):
+                worker_manager = worker_manager()
+            worker = getattr(
+                worker_manager, "_llm_generate_worker", None
+            )
+            return getattr(worker, "_model_manager", None)
+        except Exception:
+            return None
+
+    def _revalidate_loaded_model(self) -> None:
+        """Re-check the snapshot against reachable worker state."""
+        if self._loaded_model_provider is not None:
+            super()._revalidate_loaded_model()
+            return
+        if not self._loaded_model:
+            return
+        model_path = self._reachable_worker_model_path()
+        if model_path is None:
+            return
+        if not model_path:
+            self._mark_silently_unloaded()
+            return
+        if not self._snapshot_matches(model_path):
+            self._loaded_model = self._worker_loaded_model()
+
+    def _snapshot_matches(self, model_path: str) -> bool:
+        """Return True when the snapshot names this model path."""
+        snapshot_path = self._loaded_model.get("model_path")
+        if isinstance(snapshot_path, str) and snapshot_path:
+            return snapshot_path == model_path
+        snapshot_id = self._loaded_model.get("model_id")
+        if isinstance(snapshot_id, str) and snapshot_id:
+            return snapshot_id == _resolve_served_model_id(model_path)
+        return True
 
     def invoke(self, request: RequestEnvelope) -> ResponseEnvelope:
         """Invoke the legacy LLM service or model-control path."""
@@ -670,162 +469,9 @@ class LocalFallbackLLMClient(_SignalRuntimeClient):
         )
 
 
-class LocalFallbackSTTClient(_SignalRuntimeClient):
-    """Bridge STT runtime requests to the current synchronous signal path."""
-
-    def __init__(
-        self,
-        provider: str = DEFAULT_PROVIDER,
-        timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
-        signal_source: Any = None,
-        mediator: Any = None,
-        health_provider: Optional[HealthProvider] = None,
-    ) -> None:
-        super().__init__(
-            RuntimeKind.STT,
-            provider,
-            signal_source=signal_source or _build_stt_service(),
-            mediator=mediator,
-            timeout_seconds=timeout_seconds,
-            health_provider=health_provider,
-            model_type=_resolve_model_type("STT"),
-        )
-
-    def invoke(self, request: RequestEnvelope) -> ResponseEnvelope:
-        """Execute STT invocation or model-control requests."""
-        if request.runtime is not RuntimeKind.STT:
-            raise ValueError("LocalFallbackSTTClient only supports STT")
-        if request.action is RuntimeAction.STATUS:
-            return self._status_response(request.request_id)
-        if request.action is RuntimeAction.LOAD_MODEL:
-            return self._load_model(request.request_id)
-        if request.action is RuntimeAction.UNLOAD_MODEL:
-            return self._unload_model(request.request_id)
-        if request.action is not RuntimeAction.INVOKE:
-            raise ValueError("LocalFallbackSTTClient only supports invoke")
-        return self._transcribe(request)
-
-    def cancel(self, request_id: str) -> ResponseEnvelope:
-        """Interrupt an STT request on a best-effort basis."""
-        from airunner_common.contract_enums import SignalCode
-
-        self._emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL, {})
-        return ResponseEnvelope(
-            request_id=request_id,
-            status=EnvelopeStatus.CANCELLED,
-            metadata={"best_effort": True},
-        )
-
-    def _load_model(self, request_id: str) -> ResponseEnvelope:
-        """Load the local STT model."""
-        from airunner_common.contract_enums import ModelStatus, SignalCode
-
-        return self._wait_for_model_status(
-            request_id,
-            emit_code=SignalCode.STT_LOAD_SIGNAL,
-            emit_data={},
-            success_statuses=(ModelStatus.LOADED, ModelStatus.READY),
-            timeout_code="stt_load_timeout",
-            failure_code="stt_load_failed",
-            action_name="STT load",
-        )
-
-    def _unload_model(self, request_id: str) -> ResponseEnvelope:
-        """Unload the local STT model."""
-        from airunner_common.contract_enums import ModelStatus, SignalCode
-
-        return self._wait_for_model_status(
-            request_id,
-            emit_code=SignalCode.STT_UNLOAD_SIGNAL,
-            emit_data={},
-            success_statuses=(ModelStatus.UNLOADED,),
-            timeout_code="stt_unload_timeout",
-            failure_code="stt_unload_failed",
-            action_name="STT unload",
-        )
-
-    def _transcribe(self, request: RequestEnvelope) -> ResponseEnvelope:
-        """Run a transcription request through the working response signal."""
-        from airunner_common.contract_enums import SignalCode
-
-        invocation = STTInvocationRequest.model_validate(request.payload)
-        try:
-            audio_bytes = base64.b64decode(invocation.audio_b64, validate=True)
-        except Exception:
-            return self._failure_response(
-                request.request_id,
-                "stt_invalid_audio",
-                "Invalid base64 audio payload",
-            )
-
-        transcription_queue: Queue[Any] = Queue()
-
-        def on_transcription(data: dict[str, Any]) -> None:
-            transcription = data.get("transcription")
-            if transcription is not None:
-                transcription_queue.put(transcription)
-
-        self._mediator.register(
-            SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL,
-            on_transcription,
-        )
-        try:
-            self._emit_signal(
-                SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL,
-                {"item": audio_bytes},
-            )
-            try:
-                transcription = transcription_queue.get(
-                    timeout=self._timeout_seconds
-                )
-            except Empty:
-                return self._failure_response(
-                    request.request_id,
-                    "stt_timeout",
-                    "Timed out waiting for STT response",
-                    retryable=True,
-                )
-        except Exception as exc:
-            # A missing local STT backend (no model configured, no ML
-            # runtime) surfaces here as a raised error; report it as a
-            # failed envelope like the art fallback does (issue #2243)
-            # instead of letting the route turn it into a bare 500.
-            return self._failure_response(
-                request.request_id,
-                "stt_invoke_failed",
-                str(exc),
-                retryable=True,
-            )
-        finally:
-            self._mediator.unregister(
-                SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL,
-                on_transcription,
-            )
-
-        payload = self._transcription_payload(transcription, invocation.language)
-        return ResponseEnvelope(
-            request_id=request.request_id,
-            status=EnvelopeStatus.SUCCEEDED,
-            payload=payload,
-        )
-
-    @staticmethod
-    def _transcription_payload(
-        transcription: Any,
-        language: Optional[str],
-    ) -> dict[str, Any]:
-        """Normalize the current STT response payload shape."""
-        if isinstance(transcription, dict):
-            return {
-                "text": transcription.get("text")
-                or transcription.get("transcription", ""),
-                "language": transcription.get("language") or language,
-            }
-        return {"text": str(transcription), "language": language}
-
 
 class LocalFallbackTTSClient(_SignalRuntimeClient):
-    """Bridge TTS runtime requests to the existing playback-oriented path."""
+    """Use configured headless TTS backends with opt-in legacy playback."""
 
     def __init__(
         self,
@@ -834,6 +480,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         signal_source: Any = None,
         mediator: Any = None,
         health_provider: Optional[HealthProvider] = None,
+        allow_legacy_playback: bool = False,
     ) -> None:
         super().__init__(
             RuntimeKind.TTS,
@@ -844,35 +491,208 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
             health_provider=health_provider,
             model_type=_resolve_model_type("TTS"),
         )
+        self._espeak_cli_renderer = EspeakCliRenderer()
+        self._espeak_cli_ready = False
+        self._allow_legacy_playback = bool(allow_legacy_playback)
+
+    def healthcheck(self):
+        """Report loaded TTS identity without creating a worker or model."""
+        health = super().healthcheck()
+        if self._espeak_cli_ready:
+            return health.model_copy(
+                update={
+                    "status": RuntimeHealthStatus.READY,
+                    "details": "eSpeak NG command-line renderer is ready",
+                    "metadata": {
+                        **health.metadata,
+                        "model_type": "espeak",
+                        "model_id": "espeak-ng-cli",
+                        "model_name": "eSpeak NG CLI",
+                        "voice_ids": list(
+                            self._espeak_cli_renderer.voice_ids or ()
+                        ),
+                    },
+                }
+            )
+        worker = self._existing_tts_worker()
+        status_getter = getattr(worker, "_current_tts_status", None)
+        if worker is None or not callable(status_getter):
+            configured_model = os.environ.get("AIRUNNER_TTS_MODEL_TYPE")
+            if is_deferred_tts_model_type(configured_model):
+                metadata = {
+                    **health.metadata,
+                    **deferred_tts_metadata(configured_model),
+                }
+                return health.model_copy(
+                    update={
+                        "status": RuntimeHealthStatus.FAILED,
+                        "details": OPENVOICE_DEFERRED_DETAILS,
+                        "metadata": metadata,
+                    }
+                )
+            return health
+
+        from airunner_common.contract_enums import ModelStatus
+
+        model_status = status_getter()
+        status_map = {
+            ModelStatus.LOADING: RuntimeHealthStatus.STARTING,
+            ModelStatus.LOADED: RuntimeHealthStatus.READY,
+            ModelStatus.READY: RuntimeHealthStatus.READY,
+            ModelStatus.FAILED: RuntimeHealthStatus.FAILED,
+            ModelStatus.UNLOADED: RuntimeHealthStatus.STOPPED,
+        }
+        runtime_status = status_map.get(model_status)
+        if runtime_status is None:
+            return health
+
+        metadata = dict(health.metadata)
+        metadata["model_status"] = _model_status_value(model_status)
+        model_resolver = getattr(worker, "_active_tts_model", None)
+        try:
+            model_type = model_resolver() if callable(model_resolver) else None
+        except Exception:
+            model_type = None
+        normalized_model = str(
+            getattr(model_type, "value", model_type) or ""
+        ).strip().lower().split(".")[-1]
+        if normalized_model:
+            metadata["model_type"] = normalized_model
+        if is_deferred_tts_model_type(normalized_model):
+            metadata.update(deferred_tts_metadata(normalized_model))
+            return health.model_copy(
+                update={
+                    "status": RuntimeHealthStatus.FAILED,
+                    "details": OPENVOICE_DEFERRED_DETAILS,
+                    "metadata": metadata,
+                }
+            )
+        if (
+            runtime_status is RuntimeHealthStatus.READY
+            and normalized_model == "openvoice"
+        ):
+            metadata["voice_ids"] = ["default"]
+        else:
+            metadata.pop("voice_ids", None)
+        return health.model_copy(
+            update={"status": runtime_status, "metadata": metadata}
+        )
+
+    def _existing_tts_worker(self) -> Any:
+        """Return an instantiated worker without triggering its lazy property."""
+        worker_manager = getattr(
+            self._signal_source, "_worker_manager", None
+        )
+        if worker_manager is None:
+            return None
+        try:
+            return vars(worker_manager).get("_tts_generator_worker")
+        except TypeError:
+            return None
+
+    def list_voice_ids(self, model_type: str) -> tuple[str, ...]:
+        """Enumerate an explicitly selected eSpeak CLI voice catalog."""
+        if is_deferred_tts_model_type(model_type):
+            raise EspeakRenderError("tts_backend_unavailable")
+        if not self._is_espeak_model_type(model_type):
+            raise EspeakRenderError("tts_invalid_request")
+        return self._espeak_cli_renderer.catalogue()
 
     def invoke(self, request: RequestEnvelope) -> ResponseEnvelope:
-        """Queue playback or execute TTS model-control actions."""
+        """Synthesize with a configured backend or honor explicit playback opt-in."""
         if request.runtime is not RuntimeKind.TTS:
             raise ValueError("LocalFallbackTTSClient only supports TTS")
         if request.action is RuntimeAction.STATUS:
             return self._status_response(request.request_id)
         if request.action is RuntimeAction.LOAD_MODEL:
-            return self._load_model(request.request_id)
+            return self._load_model(
+                request.request_id,
+                (request.metadata or {}).get("model_type"),
+            )
         if request.action is RuntimeAction.UNLOAD_MODEL:
             return self._unload_model(request.request_id)
         if request.action is not RuntimeAction.INVOKE:
             raise ValueError("LocalFallbackTTSClient only supports invoke")
         invocation = TTSInvocationRequest.model_validate(request.payload)
-        if self._headless_tts_worker() is not None:
+        configured_model = os.environ.get("AIRUNNER_TTS_MODEL_TYPE")
+        requested_model = (invocation.metadata or {}).get("model_type")
+        if is_deferred_tts_model_type(
+            requested_model or configured_model
+        ):
+            return self._failure_response(
+                request.request_id,
+                TTS_BACKEND_UNAVAILABLE_CODE,
+                OPENVOICE_DEFERRED_DETAILS,
+            )
+
+        if self._is_espeak_model_type(requested_model or configured_model):
             return self._invoke_headless_runtime(
                 request.request_id,
                 invocation,
+                worker=None,
             )
 
-        return self._invoke_playback_runtime(request.request_id, invocation)
+        worker = self._headless_tts_worker()
+        active_model = getattr(worker, "_active_tts_model", None)
+        try:
+            active_model_type = active_model() if callable(active_model) else None
+        except Exception:
+            active_model_type = None
+        if is_deferred_tts_model_type(active_model_type):
+            return self._failure_response(
+                request.request_id,
+                TTS_BACKEND_UNAVAILABLE_CODE,
+                OPENVOICE_DEFERRED_DETAILS,
+            )
+        if worker is not None:
+            return self._invoke_headless_runtime(
+                request.request_id,
+                invocation,
+                worker=worker,
+            )
+
+        if self._allow_legacy_playback:
+            return self._invoke_playback_runtime(request.request_id, invocation)
+        return self._failure_response(
+            request.request_id,
+            TTS_BACKEND_UNAVAILABLE_CODE,
+            "No headless TTS backend is configured",
+        )
 
     def _invoke_headless_runtime(
         self,
         request_id: str,
         invocation: TTSInvocationRequest,
+        *,
+        worker: Any = _UNRESOLVED_WORKER,
     ) -> ResponseEnvelope:
         """Return audio from one headless runtime instead of local playback."""
-        audio_b64 = self._audio_payload(invocation)
+        if worker is _UNRESOLVED_WORKER:
+            worker = self._headless_tts_worker()
+        model_type = normalize_tts_model_type(
+            self._tts_model_type(invocation, worker)
+        )
+        unsupported = (
+            self._unsupported_headless_openvoice_params(invocation, worker)
+            if model_type == "openvoice"
+            else []
+        )
+        if unsupported:
+            return self._failure_response(
+                request_id,
+                "tts_unsupported_parameter",
+                "Headless OpenVoice does not support: "
+                + ", ".join(unsupported),
+            )
+        try:
+            audio_b64 = self._audio_payload(invocation, worker=worker)
+        except EspeakRenderError as exc:
+            return self._failure_response(
+                request_id,
+                exc.code,
+                exc.public_message,
+                retryable=exc.retryable,
+            )
         if audio_b64 is not None:
             return ResponseEnvelope(
                 request_id=request_id,
@@ -896,18 +716,45 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         invocation: TTSInvocationRequest,
     ) -> ResponseEnvelope:
         """Queue playback for one local interactive runtime."""
-        self._speak(invocation.text)
+        self._speak(invocation)
+        metadata: dict[str, Any] = {"stream": False}
+        unsupported = self._unsupported_playback_params(invocation)
+        if unsupported:
+            metadata["unsupported_params"] = unsupported
+            logger.warning(
+                "TTS playback ignores caller params for request %s: %s",
+                request_id,
+                ", ".join(unsupported),
+            )
         return ResponseEnvelope(
             request_id=request_id,
             status=EnvelopeStatus.SUCCEEDED,
             payload={"accepted": True},
-            metadata={"stream": False},
+            metadata=metadata,
         )
+
+    @staticmethod
+    def _unsupported_playback_params(
+        invocation: TTSInvocationRequest,
+    ) -> list[str]:
+        """Name caller TTS params the playback path cannot honor."""
+        unsupported = []
+        if invocation.voice:
+            unsupported.append("voice")
+        if invocation.speed != 1.0:
+            unsupported.append("speed")
+        if invocation.model:
+            unsupported.append("model")
+        return unsupported
 
     def cancel(self, request_id: str) -> ResponseEnvelope:
         """Interrupt queued or active TTS playback on a best-effort basis."""
         from airunner_common.contract_enums import SignalCode
 
+        logger.warning(
+            "TTS playback cancel for request %s is best-effort only",
+            request_id,
+        )
         self._emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL, {})
         return ResponseEnvelope(
             request_id=request_id,
@@ -915,12 +762,38 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
             metadata={"best_effort": True},
         )
 
-    def _load_model(self, request_id: str) -> ResponseEnvelope:
+    def _load_model(
+        self,
+        request_id: str,
+        requested_model_type: Optional[str] = None,
+    ) -> ResponseEnvelope:
         """Enable and load the local TTS model."""
         from airunner_common.contract_enums import ModelStatus, SignalCode
 
+        if is_deferred_tts_model_type(
+            requested_model_type or os.environ.get("AIRUNNER_TTS_MODEL_TYPE")
+        ):
+            return self._failure_response(
+                request_id,
+                TTS_BACKEND_UNAVAILABLE_CODE,
+                OPENVOICE_DEFERRED_DETAILS,
+            )
+
         worker = self._headless_tts_worker()
         if worker is not None:
+            active_model = getattr(worker, "_active_tts_model", None)
+            try:
+                active_model_type = (
+                    active_model() if callable(active_model) else None
+                )
+            except Exception:
+                active_model_type = None
+            if is_deferred_tts_model_type(active_model_type):
+                return self._failure_response(
+                    request_id,
+                    TTS_BACKEND_UNAVAILABLE_CODE,
+                    OPENVOICE_DEFERRED_DETAILS,
+                )
             load_tts = getattr(worker, "_load_tts", None)
             current_status = getattr(worker, "_current_tts_status", None)
             if not callable(load_tts) or not callable(current_status):
@@ -1017,9 +890,11 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
     def _audio_payload(
         self,
         invocation: TTSInvocationRequest,
+        *,
+        worker: Any = _UNRESOLVED_WORKER,
     ) -> Optional[str]:
         """Return base64 WAV audio when headless synthesis is available."""
-        audio_bytes = self._render_audio_bytes(invocation)
+        audio_bytes = self._render_audio_bytes(invocation, worker=worker)
         if not audio_bytes:
             return None
         return base64.b64encode(audio_bytes).decode("ascii")
@@ -1027,9 +902,32 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
     def _render_audio_bytes(
         self,
         invocation: TTSInvocationRequest,
+        *,
+        worker: Any = _UNRESOLVED_WORKER,
     ) -> Optional[bytes]:
         """Render one TTS request to WAV bytes in headless mode."""
-        worker = self._headless_tts_worker()
+        if worker is _UNRESOLVED_WORKER:
+            selected_model = (
+                (invocation.metadata or {}).get("model_type")
+                or os.environ.get("AIRUNNER_TTS_MODEL_TYPE")
+            )
+            worker = (
+                None
+                if self._is_espeak_model_type(selected_model)
+                else self._headless_tts_worker()
+            )
+        selected_model = normalize_tts_model_type(
+            self._tts_model_type(invocation, worker)
+            or os.environ.get("AIRUNNER_TTS_MODEL_TYPE")
+        )
+        if self._is_espeak_model_type(selected_model):
+            audio = self._espeak_cli_renderer.render(
+                invocation.text,
+                voice=invocation.voice,
+                speed=invocation.speed,
+            )
+            self._espeak_cli_ready = True
+            return audio
         manager = self._tts_manager(worker)
         request = self._tts_request(invocation, worker)
         if worker is None or manager is None or request is None:
@@ -1038,6 +936,15 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         if audio is None:
             return None
         return self._encode_audio(audio, self._sample_rate(manager))
+
+    @staticmethod
+    def _is_espeak_model_type(model_type: Any) -> bool:
+        """Return whether a model selection names the eSpeak backend."""
+        return normalize_tts_model_type(model_type) in {
+            "espeak",
+            "espeak-ng",
+            "espeak_ng",
+        }
 
     def _headless_tts_worker(self):
         """Return the headless TTS worker when one exists."""
@@ -1083,7 +990,24 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         return OpenVoiceTTSRequest(
             message=invocation.text,
             gender=getattr(chatbot, "gender", "Male"),
+            speed=round(invocation.speed * 100),
+            voice=invocation.voice or "default",
         )
+
+    @staticmethod
+    def _unsupported_headless_openvoice_params(
+        invocation: TTSInvocationRequest, worker: Any
+    ) -> list[str]:
+        """Report request parameters OpenVoice cannot apply as requested."""
+        unsupported = []
+        if invocation.voice not in (None, "default"):
+            unsupported.append("voice")
+        active_model = LocalFallbackTTSClient._tts_model_type(
+            invocation, worker
+        )
+        if invocation.model and invocation.model not in (active_model,):
+            unsupported.append("model")
+        return unsupported
 
     @staticmethod
     def _tts_model_type(invocation: TTSInvocationRequest, worker) -> Optional[str]:
@@ -1115,17 +1039,26 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         sf.write(buffer, audio, sample_rate, format="WAV")
         return buffer.getvalue()
 
-    def _speak(self, text: str) -> None:
-        """Queue a TTS request using the current playback service."""
+    def _speak(self, invocation: TTSInvocationRequest) -> None:
+        """Queue a TTS request using the current playback service.
+
+        Voice, speed and model travel in the queued payload for
+        consumers that can honor them; the legacy playback path only
+        speaks the message text (see _unsupported_playback_params).
+        """
+        payload = {
+            "message": invocation.text,
+            "is_end_of_message": True,
+            "voice": invocation.voice,
+            "speed": invocation.speed,
+            "model": invocation.model,
+        }
         if hasattr(self._signal_source, "play_audio"):
-            self._signal_source.play_audio(text)
+            self._signal_source.play_audio(invocation.text)
             return
         from airunner_common.contract_enums import SignalCode
 
-        self._emit_signal(
-            SignalCode.TTS_QUEUE_SIGNAL,
-            {"message": text, "is_end_of_message": True},
-        )
+        self._emit_signal(SignalCode.TTS_QUEUE_SIGNAL, payload)
 
 
 class LocalFallbackArtClient(_SignalRuntimeClient):
@@ -1156,6 +1089,10 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         )
         self._art_model_metadata: dict[str, Any] = {}
         self._rmbg_model_manager = None
+        self._art_request_lock = threading.Lock()
+        self._active_art_request_id: Optional[str] = None
+        self._owned_art_request_ids: set[str] = set()
+        self._cancelled_art_request_ids: set[str] = set()
 
     def _status_metadata(self) -> dict[str, Any]:
         """Return cached art metadata for daemon health summaries."""
@@ -1197,15 +1134,52 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         return self._generate_image(request, progress_callback)
 
     def cancel(self, request_id: str) -> ResponseEnvelope:
-        """Interrupt active art generation on a best-effort basis."""
+        """Cancel only the matching art request, never unrelated work."""
+        from airunner_common.contract_enums import SignalCode
+
+        with self._art_request_lock:
+            if self._active_art_request_id == request_id:
+                interrupt_active = True
+            elif request_id in self._owned_art_request_ids:
+                # The API may cancel after admission but before the runtime
+                # invocation thread starts. The invocation consumes this
+                # request-owned marker and exits without emitting a signal.
+                self._cancelled_art_request_ids.add(request_id)
+                interrupt_active = False
+            else:
+                interrupt_active = False
+        if interrupt_active:
+            self._emit_signal(
+                SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL,
+                {"request_id": request_id},
+            )
+        return ResponseEnvelope(
+            request_id=request_id,
+            status=EnvelopeStatus.CANCELLED,
+            metadata={"best_effort": True, "active": interrupt_active},
+        )
+
+    def cancel_active(self, request_id: str) -> ResponseEnvelope:
+        """Honor an explicit administrator request to interrupt current art."""
         from airunner_common.contract_enums import SignalCode
 
         self._emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL, {})
         return ResponseEnvelope(
             request_id=request_id,
             status=EnvelopeStatus.CANCELLED,
-            metadata={"best_effort": True},
+            metadata={"best_effort": True, "administrative": True},
         )
+
+    def finish_request(self, request_id: str) -> None:
+        """Forget a completed request's pending cancellation marker."""
+        with self._art_request_lock:
+            self._owned_art_request_ids.discard(request_id)
+            self._cancelled_art_request_ids.discard(request_id)
+
+    def register_request(self, request_id: str) -> None:
+        """Register an admitted API request before its runtime call starts."""
+        with self._art_request_lock:
+            self._owned_art_request_ids.add(request_id)
 
     def _unload_model(self, request: RequestEnvelope) -> ResponseEnvelope:
         """Unload the current art pipeline or one supported component."""
@@ -1323,6 +1297,36 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         request: RequestEnvelope,
         progress_callback: Optional[ProgressCallback] = None,
     ) -> ResponseEnvelope:
+        """Own one local runtime slot and route cancellation by request id."""
+        request_id = request.request_id
+        with self._art_request_lock:
+            if request_id in self._cancelled_art_request_ids:
+                self._cancelled_art_request_ids.discard(request_id)
+                return ResponseEnvelope(
+                    request_id=request_id,
+                    status=EnvelopeStatus.CANCELLED,
+                    metadata={"best_effort": True, "active": False},
+                )
+            if self._active_art_request_id is not None:
+                return self._failure_response(
+                    request_id,
+                    "art_runtime_busy",
+                    "Another local art request is active",
+                    retryable=True,
+                )
+            self._active_art_request_id = request_id
+        try:
+            return self._generate_image_owned(request, progress_callback)
+        finally:
+            with self._art_request_lock:
+                if self._active_art_request_id == request_id:
+                    self._active_art_request_id = None
+
+    def _generate_image_owned(
+        self,
+        request: RequestEnvelope,
+        progress_callback: Optional[ProgressCallback] = None,
+    ) -> ResponseEnvelope:
         """Generate art through the current callback-based worker flow."""
         from airunner_services.art.managers.stablediffusion.image_request import (
             ImageRequest,
@@ -1375,7 +1379,10 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             ),
         )
         self._cache_art_model_metadata(image_request)
-        signal_payload = {"image_request": image_request}
+        signal_payload = {
+            "image_request": image_request,
+            "request_id": request.request_id,
+        }
         active_rect = _resolve_art_active_rect(metadata)
         if active_rect is not None:
             signal_payload["active_rect"] = active_rect
@@ -1396,6 +1403,12 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
                 "[LocalFallbackArtClient] ERROR: SD worker could not "
                 "be created (worker_manager not found on signal_source)"
             )
+            return self._failure_response(
+                request.request_id,
+                "art_worker_unavailable",
+                "Local art worker is unavailable",
+                retryable=True,
+            )
         else:
             logger.info(
                 "[LocalFallbackArtClient] SD worker created: "
@@ -1409,6 +1422,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
                 SignalCode.SD_PROGRESS_SIGNAL,
                 progress_handler,
             )
+        timed_out = False
         try:
             self._emit_signal(
                 SignalCode.DO_GENERATE_SIGNAL,
@@ -1417,18 +1431,26 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             try:
                 result = image_queue.get(timeout=self._timeout_seconds)
             except Empty:
-                return self._failure_response(
-                    request.request_id,
-                    "art_timeout",
-                    "Timed out waiting for art response",
-                    retryable=True,
-                )
+                # A queue timeout is not proof that the worker stopped. Send
+                # request-owned cancellation and keep this invocation (and its
+                # admission reservation) alive until the worker acknowledges
+                # the queued or active request through its callback.
+                timed_out = True
+                self.cancel(request.request_id)
+                result = image_queue.get()
         finally:
             if progress_handler is not None:
                 self._mediator.unregister(
                     SignalCode.SD_PROGRESS_SIGNAL,
                     progress_handler,
                 )
+        if timed_out:
+            return self._failure_response(
+                request.request_id,
+                "art_timeout",
+                "Timed out waiting for art response",
+                retryable=True,
+            )
         if isinstance(result, str):
             return self._failure_response(
                 request.request_id,

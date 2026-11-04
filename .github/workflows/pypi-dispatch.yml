@@ -1,172 +1,93 @@
 name: PyPI Distribution
 
 on:
+  # Published releases are verified only. Promotion runs as a dispatch on the
+  # existing annotated version tag so all assets can be attached to a draft.
   release:
     types: [published]
   workflow_dispatch:
     inputs:
       packages:
         description: >-
-          Space-separated build directories to publish. Default publishes
-          all three. Use "services native" to create the sibling projects
-          first -- see the comment on the build step.
+          Space-separated build directories to build. Default builds services
+          and native; release promotion requires both.
         required: false
-        default: "services native ."
+        default: "services native"
         type: string
+      publish_pypi:
+        description: >-
+          Publish built distributions to PyPI. Defaults off and is separate
+          from GitHub Release promotion.
+        required: false
+        default: false
+        type: boolean
+      promote_release:
+        description: >-
+          Build all release artifacts and publish an immutable GitHub Release
+          from the selected existing annotated version tag.
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
   packages: write
 
 env:
-  PYTHON_VERSION: "3.13"
+  PYTHON_VERSION: "3.13.5"
 
 jobs:
-  provision-policy:
-    # Trusted release-only policy provisioning (S06). Retrieves the
-    # already-compiled, signed private policy artifact with protected
-    # release credentials, verifies its expected digest plus the
-    # detached Ed25519 sidecar, and stages the verified bytes for the
-    # release bundle. Never runs on untrusted PR code: this workflow
-    # has no pull_request trigger, this job additionally requires the
-    # release event, and secrets live in the protected `release-policy`
-    # environment (owner-managed; see
-    # release-planning/linux-v1/policy-provisioning.md). All actions
-    # below are pinned to immutable commit SHAs.
-    if: github.event_name == 'release'
-    runs-on: ubuntu-latest
-    environment: release-policy
-    permissions:
-      contents: read
-
-    steps:
-      - name: Check out release tag
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ github.event.release.tag_name }}
-          persist-credentials: false
-
-      - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install "cryptography==46.0.7"
-
-      # Secrets arrive via the environment only and are never echoed,
-      # listed, or dumped: no `set -x`, no `env` output, no debug
-      # artifacts. The stage script prints counts and the signing key
-      # ID only -- never terms, hashes, digests, or key material.
-      #
-      # Both files ship: the verified .dat plus its detached .sig ride
-      # the fragment into services/.../content_safety/data/ (sdist,
-      # wheel, frozen bundle) so the exact staged bytes stay
-      # re-verifiable after the freeze. No source list, no keys.
-      - name: Retrieve and stage signed policy artifact
-        env:
-          POLICY_ARTIFACT_URL: ${{ secrets.POLICY_ARTIFACT_URL }}
-          POLICY_ARTIFACT_TOKEN: ${{ secrets.POLICY_ARTIFACT_TOKEN }}
-          POLICY_ARTIFACT_SHA256: ${{ secrets.POLICY_ARTIFACT_SHA256 }}
-          POLICY_TRUST_STORE_JSON: ${{ secrets.POLICY_TRUST_STORE_JSON }}
-        run: |
-          mkdir -p "$RUNNER_TEMP/policy-release" "$RUNNER_TEMP/policy-staged"
-          curl -fsSL -H "Authorization: Bearer $POLICY_ARTIFACT_TOKEN" \
-            "$POLICY_ARTIFACT_URL" \
-            -o "$RUNNER_TEMP/policy-release/policy_terms.dat"
-          curl -fsSL -H "Authorization: Bearer $POLICY_ARTIFACT_TOKEN" \
-            "$POLICY_ARTIFACT_URL.sig" \
-            -o "$RUNNER_TEMP/policy-release/policy_terms.dat.sig"
-          # Fail closed on an empty download before anything is staged.
-          test -s "$RUNNER_TEMP/policy-release/policy_terms.dat"
-          test -s "$RUNNER_TEMP/policy-release/policy_terms.dat.sig"
-          printf '%s' "$POLICY_TRUST_STORE_JSON" \
-            > "$RUNNER_TEMP/policy-release/trust-store.json"
-          python scripts/build_policy_terms.py --stage-release \
-            --artifact "$RUNNER_TEMP/policy-release/policy_terms.dat" \
-            --trust-store "$RUNNER_TEMP/policy-release/trust-store.json" \
-            --expected-sha256 "$POLICY_ARTIFACT_SHA256" \
-            --output "$RUNNER_TEMP/policy-staged/policy_terms.dat"
-          cp "$RUNNER_TEMP/policy-release/policy_terms.dat.sig" \
-            "$RUNNER_TEMP/policy-staged/policy_terms.dat.sig"
-          # Fail closed on an empty stage before the fragment exists.
-          test -s "$RUNNER_TEMP/policy-staged/policy_terms.dat"
-          test -s "$RUNNER_TEMP/policy-staged/policy_terms.dat.sig"
-          # Drop credential-derived material; only verified hashes plus
-          # the detached signature remain for the bundle fragment.
-          rm "$RUNNER_TEMP/policy-release/trust-store.json"
-
-      # The fragment holds verified hashes plus the detached signature:
-      # no source list, no keys. It is a release-bundle input with a
-      # one-day retention, not a general downloadable artifact.
-      - name: Upload verified policy fragment
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: policy-bundle-fragment
-          path: ${{ runner.temp }}/policy-staged/policy_terms.dat*
-          if-no-files-found: error
-          retention-days: 1
-
-  provision-policy-fixture:
-    # Secret-free wiring check (S06): exercises the same release-stage
-    # script with throwaway keys and synthetic data. No environment, no
-    # secrets; safe to run on every dispatch of this workflow.
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
-    steps:
-      - name: Check out code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-
-      - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install "cryptography==46.0.7" pytest pyyaml
-
-      - name: Validate release-stage wiring with synthetic fixtures
-        run: |
-          PYTHONPATH=services/src python -m pytest \
-            services/tests/test_release_s06.py -o addopts='' -q
-
   linux-candidate:
     # Linux v1 release-candidate assembly (C01). Runs the required
     # deterministic checks (safety/auth/download/data migration),
-    # freezes the services bundle with the provisioned policy and
+    # freezes the services bundle with optional policy disabled and
     # pinned sidecars, verifies the single candidate manifest, and
     # uploads the bundle as candidate artifacts. This job creates a
     # candidate only: it must never publish to PyPI/itch itself --
     # promotion goes through candidate-gate below.
     #
-    # Runs unless an upstream hard-failed: on workflow_dispatch the
-    # release-only upstreams skip by design and the candidate builds
-    # with the packaged policy data and no sidecars (the inspector
-    # warns); on release both must have run for --require-sidecars.
-    needs: [provision-policy, fetch-sidecars]
+    # Every dispatch builds the complete candidate with verified sidecars.
+    needs: [fetch-sidecars]
     if: >-
       always() &&
-      needs.provision-policy.result != 'failure' &&
-      needs.provision-policy.result != 'cancelled' &&
-      needs.fetch-sidecars.result != 'failure' &&
-      needs.fetch-sidecars.result != 'cancelled'
-    runs-on: ubuntu-latest
+      github.event_name == 'workflow_dispatch' &&
+      needs.fetch-sidecars.result == 'success'
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
+      actions: read
 
     steps:
       - name: Check out code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Check CORE builder input readiness before installs
+        run: python scripts/check_core_input_readiness.py --mode activate
+
+      - name: Verify promotion tag and source identity
+        env:
+          PUBLISH_PYPI: ${{ inputs.publish_pypi || false }}
+          PROMOTE_RELEASE: ${{ inputs.promote_release || false }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/check_release_identity.py \
+            --event "$GITHUB_EVENT_NAME" \
+            --ref "$GITHUB_REF" \
+            --source-sha "$GITHUB_SHA" \
+            --publish-pypi "$PUBLISH_PYPI" \
+            --promote-release "$PROMOTE_RELEASE"
+
+      - name: Require reviewed sibling release inputs
+        run: >-
+          python scripts/check_reviewed_release_inputs.py
+          --workflow .github/workflows/pypi-dispatch.yml
+
+      - name: Check reviewed CORE dependency readiness
+        run: python scripts/check_core_input_readiness.py --mode activate
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -174,53 +95,195 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PROMOTE_RELEASE: ${{ inputs.promote_release || false }}
         run: |
-          python -m pip install --upgrade pip setuptools wheel
-          # Freeze profile from the P05 bundle spec: the desktop
-          # aggregate of services/setup.py under the P02 lock, plus
-          # the pinned PyInstaller recipe (spec [bundle].tool) and
-          # the development extra for the required checks below.
-          pip install -c package/constraints-linux-nvidia-cu129.txt \
-            "pyinstaller==6.12.0"
-          pip install -c package/constraints-linux-nvidia-cu129.txt \
-            -e "./services[desktop,development]"
+          wheelhouse="$RUNNER_TEMP/linux-release-wheelhouse"
+          tools="$RUNNER_TEMP/linux-ci-tools-wheelhouse"
+          builder="$RUNNER_TEMP/linux-builder-wheelhouse"
+          audit="$RUNNER_TEMP/linux-candidate-input-audit"
+          mkdir -p "$audit"
+          df -B1 --output=source,size,used,avail,pcent,target \
+            "$RUNNER_TEMP" "$GITHUB_WORKSPACE" \
+            | tee "$audit/capacity-before-staging.txt"
+          free -b | tee "$audit/memory-before-staging.txt"
+          cp package/constraints-linux-nvidia-cu129-linux-release.txt \
+            "$audit/runtime-lock.txt"
+          cp package/constraints-linux-ci-tools.txt "$audit/ci-tools-lock.txt"
+          cp package/constraints-linux-builder-tools.txt "$audit/builder-tools-lock.txt"
+          cp package/linux-release-v4-artifact-sources.json \
+            "$audit/runtime-artifact-sources.json"
+          cp package/linux-ci-tools-artifact-sources.json \
+            "$audit/ci-tools-artifact-sources.json"
+          cp package/linux-builder-tools-artifact-sources.json \
+            "$audit/builder-tools-artifact-sources.json"
+          python scripts/stage_postgresql_runtime.py \
+            --output-dir "$audit/postgresql-runtime" \
+            --cache-dir /var/cache/apt/archives
+          python scripts/stage_postgresql_runtime.py \
+            --kind build-supplement \
+            --output-dir "$audit/postgresql-build-supplement" \
+            --cache-dir /var/cache/apt/archives
+          python scripts/stage_linux_release_artifacts.py \
+            --manifest package/linux-release-v4-artifact-sources.json \
+            --selected-lockfile package/constraints-linux-nvidia-cu129-linux-release.txt \
+            --output-dir "$wheelhouse"
+          python -m pip install --no-index --find-links "$wheelhouse" \
+            --require-hashes -r "$wheelhouse/requirements.txt"
+          python scripts/stage_linux_release_artifacts.py \
+            --manifest package/linux-ci-tools-artifact-sources.json \
+            --selected-lockfile package/constraints-linux-ci-tools.txt \
+            --output-dir "$tools"
+          python -m pip install --no-index --find-links "$tools" \
+            --no-deps --require-hashes -r "$tools/requirements.txt"
+          python scripts/stage_linux_release_artifacts.py \
+            --manifest package/linux-builder-tools-artifact-sources.json \
+            --selected-lockfile package/constraints-linux-builder-tools.txt \
+            --output-dir "$builder"
+          cp "$wheelhouse/requirements.txt" "$audit/runtime-requirements.txt"
+          cp "$wheelhouse/staging-receipt.json" "$audit/runtime-staging-receipt.json"
+          cp "$tools/requirements.txt" "$audit/ci-tools-requirements.txt"
+          cp "$tools/staging-receipt.json" "$audit/ci-tools-staging-receipt.json"
+          cp "$builder/requirements.txt" "$audit/builder-tools-requirements.txt"
+          cp "$builder/staging-receipt.json" "$audit/builder-tools-staging-receipt.json"
+          python -m pip install --no-index --find-links "$builder" \
+            --no-deps --require-hashes -r "$builder/requirements.txt"
+          python -m pip install --no-deps --no-build-isolation -e './services[linux-release]'
+          python -m pip install --no-index --no-deps --no-build-isolation -e ./native
+          python -m pip check
+          if [ "$PROMOTE_RELEASE" = "true" ]; then
+            version="$(python services/setup.py --version)"
+            python scripts/linux_release_wheel_assets.py create \
+              --wheelhouse "$wheelhouse" \
+              --output-dir release-assets/runtime-wheels \
+              --application-version "$version" \
+              --source-sha "$GITHUB_SHA"
+          fi
+          df -B1 --output=source,size,used,avail,pcent,target \
+            "$RUNNER_TEMP" "$GITHUB_WORKSPACE" \
+            | tee "$audit/capacity-after-install-before-cleanup.txt"
+          # The installed profile stays in the environment; remove only the
+          # staged wheel copies before PyInstaller duplicates runtime files.
+          rm -rf -- "$wheelhouse" "$tools" "$builder"
+          df -B1 --output=source,size,used,avail,pcent,target \
+            "$RUNNER_TEMP" "$GITHUB_WORKSPACE" \
+            | tee "$audit/capacity-after-wheelhouse-cleanup.txt"
 
       # Required deterministic checks (C01): safety, auth, download,
-      # and data-migration coverage. Same files as the PR contract
-      # list in eval-tests.yml; no continue-on-error anywhere here.
+      # and data-migration coverage. Identical file list to the PR
+      # contract in eval-tests.yml; no continue-on-error anywhere
+      # here. Keep the two lists in lockstep: a check that gates PRs
+      # must gate releases too.
       - name: Run required deterministic checks
         run: |
           PYTHONPATH=services/src python -m pytest \
-            services/tests/test_content_safety_gate.py \
-            services/tests/test_model_load_security.py \
+            scripts/tests/test_cuda_source_recipe.py \
+            scripts/tests/test_cuda_wheel_handoff.py \
+            scripts/tests/test_linux_release_artifact_stager.py \
+            scripts/tests/test_postgresql_runtime_stager.py \
+            scripts/tests/test_postgresql_runtime_bundle.py \
+            scripts/tests/test_stage_cuda_runtime_profile.py \
+            scripts/tests/test_assemble_cuda_profile_options.py \
+            scripts/tests/test_linux_release_wheel_assets.py \
+            scripts/tests/test_linux_ci_dependency_inputs.py \
+            scripts/tests/test_apt_release_publisher.py \
+            scripts/tests/test_apt_daemon_health_probe.py \
+            scripts/tests/test_github_release_promotion.py \
+            services/tests/test_release_identity.py \
+            services/tests/test_release_core_promotion.py \
+            services/tests/test_debian_postinst_safety.py \
+            scripts/tests/test_core_interrupted_upgrade_probe.py \
+            services/tests/test_release_core_bundle.py \
+            services/tests/test_core_input_readiness.py \
+            services/tests/test_dependency_notices.py \
+            services/tests/test_service_bootstrap.py \
+            services/tests/test_legacy_api_surface.py \
             services/tests/test_loopback_auth.py \
             services/tests/test_secret_storage.py \
+            services/tests/test_model_load_security.py \
+            services/tests/test_cross_distribution_versions.py \
+            services/tests/test_tool_sandbox_security.py \
+            services/tests/test_dependency_constraints.py \
+            services/tests/test_release_p02.py \
+            services/tests/test_release_profile_activation.py \
+            scripts/tests/test_check_reviewed_release_inputs.py \
+            services/tests/test_native_package_isolation.py \
+            services/tests/test_zimage_model_dir_config.py \
+            services/tests/test_third_party_notices.py \
+            services/tests/test_llm_request_for_action_parity.py \
+            services/tests/test_content_safety_gate.py \
+            services/tests/test_content_policy_mode.py \
+            services/tests/test_optional_policy_streaming.py \
+            services/tests/test_release_s04_packaged.py \
             services/tests/test_download_security.py \
             services/tests/test_release_b02.py \
-            -o addopts='' -q
+            services/tests/test_import_boundaries.py \
+            services/tests/test_security_package_pins.py \
+            services/tests/test_run_tests_optional_smoke.py \
+            services/tests/test_gguf_chat_handler_cpu_contract.py \
+            services/tests/test_e5_model_identity.py \
+            services/tests/test_e5_manager_runtime_lock.py \
+            services/tests/test_embedding_space_fingerprint.py \
+            services/tests/test_rag_reindex_transaction.py \
+            services/tests/test_rag_reindex_worker.py \
+            services/tests/test_rag_reindex_route.py \
+            services/tests/test_rag_dependency_isolation.py \
+            services/tests/test_rag_service_interface.py \
+            services/tests/test_rag_document_delete.py \
+            services/tests/test_rag_document_delete_route.py \
+            services/tests/test_rag_document_formats.py \
+            services/tests/test_rag_document_scope.py \
+            services/tests/test_rag_index_admission_results.py \
+            services/tests/test_rag_tool_config_injection.py \
+            services/tests/test_rag_knowledge_base_tool_boundaries.py \
+            services/tests/test_rag_knowledge_base_tool_sqlite_integration.py \
+            services/tests/test_offline_remote_url_guards.py \
+            services/tests/test_zimage_resource_budget.py \
+            services/tests/test_tts_buffered_response.py \
+            scripts/tests/test_espeak_build_recipes.py \
+            scripts/tests/test_prepare_espeak_native_payload.py \
+            scripts/tests/test_stage_espeak_native_payload.py \
+            scripts/tests/test_linux_warning_dispositions.py \
+            services/tests/test_espeak_runtime_paths.py \
+            services/tests/test_postgresql_runtime.py \
+            services/tests/test_postgresql_prerequisites.py \
+            services/tests/test_release_p05_inspect.py \
+            services/tests/test_release_p05_assemble.py \
+            services/tests/test_sidecar_llm_auth.py \
+            services/tests/test_sidecar_stt_auth.py \
+            services/tests/test_sidecar_llm_stream.py \
+            services/tests/test_sidecar_llm_payload.py \
+            services/tests/test_native_backend_profiles.py \
+            services/tests/test_sidecar_openai_protocol.py \
+            services/tests/test_llm_generation_tools.py \
+            services/tests/test_events_stream.py \
+            services/tests/test_sidecar_llama_server_proxy.py \
+            services/tests/test_llm_request_ownership.py \
+            services/tests/test_llm_request_cancellation_api.py \
+            services/tests/test_release_p05_binaries.py \
+            services/tests/test_release_p05_gates.py \
+            services/tests/test_local_fallback_loaded_metadata.py \
+            services/tests/test_ollama_embedding_contract.py \
+            services/tests/test_ollama_runtime_metadata.py \
+            services/tests/test_llm_worker_embedding_queue.py \
+            services/tests/test_art_job_admission.py \
+            services/tests/test_art_model_scan_path_safety.py \
+            -o addopts='' -q --junitxml=required-checks.xml
         env:
           AIRUNNER_HEADLESS: "1"
           AIRUNNER_HTTP_PORT: "8188"
           AIRUNNER_HTTP_HOST: "127.0.0.1"
 
-      - name: Download verified policy fragment
-        if: needs.provision-policy.result == 'success'
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      # Counts come from the JUnit XML: the pytest stdout tail is
+      # deterministically lost in this job's log stream, so a green
+      # step alone does not prove how many checks ran.
+      - name: Upload required-check results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: policy-bundle-fragment
-          path: policy-fragment
-
-      # The freeze collects content_safety/data/*.dat* from the
-      # source tree (spec [[data]]), so the staged production policy
-      # lands inside the frozen bundle and its manifest.
-      - name: Install staged policy data
-        if: needs.provision-policy.result == 'success'
-        run: |
-          ls -1 policy-fragment/
-          cp policy-fragment/policy_terms.dat \
-            services/src/airunner_services/content_safety/data/policy_terms.dat
-          cp policy-fragment/policy_terms.dat.sig \
-            services/src/airunner_services/content_safety/data/policy_terms.dat.sig
+          name: required-check-results
+          path: required-checks.xml
 
       - name: Download sidecar bundle artifacts
         if: needs.fetch-sidecars.result == 'success'
@@ -229,26 +292,58 @@ jobs:
           name: sidecar-bundles
           path: release-assets/sidecars
 
-      # The assembler's internal gate verifies the frozen tree,
-      # policy payload, and manifest; sidecars stage next, and the
-      # standalone verify below re-gates the final shipped bytes.
+      - name: Record available capacity before freeze
+        run: |
+          audit="$RUNNER_TEMP/linux-candidate-input-audit"
+          df -B1 --output=source,size,used,avail,pcent,target \
+            "$RUNNER_TEMP" "$GITHUB_WORKSPACE" \
+            | tee "$audit/capacity-before-freeze.txt"
+          free -b | tee "$audit/memory-before-freeze.txt"
+
+      # The assembler verifies the frozen tree and manifest; sidecars
+      # stage next; the standalone verify below re-gates the final bytes.
+      - name: Build reviewed native speech payload offline
+        run: |
+          set -euo pipefail
+          docker pull nvidia/cuda:12.9.2-devel-ubuntu24.04@sha256:16656a1ef115bca9e1f820c6349876f1486d2b3c9a0e615773799fe402960dc5
+          python scripts/prepare_espeak_native_payload.py \
+            --work-dir "$RUNNER_TEMP/espeak-native" \
+            --fetch-canonical --download-cmake \
+            --python-base-prefix "$(python -c 'import sys; print(sys.base_prefix)')"
+
       - name: Assemble candidate bundle
         run: |
           python scripts/assemble_linux_bundle.py \
+            --base "${{ github.sha }}" \
+            --espeak-payload "$RUNNER_TEMP/espeak-native/out/candidate/payload" \
+            --postgresql-runtime-inputs "$RUNNER_TEMP/linux-candidate-input-audit/postgresql-runtime" \
+            --postgresql-build-supplement-inputs "$RUNNER_TEMP/linux-candidate-input-audit/postgresql-build-supplement" \
             --distpath build/bundle-dist \
             --workpath build/bundle-work
 
+      - name: Upload native speech build evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-speech-build-evidence
+          path: |
+            ${{ runner.temp }}/espeak-native/launch-receipt.json
+            ${{ runner.temp }}/espeak-native/prepare-and-build-recipe.md
+            ${{ runner.temp }}/espeak-native/build.log
+
       # Native sidecars land in bin/ after the freeze (PyInstaller
       # wipes its output dir, so nothing can be pre-seeded) and the
-      # manifest is extended over them, keeping native artifacts and
-      # signed policy in the same manifest. Names cite spec
-      # [runtimes]; runs on release only.
+      # manifest is extended over them. Names cite spec
+      # [runtimes]; candidates and releases use the same pinned sidecars.
       - name: Stage sidecars and extend manifest
         if: needs.fetch-sidecars.result == 'success'
         run: |
           bash packaging/linux/stage-sidecars.sh \
             --tarball \
             release-assets/sidecars/runtime-sidecars-linux.tar.gz \
+            --checksums .github/native-sidecar-checksums.json \
+            --tag-file .github/native-sidecar-version \
+            --platform linux \
             --bundle build/bundle-dist/airunner-daemon \
             -- llama-server whisper-server
 
@@ -256,19 +351,45 @@ jobs:
       # hashes, required resources, and the exclusion scan.
       - name: Verify candidate manifest
         run: |
-          extra=""
-          if [ "${{ github.event_name }}" = "release" ]; then
-            extra="--require-sidecars"
-          fi
           python scripts/inspect_linux_bundle.py \
-            build/bundle-dist/airunner-daemon $extra
+            build/bundle-dist/airunner-daemon --require-sidecars
 
-      - name: Upload Linux candidate bundle
+      - name: Package verified Linux candidate
+        run: |
+          VERSION="$(python services/setup.py --version)"
+          python scripts/linux_candidate_artifact.py create \
+            --bundle build/bundle-dist/airunner-daemon \
+            --output-dir build/release-assets \
+            --version "$VERSION" \
+            --source-sha "${{ github.sha }}"
+
+      - name: Upload Linux candidate archive
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: linux-candidate
-          path: build/bundle-dist/airunner-daemon
+          path: build/release-assets/*.tar.gz
           if-no-files-found: error
+
+      - name: Upload verified runtime wheel release assets
+        if: github.event_name == 'workflow_dispatch' && inputs.promote_release == true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: runtime-wheels
+          path: release-assets/runtime-wheels/*
+          if-no-files-found: error
+
+      - name: Upload Linux candidate input and capacity audit
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: linux-candidate-input-audit
+          path: |
+            ${{ runner.temp }}/linux-candidate-input-audit/*
+            ${{ runner.temp }}/linux-candidate-input-audit/postgresql-runtime/**
+            ${{ runner.temp }}/linux-candidate-input-audit/postgresql-build-supplement/**
+            build/bundle-work/airunner-daemon/warn-airunner-daemon.txt
+            build/bundle-work/airunner-daemon/PYZ-00.toc
+          if-no-files-found: warn
 
   candidate-gate:
     # Promotion gate (C01): every required upstream result must be
@@ -276,16 +397,12 @@ jobs:
     # or cancelled, or is missing (empty result) blocks promotion --
     # there is deliberately no continue-on-error and no
     # `success || skipped` tolerance on this path. The gate script
-    # knows the per-event required set: on release the trusted
-    # provisioning and sidecar jobs must have run; on
-    # workflow_dispatch they skip by design. Publish steps below
+    # knows the required set for a candidate or release promotion. Publish steps below
     # need this job, so nothing ships without a green candidate.
     needs:
-      - provision-policy
-      - provision-policy-fixture
       - fetch-sidecars
       - linux-candidate
-    if: always()
+    if: always() && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -294,101 +411,107 @@ jobs:
       - name: Check out code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Gate candidate promotion on required checks
         run: |
           bash packaging/linux/candidate-gate.sh \
-            --event "${{ github.event_name }}" \
-            --check "provision-policy=${{ needs.provision-policy.result }}" \
-            --check "provision-policy-fixture=${{ needs.provision-policy-fixture.result }}" \
+            --event "${{ inputs.promote_release == true && 'release' || github.event_name }}" \
             --check "fetch-sidecars=${{ needs.fetch-sidecars.result }}" \
             --check "linux-candidate=${{ needs.linux-candidate.result }}"
 
   build-python-package:
-    # On a release, the verified policy fragment must stage first; a
-    # failed provisioning fails the release (this job skips). Ordinary
-    # dispatches skip provisioning and build with the packaged data.
-    # Nothing here publishes without a green candidate (C01): the
-    # gate result must be exactly `success`, never skipped.
-    needs: [provision-policy, candidate-gate]
-    if: >-
-      always() && (needs.provision-policy.result == 'success' ||
-      needs.provision-policy.result == 'skipped') &&
-      needs.candidate-gate.result == 'success'
+    # Nothing here builds or publishes without a green candidate gate.
+    needs: [candidate-gate]
+    if: always() && needs.candidate-gate.result == 'success'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify promotion tag and source identity
+        env:
+          PUBLISH_PYPI: ${{ inputs.publish_pypi || false }}
+          PROMOTE_RELEASE: ${{ inputs.promote_release || false }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/check_release_identity.py \
+            --event "$GITHUB_EVENT_NAME" \
+            --ref "$GITHUB_REF" \
+            --source-sha "$GITHUB_SHA" \
+            --publish-pypi "$PUBLISH_PYPI" \
+            --promote-release "$PROMOTE_RELEASE"
+
+      - name: Require reviewed sibling release inputs
+        run: >-
+          python scripts/check_reviewed_release_inputs.py
+          --workflow .github/workflows/pypi-dispatch.yml
+
+      - name: Check reviewed CORE dependency readiness
+        run: python scripts/check_core_input_readiness.py --mode activate
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install build
+          builder="$RUNNER_TEMP/linux-builder-wheelhouse"
+          core="$RUNNER_TEMP/linux-core-ci-wheelhouse"
+          python scripts/stage_linux_release_artifacts.py \
+            --manifest package/linux-core-ci-artifact-sources.json \
+            --selected-lockfile package/constraints-linux-core-ci.txt \
+            --output-dir "$core"
+          python scripts/stage_linux_release_artifacts.py \
+            --manifest package/linux-builder-tools-artifact-sources.json \
+            --selected-lockfile package/constraints-linux-builder-tools.txt \
+            --output-dir "$builder"
+          python -m pip install --no-index --find-links "$builder" \
+            --no-deps --require-hashes -r "$builder/requirements.txt"
+          rm -rf -- "$builder"
 
-      # Release only: install the verified policy fragment staged by
-      # provision-policy so the built services package carries the
-      # production hashes plus the detached signature. Dispatches skip
-      # this and build with the packaged (empty/synthetic) data.
-      - name: Download verified policy fragment
-        if: needs.provision-policy.result == 'success'
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: policy-bundle-fragment
-          path: policy-fragment
-
-      - name: Install staged policy data
-        if: needs.provision-policy.result == 'success'
+      - name: Validate requested package selection
+        env:
+          PACKAGE_SELECTION: ${{ inputs.packages || 'services native' }}
+          PROMOTE_RELEASE: ${{ inputs.promote_release || false }}
         run: |
-          ls -1 policy-fragment/
-          cp policy-fragment/policy_terms.dat \
-            services/src/airunner_services/content_safety/data/policy_terms.dat
-          cp policy-fragment/policy_terms.dat.sig \
-            services/src/airunner_services/content_safety/data/policy_terms.dat.sig
+          python - <<'PY'
+          import os
+          import re
+
+          selection = os.environ["PACKAGE_SELECTION"]
+          if not re.fullmatch(r"(services|native)( (services|native))*", selection):
+              raise SystemExit("packages must contain unique services/native names")
+          packages = selection.split()
+          if len(packages) != len(set(packages)):
+              raise SystemExit("packages must not contain duplicates")
+          if os.environ["PROMOTE_RELEASE"] == "true" and set(packages) != {"services", "native"}:
+              raise SystemExit("release promotion requires both services and native packages")
+          PY
 
       - name: Build packages
+        env:
+          PACKAGE_SELECTION: ${{ inputs.packages || 'services native' }}
         run: |
-          # Publish the package surface documented in the README (issue
-          # #2061): airunner (GUI), airunner-services (headless daemon +
-          # runtimes) and airunner-native (launcher). airunner-common
-          # (shared foundation) moved to its own repository (issue #2197,
-          # https://github.com/Capsize-Games/airunner-common) and
-          # publishes from there now. airunner and airunner-native pin
-          # airunner-services==VERSION, so both must be published together
-          # or `pip install airunner` cannot resolve. Each invocation
-          # produces an sdist and a wheel in dist/; the publish step below
-          # uploads every artifact.
-          # Publishing order matters the first time. airunner pins
-          # airunner-services==VERSION, and that sibling project might not
-          # exist on PyPI yet. If airunner uploads but the sibling fails
-          # -- e.g. a project-scoped token that cannot create new projects
-          # -- then `pip install airunner` is permanently unresolvable at
-          # that version, because PyPI versions can be yanked but never
-          # replaced.
-          #
-          # So dispatch once with packages="services native" to create
-          # that sibling, confirm it appears on PyPI, then dispatch again
-          # with packages="." for airunner itself. After the project
-          # exists, the default (all three) is safe.
+          # Services-only surface: airunner-services (headless daemon +
+          # runtimes + FastAPI) and airunner-native (launcher).
+          # airunner-common (shared foundation) moved to its own
+          # repository (issue #2197) and publishes from there now.
+          # The former root `airunner` GUI distribution was removed;
+          # this workflow builds `services` + `native` only.
           mkdir -p dist
-          for pkg in ${{ inputs.packages || 'services native .' }}; do
+          read -r -a packages <<< "$PACKAGE_SELECTION"
+          for pkg in "${packages[@]}"; do
             echo "::group::build $pkg"
-            # The root package refuses to build when the generated Qt
-            # *_ui.py / resources.py files are missing or stale. They are not
-            # committed, and a PEP 517 isolated build only installs the
-            # declared build-system requirements, so it cannot generate them
-            # itself -- they have to exist before `python -m build` runs.
-            # Only the root package needs them; the siblings are pure Python.
-            if [ "$pkg" = "." ]; then
-              pip install "PySide6==6.9.0"
-              QT_QPA_PLATFORM=offscreen python scripts/build_ui.py
-            fi
-            python -m build --outdir dist "$pkg"
+            python scripts/build_python_distributions.py "$pkg" --outdir dist
             echo "::endgroup::"
           done
           echo "Built artifacts:"; ls -1 dist/
@@ -398,22 +521,41 @@ jobs:
       # exercise the daemon before publishing it.
       - name: Gate -- candidate artifact must run
         env:
-          PUBLISH_PACKAGES: ${{ inputs.packages || 'services native .' }}
+          PUBLISH_PACKAGES: ${{ inputs.packages || 'services native' }}
         run: |
-          VERSION="$(python setup.py --version)"
+          VERSION="$(python services/setup.py --version)"
           echo "gating candidate version $VERSION for selection: $PUBLISH_PACKAGES"
           python scripts/artifact_runtime_gate.py \
             --find-links dist --version "$VERSION" \
-            --packages "$PUBLISH_PACKAGES"
+            --packages "$PUBLISH_PACKAGES" \
+            --locked-dependency-requirements "$RUNNER_TEMP/linux-core-ci-wheelhouse/requirements.txt" \
+            --locked-dependency-wheelhouse "$RUNNER_TEMP/linux-core-ci-wheelhouse" \
+            --require-optional-boundary
+
+      - name: Remove staged CORE acceptance wheelhouse
+        if: always()
+        run: rm -rf -- "$RUNNER_TEMP/linux-core-ci-wheelhouse"
+
+      - name: Recheck promotion tag before PyPI upload
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_pypi == true
+        env:
+          PUBLISH_PYPI: "true"
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/check_release_identity.py \
+            --event "$GITHUB_EVENT_NAME" \
+            --ref "$GITHUB_REF" \
+            --source-sha "$GITHUB_SHA" \
+            --publish-pypi "$PUBLISH_PYPI"
 
       - name: Upload Python distribution artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: python-dist
           path: dist/*
 
       - name: Publish package
-        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_pypi == true
         uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
         with:
           user: __token__
@@ -423,61 +565,254 @@ jobs:
           # PyPI rejected rather than a bare "400 Bad Request".
           verbose: true
 
+  build-debian-package:
+    # The apt source contains only a pull publisher. Build the .deb here,
+    # after the same candidate gate and wheel artifact gate as the release;
+    # only publish-release-assets may attach it to the exact release tag.
+    if: github.event_name == 'workflow_dispatch' && inputs.promote_release == true
+    needs: [candidate-gate, build-python-package]
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out exact release source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check CORE builder input readiness before installs
+        run: python scripts/check_core_input_readiness.py --mode activate
+
+      - name: Verify promotion tag and source identity
+        env:
+          PROMOTE_RELEASE: "true"
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/check_release_identity.py \
+            --event "$GITHUB_EVENT_NAME" \
+            --ref "$GITHUB_REF" \
+            --source-sha "$GITHUB_SHA" \
+            --promote-release "$PROMOTE_RELEASE"
+
+      - name: Install Debian build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y debhelper-compat dpkg-dev python3-venv
+
+      - name: Set up the hash-locked CORE freeze environment
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install CORE freeze inputs
+        run: |
+          core_env="$RUNNER_TEMP/airunner-core-build"
+          python -m venv "$core_env"
+          "$core_env/bin/python" -m pip install --require-hashes --only-binary=:all: \
+            -r package/constraints-linux-core.txt
+          "$core_env/bin/python" -m pip install --no-deps \
+            --no-build-isolation ./services
+          echo "AIRUNNER_CORE_PYTHON=$core_env/bin/python" >> "$GITHUB_ENV"
+
+      - name: Build and bind the Debian package
+        run: |
+          dpkg-buildpackage --build=binary --no-sign
+          debian_version="$(dpkg-parsechangelog --show-field Version)"
+          mapfile -t packages < <(
+            find .. -maxdepth 1 -type f -name 'airunner_*_amd64.deb' -print
+          )
+          if [[ "${#packages[@]}" -ne 1 ]]; then
+            echo "expected exactly one amd64 AIRunner .deb" >&2
+            exit 1
+          fi
+          install -d -m 0755 build/debian-release
+          install -m 0644 "${packages[0]}" build/debian-release/
+          package="build/debian-release/$(basename "${packages[0]}")"
+          python packaging/apt/release_manifest.py \
+            --deb "$package" \
+            --repository "$GITHUB_REPOSITORY" \
+            --tag "$GITHUB_REF_NAME" \
+            --source-commit "$GITHUB_SHA" \
+            --workflow .github/workflows/pypi-dispatch.yml \
+            --workflow-event workflow_dispatch \
+            --promotion-job publish-release-assets \
+            --run-id "$GITHUB_RUN_ID" \
+            --debian-version "$debian_version" \
+            --output build/debian-release/airunner-apt-release.json
+
+      - name: Upload Debian package and source manifest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: debian-release
+          path: build/debian-release/*
+          if-no-files-found: error
+
   fetch-sidecars:
     # The sidecar build itself lives in Capsize-Games/airunner-native now
     # (a different toolchain -- cmake/mingw-w64/ninja -- on its own
     # release cadence). This downloads the pinned release's prebuilt
     # bundles rather than rebuilding them here; see
     # .github/native-sidecar-version for which tag.
-    if: github.event_name == 'release'
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          sparse-checkout: .github/native-sidecar-version
+          ref: ${{ github.sha }}
+          sparse-checkout: |
+            .github/native-sidecar-version
+            .github/native-sidecar-checksums.json
+            scripts/sidecar_archive.py
           sparse-checkout-cone-mode: false
+          persist-credentials: false
 
       - name: Download pinned sidecar bundles from airunner-native
         run: |
           tag="$(cat .github/native-sidecar-version)"
+          for platform in linux windows; do
+            python scripts/sidecar_archive.py check-pin \
+              --checksums .github/native-sidecar-checksums.json \
+              --tag-file .github/native-sidecar-version \
+              --platform "$platform"
+          done
           mkdir -p release-assets/sidecars
           for platform in linux windows; do
+            archive="release-assets/sidecars/runtime-sidecars-${platform}.tar.gz"
             curl -fsSL \
               "https://github.com/Capsize-Games/airunner-native/releases/download/${tag}/runtime-sidecars-${platform}.tar.gz" \
-              -o "release-assets/sidecars/runtime-sidecars-${platform}.tar.gz"
+              -o "$archive"
+            python scripts/sidecar_archive.py verify \
+              --tarball "$archive" \
+              --checksums .github/native-sidecar-checksums.json \
+              --tag-file .github/native-sidecar-version \
+              --platform "$platform"
           done
 
       - name: Upload sidecar bundle artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: sidecar-bundles
           path: release-assets/sidecars/*
 
   publish-release-assets:
-    # Promotes the green candidate only (C01): the gate must have
-    # passed, which already implies the candidate bundle verified.
-    if: github.event_name == 'release'
-    needs: [build-python-package, fetch-sidecars, candidate-gate]
+    # Create/resume a draft only after every artifact has been built and gated.
+    # Attach the complete digest-checked set before publishing exactly once.
+    if: github.event_name == 'workflow_dispatch' && inputs.promote_release == true
+    needs: [build-python-package, build-debian-package, fetch-sidecars, candidate-gate]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
+      - name: Check out exact release source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
       - name: Download Python distribution artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: python-dist
           path: release-assets/python-dist
 
       - name: Download sidecar bundle artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: sidecar-bundles
           path: release-assets/sidecars
 
-      - name: Upload release assets
-        uses: softprops/action-gh-release@v2
+      - name: Download verified Linux candidate archive
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          files: |
-            release-assets/python-dist/*
-            release-assets/sidecars/*
-          overwrite_files: true
+          name: linux-candidate
+          path: release-assets/linux-candidate
+
+      - name: Download verified runtime wheel release assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: runtime-wheels
+          path: release-assets/runtime-wheels
+
+      - name: Download Debian package and source manifest
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: debian-release
+          path: release-assets/debian
+
+      - name: Verify candidate and checksum final release assets
+        env:
+          RELEASE_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          mapfile -t CANDIDATES < <(
+            find release-assets/linux-candidate -maxdepth 1 -type f \
+              -name '*.tar.gz' -print | sort
+          )
+          if [ "${#CANDIDATES[@]}" -ne 1 ]; then
+            echo "expected exactly one Linux candidate archive" >&2
+            exit 1
+          fi
+          python scripts/linux_candidate_artifact.py verify \
+            --archive "${CANDIDATES[0]}" \
+            --source-sha "$RELEASE_SOURCE_SHA"
+          version="$(python services/setup.py --version)"
+          python scripts/linux_release_wheel_assets.py verify \
+            --asset-dir release-assets/runtime-wheels \
+            --application-version "$version" \
+            --source-sha "$RELEASE_SOURCE_SHA"
+          mapfile -t ASSETS < <(
+            find release-assets/python-dist release-assets/sidecars \
+              release-assets/linux-candidate release-assets/debian \
+              release-assets/runtime-wheels \
+              -maxdepth 1 -type f -print | sort
+          )
+          python scripts/linux_candidate_artifact.py checksums \
+            --output release-assets/SHA256SUMS "${ASSETS[@]}"
+
+      - name: Create draft, attach all assets, and publish immutable release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/check_release_identity.py \
+            --event "$GITHUB_EVENT_NAME" \
+            --ref "$GITHUB_REF" \
+            --source-sha "$GITHUB_SHA" \
+            --promote-release-assets \
+            --run-id "$GITHUB_RUN_ID" \
+            --repository "$GITHUB_REPOSITORY" \
+            --asset-dir release-assets/python-dist \
+            --asset-dir release-assets/sidecars \
+            --asset-dir release-assets/linux-candidate \
+            --asset-dir release-assets/debian \
+            --asset-dir release-assets/runtime-wheels \
+            --asset-file release-assets/SHA256SUMS
+
+  verify-published-release:
+    # Any release.published run is verification-only. The dispatch promotion
+    # verifies publication itself because GITHUB_TOKEN may suppress this event.
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out exact published source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify published immutable release without mutation
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/check_release_identity.py \
+            --event "$GITHUB_EVENT_NAME" \
+            --ref "$GITHUB_REF" \
+            --source-sha "$GITHUB_SHA" \
+            --repository "$GITHUB_REPOSITORY" \
+            --verify-published-release

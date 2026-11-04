@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import secrets
+import stat
 import subprocess
 import time
 from typing import Any, Callable, Optional
@@ -12,11 +14,19 @@ from urllib.request import urlopen
 from airunner_services.runtimes.contracts import RuntimeHealthStatus
 from airunner_services.runtimes.file_policy import PathPolicyError
 from airunner_services.runtimes.file_policy import resolve_existing_file
+from airunner_services.runtimes.native_backend_profiles import (
+	NativeBackendUnavailable,
+)
 from airunner_services.runtimes.llama_cpp_runtime_settings import (
 	LlamaCppRuntimeSettings,
 )
 from airunner_services.config.runtime_layout import (
 	build_runtime_directory_layout,
+)
+from airunner_services.api.loopback_token import (
+	get_or_create_loopback_token,
+	load_loopback_token,
+	loopback_token_path,
 )
 
 
@@ -44,6 +54,7 @@ class SidecarLauncher:
 		self._process: Optional[subprocess.Popen] = None
 		self._last_error = ""
 		self._log_handle = None
+		self._api_key: Optional[str] = None
 
 	@property
 	def endpoint(self) -> str:
@@ -58,7 +69,10 @@ class SidecarLauncher:
 	def command(self) -> list[str]:
 		"""Build the llama-server command line for the current settings."""
 		model_path = self._required_model_path()
-		return [
+		# Service negative values request full offload; the native CLI uses -1
+		# for auto placement and -2 for all layers, including appended MTP blocks.
+		gpu_layers = -2 if self.settings.n_gpu_layers < 0 else self.settings.n_gpu_layers
+		command = [
 			self.settings.executable,
 			"--host",
 			self.settings.host,
@@ -69,11 +83,32 @@ class SidecarLauncher:
 			"--ctx-size",
 			str(self.settings.n_ctx),
 			"--n-gpu-layers",
-			str(self.settings.n_gpu_layers),
+			str(gpu_layers),
+			"--api-key-file",
+			str(loopback_token_path()),
 		]
+		optional_flags = (
+			("--device", self.settings.requested_device),
+			("--fit", self.settings.fit),
+			("--batch-size", self.settings.n_batch),
+			(
+				"--flash-attn",
+				None
+				if self.settings.flash_attn is None
+				else "on" if self.settings.flash_attn else "off",
+			),
+			("--cache-type-k", self.settings.cache_type_k),
+			("--cache-type-v", self.settings.cache_type_v),
+			("--repeat-last-n", self.settings.repeat_last_n),
+		)
+		for flag, value in optional_flags:
+			if value is not None:
+				command.extend((flag, str(value)))
+		return command
 
 	def start(self) -> None:
 		"""Start the sidecar and wait until its health endpoint responds."""
+		self._api_key = self._ensure_api_key_file()
 		if self.is_ready():
 			return
 		self._last_error = ""
@@ -137,6 +172,36 @@ class SidecarLauncher:
 		except PathPolicyError as error:
 			raise RuntimeError(str(error)) from error
 
+	@staticmethod
+	def _ensure_api_key_file() -> str:
+		"""Provision and validate the existing private loopback credential."""
+		token = get_or_create_loopback_token()
+		persisted = load_loopback_token()
+		path = loopback_token_path()
+		try:
+			info = path.lstat()
+			private_regular_file = (
+				stat.S_ISREG(info.st_mode)
+				and stat.S_IMODE(info.st_mode) == 0o600
+			)
+		except OSError:
+			private_regular_file = False
+		if (
+			persisted is None
+			or not private_regular_file
+			or not secrets.compare_digest(token, persisted)
+		):
+			raise RuntimeError(
+				"Unable to validate the private local runtime credential file"
+			)
+		return token
+
+	def internal_auth_headers(self) -> dict[str, str]:
+		"""Return auth headers for requests made to this managed child only."""
+		if not self._api_key:
+			return {}
+		return {"Authorization": f"Bearer {self._api_key}"}
+
 	def _spawn_if_needed(self) -> None:
 		"""Spawn the subprocess when it is not already alive."""
 		if self.is_running():
@@ -182,6 +247,13 @@ class SidecarLauncher:
 		layout.ensure_exists()
 		environment = os.environ.copy()
 		environment.update(layout.as_environment())
+		if self.settings.backend_profile == "cuda-sm120a":
+			if "CUDA_VISIBLE_DEVICES" in environment:
+				raise NativeBackendUnavailable(
+					"CUDA SM120a runtime does not support CUDA_VISIBLE_DEVICES "
+					"remapping; unset it and retry"
+				)
+			environment["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 		return environment
 
 	def _open_log_handle(self):

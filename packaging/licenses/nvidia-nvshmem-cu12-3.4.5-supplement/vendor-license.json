@@ -1,0 +1,19 @@
+{
+  "distribution": "nvidia-nvshmem-cu12",
+  "version": "3.4.5+capsize.1",
+  "exact_pin": "nvidia-nvshmem-cu12==3.4.5+capsize.1",
+  "selected_wheel_sha256": "f2297cd80f097e40e0544672186c020d2ae12ddfa438f50626053e2de72c94ea",
+  "vendor_document": {
+    "publisher": "NVIDIA Corporation",
+    "product": "NVIDIA NVSHMEM SDK",
+    "release_scope": "NVSHMEM source release v3.4.5-0; source License.txt includes the NVSHMEM supplement and additional licenses. The selected subset wheel removes only opt-in MPI/SHMEM bootstrap members, retains all other vendor binary members byte-for-byte, and receives the exact source License.txt as a separate bundle notice.",
+    "official_source_url": "https://github.com/NVIDIA/nvshmem/blob/131da55f643ac87c810ba0bc51d359258bf433a1/License.txt",
+    "retrieved_date": "2026-11-02",
+    "document_path": "packaging/licenses/nvidia-nvshmem-cu12-3.4.5-supplement/NVSHMEM-3.4.5-License.txt",
+    "document_sha256": "1f5b7ada702926bc73327e6eb02dc2d41facc844cc4512ac900451bda06a459e",
+    "document_size_bytes": 28205,
+    "text_path": "packaging/licenses/nvidia-nvshmem-cu12-3.4.5-supplement/NVSHMEM-3.4.5-License.txt",
+    "text_sha256": "1f5b7ada702926bc73327e6eb02dc2d41facc844cc4512ac900451bda06a459e",
+    "text_size_bytes": 28205
+  }
+}

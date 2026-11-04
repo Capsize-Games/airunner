@@ -21,12 +21,11 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import requests
+from requests import RequestException
 from tqdm import tqdm
 
 from airunner_services.config.local_settings_store import get_setting
 from airunner_services.downloads.job_service import DownloadJobService
-from airunner_common.settings import MODELS_DIR
 
 
 # Terminal colors
@@ -93,17 +92,15 @@ def fetch_model_info(model_id: str, api_key: str = "") -> Dict[str, Any]:
         Model metadata dictionary
 
     Raises:
-        requests.RequestException: On API error
+        RequestException: On API error
     """
-    url = f"https://civitai.com/api/v1/models/{model_id}"
-    headers = {"Content-Type": "application/json"}
+    from airunner_services.downloads.civitai import (
+        fetch_model_info as fetch_service_model_info,
+    )
+    from airunner_services.downloads.service import require_provider_allowed
 
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
-
-    response = requests.get(url, headers=headers, timeout=30)
-    response.raise_for_status()
-    return response.json()
+    require_provider_allowed("civitai")
+    return fetch_service_model_info(model_id, api_key)
 
 
 def sanitize_filename(name: str) -> str:
@@ -211,58 +208,42 @@ def download_file(
     Returns:
         True if download succeeded, False otherwise
     """
-    headers = {}
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
+    from airunner_services.downloads.service import (
+        download_civitai_file,
+        require_provider_allowed,
+    )
 
+    require_provider_allowed("civitai")
     try:
-        # First attempt with auth header
-        response = requests.get(
-            url, headers=headers, stream=True, timeout=30, allow_redirects=True
-        )
+        filepath = Path(filepath)
+        with tqdm(
+            total=file_size,
+            unit="B",
+            unit_scale=True,
+            unit_divisor=1024,
+            desc=filepath.name,
+            ncols=80,
+        ) as pbar:
+            def _update_progress(downloaded: int, total: int) -> None:
+                pbar.total = total
+                pbar.update(max(0, downloaded - int(pbar.n)))
 
-        # If 401, retry with token in URL
-        if response.status_code == 401 and api_key:
-            sep = "&" if "?" in url else "?"
-            url_with_token = f"{url}{sep}token={api_key}"
-            response = requests.get(
-                url_with_token, stream=True, timeout=30, allow_redirects=True
+            return download_civitai_file(
+                url,
+                filepath,
+                file_size,
+                api_key=api_key,
+                chunk_size=chunk_size,
+                progress_callback=_update_progress,
             )
-
-        response.raise_for_status()
-
-        # Get actual file size from response if available
-        content_length = response.headers.get("content-length")
-        if content_length:
-            file_size = int(content_length)
-
-        # Ensure parent directory exists
-        filepath.parent.mkdir(parents=True, exist_ok=True)
-
-        # Download with progress bar
-        with (
-            open(filepath, "wb") as f,
-            tqdm(
-                total=file_size,
-                unit="B",
-                unit_scale=True,
-                unit_divisor=1024,
-                desc=filepath.name,
-                ncols=80,
-            ) as pbar,
-        ):
-            for chunk in response.iter_content(chunk_size=chunk_size):
-                if chunk:
-                    f.write(chunk)
-                    pbar.update(len(chunk))
-
-        return True
-
-    except requests.RequestException as e:
-        print(f"{Colors.RED}Error downloading {filepath.name}: {e}{Colors.ENDC}")
-        # Clean up partial download
-        if filepath.exists():
-            filepath.unlink()
+    except RequestException:
+        # The shared atomic downloader owns cleanup of its partial temporary
+        # file. Keep a pre-existing destination intact and avoid printing
+        # request details that could contain credentials.
+        print(
+            f"{Colors.RED}Error downloading {filepath.name} (request failed)"
+            f"{Colors.ENDC}"
+        )
         return False
 
 

@@ -8,6 +8,9 @@ from airunner_services.llm.managers.agent.retriever import (
     DocumentIndexRetriever,
     MultiIndexRetriever,
 )
+from airunner_services.llm.managers.agent.mixins.runtime_activity import (
+    runtime_activity_locked,
+)
 
 
 class RAGSearchMixin:
@@ -17,7 +20,10 @@ class RAGSearchMixin:
     documents. Uses MultiIndexRetriever for lazy loading of active documents.
     """
 
-    def search(self, query: str, k: int = 3) -> List[Any]:
+    @runtime_activity_locked
+    def search(
+        self, query: str, k: int = 3, doc_ids: Optional[List[str]] = None
+    ) -> List[Any]:
         """Search for relevant documents using the retriever.
 
         This is the main search method used by rag_tools.py.
@@ -34,7 +40,10 @@ class RAGSearchMixin:
             return []
 
         try:
-            results = self.retriever.retrieve(query)
+            if doc_ids is None:
+                results = self.retriever.retrieve(query)
+            else:
+                results = self.retriever.retrieve(query, doc_ids=doc_ids)
 
             self.logger.info(
                 f"Search for '{query[:100]}' returned {len(results)} results, "
@@ -47,6 +56,7 @@ class RAGSearchMixin:
             self.logger.error(f"Error during search: {e}")
             return []
 
+    @runtime_activity_locked
     def get_retriever_for_query(
         self,
         query: str,
@@ -86,6 +96,7 @@ class RAGSearchMixin:
             return None
 
     @property
+    @runtime_activity_locked
     def retriever(self) -> Optional[Any]:
         """Get retriever for search operations.
 

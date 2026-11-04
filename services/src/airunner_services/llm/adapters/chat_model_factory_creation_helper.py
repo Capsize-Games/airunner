@@ -64,6 +64,7 @@ def _create_gguf_chat_model(
     local_runtime: LocalRuntimeConfig,
     gguf_runtime_profile: str | None,
     gguf_params: dict[str, Any],
+    runtime_client: Any = None,
 ) -> BaseChatModel:
     """Create one configured GGUF chat model from resolved local inputs."""
     gguf_kwargs = _resolved_gguf_model_kwargs(
@@ -72,6 +73,9 @@ def _create_gguf_chat_model(
         gguf_runtime_profile,
         gguf_params,
     )
+    if runtime_client is not None:
+        gguf_kwargs["sidecar_client"] = runtime_client
+        gguf_kwargs["runtime_model_id"] = resolved_model_id or "custom"
     try:
         return create_gguf_model(model_path=gguf_path, **gguf_kwargs)
     except UnsupportedGGUFArchitectureError as error:
@@ -86,6 +90,7 @@ def create_local_model_from_settings(
     model_path: str | None,
     gguf_runtime_profile: str | None,
     create_gguf_model: Callable[..., BaseChatModel],
+    runtime_client: Any = None,
 ) -> BaseChatModel | None:
     """Create one local GGUF chat model when the current settings allow it."""
     if not model_path:
@@ -95,7 +100,13 @@ def create_local_model_from_settings(
     resolution = _resolved_local_gguf_path(db_settings, get_model_optimizer(), model_path, local_runtime.quantization_bits)
     if resolution is None:
         return None
-    return _local_chat_model(create_gguf_model, resolution, local_runtime, gguf_runtime_profile)
+    return _local_chat_model(
+        create_gguf_model,
+        resolution,
+        local_runtime,
+        gguf_runtime_profile,
+        runtime_client,
+    )
 
 
 def _local_model_info(resolved_model_id: str | None) -> dict[str, Any]:
@@ -175,6 +186,7 @@ def _local_chat_model(
     resolution: tuple[str, str | None],
     local_runtime: LocalRuntimeConfig,
     gguf_runtime_profile: str | None,
+    runtime_client: Any = None,
 ) -> BaseChatModel:
     """Create one GGUF chat model from a resolved local path tuple."""
     gguf_path, resolved_model_id = resolution
@@ -185,6 +197,7 @@ def _local_chat_model(
         local_runtime,
         gguf_runtime_profile,
         dict(local_runtime.gguf_params),
+        runtime_client,
     )
 
 

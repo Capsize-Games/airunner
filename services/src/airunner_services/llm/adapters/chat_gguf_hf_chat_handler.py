@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import os
 from typing import Any
 
 from airunner_services.llm.provider_config import LLMProviderConfig
-
-try:
-    from llama_cpp import llama_chat_format
-except ImportError:
-    llama_chat_format = None
 
 try:
     from transformers import AutoTokenizer
@@ -26,20 +22,100 @@ def configure_chat_handler(adapter: Any) -> None:
     repo_id = chat_template_repo_id(adapter)
     if not repo_id:
         return
+
+    embedded = _embedded_chat_template_handler(adapter._llama)
+    if embedded is not None:
+        chat_format, base_handler = embedded
+        adapter._llama.chat_handler = _thinking_chat_handler(
+            adapter,
+            base_handler,
+            normalize_messages=True,
+            strip_open_thinking_prefix=True,
+        )
+        adapter.logger.info(
+            "Using embedded GGUF chat template %s for %s",
+            chat_format,
+            repo_id,
+        )
+        return
+
     base_handler = build_hf_chat_handler(adapter, repo_id)
     if base_handler is None:
         return
+    adapter._llama.chat_handler = _thinking_chat_handler(
+        adapter, base_handler
+    )
+    adapter.logger.info("Using HF chat template handler for %s", repo_id)
 
+
+def _embedded_chat_template_handler(
+    llama: Any,
+) -> tuple[str, Any] | None:
+    """Return the selected native handler when it came from GGUF metadata."""
+    chat_format = getattr(llama, "chat_format", None)
+    handlers = getattr(llama, "_chat_handlers", None)
+    if (
+        not isinstance(chat_format, str)
+        or not chat_format.startswith("chat_template.")
+        or not isinstance(handlers, dict)
+    ):
+        return None
+    handler = handlers.get(chat_format)
+    if not callable(handler):
+        return None
+    return chat_format, handler
+
+
+def _thinking_chat_handler(
+    adapter: Any,
+    base_handler: Any,
+    *,
+    normalize_messages: bool = False,
+    strip_open_thinking_prefix: bool = False,
+) -> Any:
+    """Pass the current thinking option through without replacing formatter behavior."""
     def chat_handler_with_kwargs(*args: Any, **kwargs: Any) -> Any:
+        if normalize_messages and isinstance(kwargs.get("messages"), list):
+            kwargs = {
+                **kwargs,
+                "messages": _normalize_tool_call_arguments(kwargs["messages"]),
+            }
+        effective_kwargs = dict(kwargs)
         template_kwargs = {
             "enable_thinking": bool(
                 getattr(adapter, "enable_thinking", True)
             )
         }
-        return base_handler(*args, **{**template_kwargs, **kwargs})
+        effective_kwargs = {**template_kwargs, **effective_kwargs}
+        if strip_open_thinking_prefix and effective_kwargs["enable_thinking"]:
+            llama = effective_kwargs.get("llama")
+            if llama is not None:
+                effective_kwargs["llama"] = _PromptSuffixLlamaProxy(llama)
+        return base_handler(*args, **effective_kwargs)
 
-    adapter._llama.chat_handler = chat_handler_with_kwargs
-    adapter.logger.info("Using HF chat template handler for %s", repo_id)
+    return chat_handler_with_kwargs
+
+
+class _PromptSuffixLlamaProxy:
+    """Remove the template's open thinking marker before llama.cpp tokenizes it."""
+
+    def __init__(self, llama: Any) -> None:
+        self._llama = llama
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._llama, name)
+
+    def tokenize(self, prompt: bytes, *args: Any, **kwargs: Any) -> Any:
+        if isinstance(prompt, bytes):
+            try:
+                decoded = prompt.decode("utf-8")
+            except UnicodeDecodeError:
+                pass
+            else:
+                stripped = _strip_auto_opened_think_tag(decoded)
+                if stripped != decoded:
+                    prompt = stripped.encode("utf-8")
+        return self._llama.tokenize(prompt, *args, **kwargs)
 
 
 def chat_template_repo_id(adapter: Any) -> str | None:
@@ -59,20 +135,36 @@ def chat_template_repo_id(adapter: Any) -> str | None:
 
 def build_hf_chat_handler(adapter: Any, repo_id: str) -> Any | None:
     """Build one llama.cpp chat handler from an HF tokenizer template."""
-    if AutoTokenizer is None or llama_chat_format is None:
+    if AutoTokenizer is None:
+        return None
+    llama_chat_format = _load_llama_chat_format()
+    if llama_chat_format is None:
         return None
     tokenizer = load_chat_template_tokenizer(adapter, repo_id)
     if tokenizer is None:
         return None
     return llama_chat_format.chat_formatter_to_chat_completion_handler(
-        _format_messages_handler(tokenizer)
+        _format_messages_handler(tokenizer, llama_chat_format)
     )
 
 
-def _format_messages_handler(tokenizer: Any) -> Any:
+def _load_llama_chat_format() -> Any | None:
+    """Import the native formatter only when the HF fallback needs it."""
+    try:
+        return importlib.import_module("llama_cpp.llama_chat_format")
+    except ImportError:
+        return None
+
+
+def _format_messages_handler(tokenizer: Any, chat_format: Any) -> Any:
     """Return a llama.cpp formatter callback for one HF tokenizer."""
     def format_messages(messages: list[dict[str, Any]], **kwargs: Any) -> Any:
-        return _chat_formatter_response(tokenizer, _normalize_tool_call_arguments(messages), kwargs)
+        return _chat_formatter_response(
+            tokenizer,
+            _normalize_tool_call_arguments(messages),
+            kwargs,
+            chat_format,
+        )
 
     return format_messages
 
@@ -141,6 +233,7 @@ def _chat_formatter_response(
     tokenizer: Any,
     messages: list[dict[str, Any]],
     kwargs: dict[str, Any],
+    chat_format: Any,
 ) -> Any:
     """Return one llama.cpp chat formatter response from an HF tokenizer."""
     tokenizer.use_default_system_prompt = False
@@ -157,7 +250,7 @@ def _chat_formatter_response(
         **kwargs,
     )
     prompt = _strip_auto_opened_think_tag(prompt)
-    return llama_chat_format.ChatFormatterResponse(
+    return chat_format.ChatFormatterResponse(
         prompt=prompt,
         stop=str(tokenizer.eos_token or ""),
         added_special=True,

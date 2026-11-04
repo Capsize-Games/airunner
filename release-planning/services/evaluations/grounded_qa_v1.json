@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "fixture_id": "airunner-grounded-qa-v1",
+  "purpose": "Fixed synthetic-source questions for retrieval-only and generated-answer evaluation.",
+  "sources": [
+    {
+      "source_id": "harbor_operations",
+      "title": "Pinehook Harbor Operations Sheet",
+      "path": "harbor_operations.txt",
+      "content": "PINEHOOK HARBOR OPERATIONS SHEET\nThe public ferry departs from Pier 3.\nThe departure signal is three short bell tones.\nEach ferry crossing may carry up to 42 bicycles.\nThe reserve fuel tank holds 180 liters.\nHarbor radio coordination uses channel 14.\n",
+      "facts": [
+        {"fact_id": "harbor_pier", "text": "The public ferry departs from Pier 3."},
+        {"fact_id": "harbor_bell", "text": "The departure signal is three short bell tones."},
+        {"fact_id": "harbor_bicycles", "text": "Each ferry crossing may carry up to 42 bicycles."},
+        {"fact_id": "harbor_fuel", "text": "The reserve fuel tank holds 180 liters."},
+        {"fact_id": "harbor_radio", "text": "Harbor radio coordination uses channel 14."}
+      ]
+    },
+    {
+      "source_id": "orchard_field_notes",
+      "title": "North Slope Orchard Field Notes",
+      "path": "orchard_field_notes.txt",
+      "content": "NORTH SLOPE ORCHARD FIELD NOTES\nThe test plot grows the Ambercrest apple cultivar.\nThe orchard test plot contains 18 numbered rows.\nThe drip irrigation timer runs on Mondays at 06:20.\nHarvest crates are held at 4 degrees Celsius.\nMason bees are used to pollinate the test plot.\n",
+      "facts": [
+        {"fact_id": "orchard_cultivar", "text": "The test plot grows the Ambercrest apple cultivar."},
+        {"fact_id": "orchard_rows", "text": "The orchard test plot contains 18 numbered rows."},
+        {"fact_id": "orchard_irrigation", "text": "The drip irrigation timer runs on Mondays at 06:20."},
+        {"fact_id": "orchard_storage", "text": "Harvest crates are held at 4 degrees Celsius."},
+        {"fact_id": "orchard_pollinators", "text": "Mason bees are used to pollinate the test plot."}
+      ]
+    },
+    {
+      "source_id": "glasshouse_museum_schedule",
+      "title": "Glasshouse Museum Visitor and Archive Schedule",
+      "path": "glasshouse_museum_schedule.txt",
+      "content": "GLASSHOUSE MUSEUM VISITOR AND ARCHIVE SCHEDULE\nThe museum is open Tuesday through Saturday from 10:00 to 16:00.\nThe observatory gallery is closed on Wednesdays.\nThe daily admission desk stops issuing tickets after 80 visitors.\nThe museum's first catalog digitization batch was completed in 1963.\nThe archive atrium is maintained at 47 percent relative humidity.\n",
+      "facts": [
+        {"fact_id": "museum_hours", "text": "The museum is open Tuesday through Saturday from 10:00 to 16:00."},
+        {"fact_id": "museum_observatory", "text": "The observatory gallery is closed on Wednesdays."},
+        {"fact_id": "museum_capacity", "text": "The daily admission desk stops issuing tickets after 80 visitors."},
+        {"fact_id": "museum_digitization", "text": "The museum's first catalog digitization batch was completed in 1963."},
+        {"fact_id": "museum_humidity", "text": "The archive atrium is maintained at 47 percent relative humidity."}
+      ]
+    },
+    {
+      "source_id": "reef_point_weather_station",
+      "title": "Reef Point Weather Station Field Card",
+      "path": "reef_point_weather_station.txt",
+      "content": "REEF POINT WEATHER STATION FIELD CARD\nThe coastal weather station is located at Reef Point.\nThe station's anemometer is mounted 12 meters above ground.\nThe fog warning threshold is visibility below 1.2 kilometers.\nThe tidal gauge reference reading is 2.4 meters.\nThe local high-wind alert begins at 35 knots.\n",
+      "facts": [
+        {"fact_id": "weather_location", "text": "The coastal weather station is located at Reef Point."},
+        {"fact_id": "weather_anemometer", "text": "The station's anemometer is mounted 12 meters above ground."},
+        {"fact_id": "weather_fog", "text": "The fog warning threshold is visibility below 1.2 kilometers."},
+        {"fact_id": "weather_tide", "text": "The tidal gauge reference reading is 2.4 meters."},
+        {"fact_id": "weather_wind", "text": "The local high-wind alert begins at 35 knots."}
+      ]
+    }
+  ],
+  "questions": [
+    {"question_id": "GQA-01", "question": "Which pier does the public ferry leave from?", "expected_fact_ids": ["harbor_pier"], "expected_source_ids": ["harbor_operations"]},
+    {"question_id": "GQA-02", "question": "What signal marks the ferry's departure?", "expected_fact_ids": ["harbor_bell"], "expected_source_ids": ["harbor_operations"]},
+    {"question_id": "GQA-03", "question": "How many bicycles can one ferry crossing carry?", "expected_fact_ids": ["harbor_bicycles"], "expected_source_ids": ["harbor_operations"]},
+    {"question_id": "GQA-04", "question": "What is the reserve fuel tank capacity?", "expected_fact_ids": ["harbor_fuel"], "expected_source_ids": ["harbor_operations"]},
+    {"question_id": "GQA-05", "question": "Which radio channel is used for harbor coordination?", "expected_fact_ids": ["harbor_radio"], "expected_source_ids": ["harbor_operations"]},
+    {"question_id": "GQA-06", "question": "Which apple cultivar is grown in the test plot?", "expected_fact_ids": ["orchard_cultivar"], "expected_source_ids": ["orchard_field_notes"]},
+    {"question_id": "GQA-07", "question": "How many numbered rows are in the orchard test plot?", "expected_fact_ids": ["orchard_rows"], "expected_source_ids": ["orchard_field_notes"]},
+    {"question_id": "GQA-08", "question": "When does the drip irrigation timer run?", "expected_fact_ids": ["orchard_irrigation"], "expected_source_ids": ["orchard_field_notes"]},
+    {"question_id": "GQA-09", "question": "At what temperature are harvest crates held?", "expected_fact_ids": ["orchard_storage"], "expected_source_ids": ["orchard_field_notes"]},
+    {"question_id": "GQA-10", "question": "Which pollinators are used in the test plot?", "expected_fact_ids": ["orchard_pollinators"], "expected_source_ids": ["orchard_field_notes"]},
+    {"question_id": "GQA-11", "question": "What are the museum's opening days and hours?", "expected_fact_ids": ["museum_hours"], "expected_source_ids": ["glasshouse_museum_schedule"]},
+    {"question_id": "GQA-12", "question": "On which day is the observatory gallery closed?", "expected_fact_ids": ["museum_observatory"], "expected_source_ids": ["glasshouse_museum_schedule"]},
+    {"question_id": "GQA-13", "question": "After how many visitors does the admission desk stop issuing tickets?", "expected_fact_ids": ["museum_capacity"], "expected_source_ids": ["glasshouse_museum_schedule"]},
+    {"question_id": "GQA-14", "question": "When was the first catalog digitization batch completed?", "expected_fact_ids": ["museum_digitization"], "expected_source_ids": ["glasshouse_museum_schedule"]},
+    {"question_id": "GQA-15", "question": "What relative humidity is maintained in the archive atrium?", "expected_fact_ids": ["museum_humidity"], "expected_source_ids": ["glasshouse_museum_schedule"]},
+    {"question_id": "GQA-16", "question": "Where is the coastal weather station located?", "expected_fact_ids": ["weather_location"], "expected_source_ids": ["reef_point_weather_station"]},
+    {"question_id": "GQA-17", "question": "How high above ground is the anemometer mounted?", "expected_fact_ids": ["weather_anemometer"], "expected_source_ids": ["reef_point_weather_station"]},
+    {"question_id": "GQA-18", "question": "What visibility level triggers a fog warning?", "expected_fact_ids": ["weather_fog"], "expected_source_ids": ["reef_point_weather_station"]},
+    {"question_id": "GQA-19", "question": "What is the tidal gauge reference reading?", "expected_fact_ids": ["weather_tide"], "expected_source_ids": ["reef_point_weather_station"]},
+    {"question_id": "GQA-20", "question": "At what wind speed does the local high-wind alert begin?", "expected_fact_ids": ["weather_wind"], "expected_source_ids": ["reef_point_weather_station"]}
+  ],
+  "scoring": {
+    "retrieval_only": {
+      "expected_chunk_source_ids": "The source IDs listed on each question are gold relevant source IDs.",
+      "metrics": ["source_recall_at_3", "source_precision_at_3", "reciprocal_rank_of_first_gold_source", "query_latency_ms"],
+      "source_identity": "Map returned Document metadata file_path or file_name to this fixture's stable source_id; do not use model-generated citations for retrieval metrics.",
+      "target_reference": "At least 19 of 20 questions should retrieve a gold source in the first 3 results; report this as a count without tuning the fixture after observing results."
+    },
+    "generated_answer": {
+      "atomic_fact_correct": "A question passes only when the answer states all expected fact content accurately; paraphrase is allowed if the value and relation remain unchanged.",
+      "citation_valid": "The answer must include at least one source citation supporting its expected facts. Every citation must resolve to a source_id actually returned for that question, and the cited source must be in expected_source_ids. An answer with no citation fails.",
+      "unsupported_claims": "Any factual assertion absent from the retrieved excerpts is an unsupported claim and fails the question.",
+      "quotation_integrity": "Quoted text must occur verbatim in a retrieved excerpt; otherwise fail the question.",
+      "question_pass": "atomic_fact_correct AND citation_valid AND no unsupported claims AND quotation_integrity.",
+      "target_reference": "At least 19 of 20 fixed questions pass. This is fixture-set characterization, not a general factuality claim."
+    },
+    "recording": "Freeze model, prompt, tool configuration, retrieved source IDs, outputs, and scoring version before each comparison; retain failures and missing outputs in the denominator."
+  }
+}

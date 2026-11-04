@@ -45,9 +45,14 @@ def test_no_remaining_references_to_the_dead_services_path():
     assert offenders == []
 
 
-def test_desktop_document_extraction_still_supports_mobi_and_html():
-    """The live implementation keeps its full format coverage."""
-    text = (
+def test_desktop_document_extraction_tree_is_gone():
+    """The desktop implementation was removed with the client.
+
+    Format coverage (mobi/html) must be re-established on the
+    services side before airunnerweb needs it; this pins the removal
+    so the gap is visible instead of silently asserted.
+    """
+    desktop_path = (
         _PROJECT_ROOT
         / "src"
         / "airunner"
@@ -55,6 +60,5 @@ def test_desktop_document_extraction_still_supports_mobi_and_html():
         / "llm"
         / "utils"
         / "document_extraction.py"
-    ).read_text(encoding="utf-8")
-    assert "def extract_text_from_mobi" in text
-    assert "def extract_text_from_html" in text
+    )
+    assert not desktop_path.exists(), desktop_path

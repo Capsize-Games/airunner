@@ -55,6 +55,9 @@ from linux_bundle_gates import (
     parse_toc_modules,
     parse_warn_file,
 )
+from dependency_notices import verify_dependency_notice_manifest
+from stage_espeak_native_payload import verify_staged_espeak
+from postgresql_runtime_payload import verify_runtime_payload
 
 DEFAULT_SPEC = (
     Path(__file__).resolve().parent.parent
@@ -62,15 +65,19 @@ DEFAULT_SPEC = (
     / "linux"
     / "services-bundle-spec.toml"
 )
+_REPO_ROOT = Path(__file__).resolve().parent.parent
 
 _POLICY_FORMAT_ID = "airunner-policy-data/1"
 _POLICY_NORMALIZATION = "v1"
 _POLICY_SIG_FORMAT_ID = "airunner-policy-signature/1"
 _MAX_POLICY_BYTES = 64 * 1024 * 1024
 _MAX_POLICY_SIG_BYTES = 4096
+_POLICY_TRUST_STORE_NAME = "policy_trust_store.json"
+_MAX_POLICY_TRUST_STORE_BYTES = 64 * 1024
 
 _HASH_LINE_RE = re.compile(r"^[0-9a-f]{64}$")
 _SIG_VALUE_RE = re.compile(r"^[0-9a-f]{128}$")
+_PUBLIC_KEY_RE = re.compile(r"^[0-9a-f]{64}$")
 _KEY_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 _META_LINE_RE = re.compile(r"^#\s*([a-z0-9_]+)\s*:\s*(\S+)\s*$")
 
@@ -88,17 +95,47 @@ class InspectionResult:
         return bool(self.problems)
 
 
-def load_spec(path: Path | None = None) -> dict[str, Any]:
-    """Return the parsed bundle spec."""
+def load_spec(
+    path: Path | None = None, _seen: frozenset[Path] = frozenset()
+) -> dict[str, Any]:
+    """Return the parsed bundle spec, applying one local ``extends`` layer."""
     spec_path = path or DEFAULT_SPEC
+    spec_path = spec_path.resolve()
+    if spec_path in _seen:
+        raise SystemExit("bundle spec extends cycle detected")
+    seen = _seen | {spec_path}
     try:
         text = spec_path.read_text(encoding="utf-8")
     except OSError as exc:
         raise SystemExit(f"cannot read bundle spec: {exc}") from exc
     try:
-        return dict(tomllib.loads(text))
+        spec = dict(tomllib.loads(text))
     except tomllib.TOMLDecodeError as exc:
         raise SystemExit(f"invalid bundle spec {spec_path}: {exc}") from exc
+    parent_name = spec.pop("extends", None)
+    if parent_name is None:
+        return spec
+    if not isinstance(parent_name, str) or Path(parent_name).is_absolute():
+        raise SystemExit("bundle spec extends must be a relative path")
+    parent_path = (spec_path.parent / parent_name).resolve()
+    if parent_path.parent != spec_path.parent:
+        raise SystemExit("bundle spec extends must stay in its directory")
+    try:
+        parent = load_spec(parent_path, seen)
+    except SystemExit:
+        raise
+
+    def overlay(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+        """Merge tables recursively; arrays and scalar values replace."""
+        merged = dict(base)
+        for key, value in override.items():
+            if isinstance(value, dict) and isinstance(merged.get(key), dict):
+                merged[key] = overlay(merged[key], value)
+            else:
+                merged[key] = value
+        return merged
+
+    return overlay(parent, spec)
 
 
 def _read_manifest(
@@ -118,7 +155,10 @@ def _read_manifest(
 
 
 def _append_manifest(
-    bundle_dir: Path, spec: dict[str, Any], result: InspectionResult
+    bundle_dir: Path,
+    spec: dict[str, Any],
+    result: InspectionResult,
+    repo_root: Path,
 ) -> None:
     """Append manifest, resource, and exclusion findings to result."""
     manifest, manifest_problems = _read_manifest(bundle_dir, spec)
@@ -128,6 +168,10 @@ def _append_manifest(
         result.problems.extend(
             verify_required_resources(bundle_dir, manifest, spec)
         )
+    result.problems.extend(
+        verify_dependency_notice_manifest(bundle_dir, spec, repo_root)
+    )
+    result.problems.extend(verify_runtime_payload(bundle_dir, spec, repo_root))
     result.problems.extend(scan_exclusions(bundle_dir, spec))
     result.problems.extend(check_extension_modules(bundle_dir, spec))
     result.problems.extend(check_collected_binaries(bundle_dir, spec))
@@ -145,6 +189,7 @@ def _append_warn(
         warn_file,
         list(spec["warn_allowlist"]["modules"]),
         list(spec["code"].get("exclude_modules", [])),
+        list(spec["warn_allowlist"].get("importer_scoped", [])),
     )
     result.problems.extend(gate_problems)
 
@@ -303,8 +348,53 @@ def check_policy_file(path: Path) -> list[str]:
 def verify_policy_payload(
     bundle_dir: Path, spec: dict[str, Any]
 ) -> list[str]:
-    """Form-check every frozen policy payload; content-free problems."""
+    """Check frozen policy plus packaged public-key trust resource."""
     problems: list[str] = []
+    trust_entries = [
+        entry for entry in spec.get("data", [])
+        if Path(str(entry.get("source", ""))).name
+        == _POLICY_TRUST_STORE_NAME
+    ]
+    if len(trust_entries) != 1:
+        return ["policy trust resource is missing or ambiguous in bundle spec"]
+    trust_entry = trust_entries[0]
+    trust_path = (
+        bundle_dir / "_internal" / str(trust_entry["dest"])
+        / _POLICY_TRUST_STORE_NAME
+    )
+    try:
+        trust_bytes = trust_path.read_bytes()
+    except OSError:
+        return ["policy trust resource is absent"]
+    if not trust_bytes or len(trust_bytes) > _MAX_POLICY_TRUST_STORE_BYTES:
+        return ["policy trust resource is empty or oversized"]
+    def unique_pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        values: dict[str, object] = {}
+        for key, value in pairs:
+            if key in values:
+                raise ValueError("duplicate trust-store key")
+            values[key] = value
+        return values
+
+    try:
+        trust_payload = json.loads(
+            trust_bytes.decode("utf-8"), object_pairs_hook=unique_pairs
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError, RecursionError):
+        return ["policy trust resource is invalid"]
+    if not isinstance(trust_payload, dict) or len(trust_payload) != 1:
+        return ["policy trust resource must contain one verified key"]
+    trusted_ids = set()
+    for key_id, public_key in trust_payload.items():
+        if (
+            not isinstance(key_id, str)
+            or not _KEY_ID_RE.fullmatch(key_id)
+            or not isinstance(public_key, str)
+            or not _PUBLIC_KEY_RE.fullmatch(public_key)
+        ):
+            return ["policy trust resource is invalid"]
+        trusted_ids.add(key_id)
+
     for entry in spec.get("data", []):
         if str(entry.get("stage")) != "collect":
             continue
@@ -317,6 +407,13 @@ def verify_policy_payload(
             continue
         for path in staged:
             problems.extend(check_policy_file(path))
+            try:
+                signature = path.with_name(path.name + ".sig").read_bytes()
+                meta = _signature_meta(signature.decode("utf-8"))
+            except (OSError, UnicodeDecodeError):
+                meta = None
+            if meta is None or meta.get("key_id") not in trusted_ids:
+                problems.append("release policy signer is absent from trust resource")
     return problems
 
 
@@ -327,15 +424,36 @@ def inspect_bundle(
     toc_paths: list[Path] | None = None,
     require_sidecars: bool = False,
     require_signed_policy: bool = False,
+    repo_root: Path | None = None,
 ) -> InspectionResult:
     """Run every static check over one built bundle directory."""
     result = InspectionResult()
     if not bundle_dir.is_dir():
         result.problems.append(f"not a directory: {bundle_dir}")
         return result
-    _append_manifest(bundle_dir, spec, result)
+    _append_manifest(bundle_dir, spec, result, repo_root or _REPO_ROOT)
     _append_warn(result, spec, warn_file)
     _append_toc_sidecars(bundle_dir, spec, result, toc_paths, require_sidecars)
+    result.problems.extend(verify_staged_espeak(
+        bundle_dir, required=bool(spec.get("native_speech", {}).get("required", False))
+    ))
+    policy_files = [
+        bundle_dir / "_internal" / str(entry["dest"])
+        for entry in spec.get("data", [])
+        if entry.get("content_policy")
+    ]
+    has_policy_payload = any(
+        directory.exists()
+        and (
+            not directory.is_dir()
+            or any(directory.iterdir())
+        )
+        for directory in policy_files
+    )
+    if has_policy_payload and not require_signed_policy:
+        result.problems.append(
+            "content-policy payload requires explicit --require-signed-policy validation"
+        )
     if require_signed_policy:
         result.problems.extend(verify_policy_payload(bundle_dir, spec))
     return result

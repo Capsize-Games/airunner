@@ -23,6 +23,7 @@ from airunner_services.runtimes.contracts import RuntimeHealthStatus
 from airunner_services.config.runtime_layout import (
     build_runtime_directory_layout,
 )
+from airunner_services.config.daemon_command import daemon_module_command
 
 HealthOpener = Callable[..., Any]
 LaunchPreparer = Callable[[], None]
@@ -62,11 +63,12 @@ def _build_temp_daemon_config(
     temp_config = DaemonConfig(Path(temp_path))
     temp_config.config = config
     temp_config.save()
+    os.chmod(temp_path, 0o600)
     written = Path(temp_path)
     # `_cleanup_config` cannot run when this process is killed, so the
     # configs of dead sidecars pile up here forever. Starting a new one
     # is the moment to clear them: see `sidecar_configs`.
-    sidecar_configs.sweep(layout.config_dir, "airunner-art-runtime-", written)
+    sidecar_configs.sweep_all(layout.config_dir, keep=written)
     return written
 
 
@@ -77,9 +79,9 @@ def _prepare_managed_daemon_launch() -> None:
     setup_database()
     if os.environ.get("AIRUNNER_ENVIRONMENT") != "test":
         return
-    from airunner_native.launcher import _configure_test_mode
+    from airunner_services.config.test_mode import configure_test_mode
 
-    _configure_test_mode()
+    configure_test_mode()
 
 
 class SidecarArtLauncher:
@@ -141,11 +143,7 @@ class SidecarArtLauncher:
         if daemon_executable is not None and os.environ.get("DEV_ENV", "1") != "1":
             command = [str(daemon_executable)]
         else:
-            command = [
-                str(bundle_layout.python_executable),
-                "-m",
-                "airunner_services.daemon",
-            ]
+            command = daemon_module_command(bundle_layout.python_executable)
         command.extend(["--config", str(self._config_path)])
         return command
 

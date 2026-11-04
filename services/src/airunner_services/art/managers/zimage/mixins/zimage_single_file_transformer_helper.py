@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Any, Optional
@@ -12,6 +13,51 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from airunner_services.art.pipelines.z_image import ZImageTransformer2DModel
+
+logger = logging.getLogger(__name__)
+
+
+def _available_ram_bytes() -> Optional[int]:
+    """Return available system RAM in bytes, or None when unknown."""
+    try:
+        import psutil  # noqa: PLC0415
+
+        return int(psutil.virtual_memory().available)
+    except Exception:
+        pass
+    try:
+        pages = os.sysconf("SC_PHYS_PAGES")
+        page_size = os.sysconf("SC_PAGE_SIZE")
+        free_pages = os.sysconf("SC_AVPHYS_PAGES")
+        if pages > 0 and page_size > 0 and free_pages > 0:
+            return int(free_pages * page_size)
+    except (ValueError, OSError):
+        return None
+    return None
+
+
+def _check_weights_fit_in_memory(model_path: str) -> None:
+    """Refuse to map a checkpoint larger than available RAM.
+
+    Raises:
+        FileNotFoundError: When the checkpoint file is missing.
+        MemoryError: When the file size exceeds available system RAM.
+    """
+    file_size = os.path.getsize(model_path)
+    available = _available_ram_bytes()
+    if available is None:
+        logger.warning(
+            "Could not determine available RAM; loading %s (%d bytes) "
+            "without a memory pre-check",
+            model_path,
+            file_size,
+        )
+        return
+    if file_size > available:
+        raise MemoryError(
+            f"Refusing to load {model_path}: file size {file_size} bytes "
+            f"exceeds available RAM {available} bytes"
+        )
 
 
 class ZImageSingleFileTransformerHelper:
@@ -96,10 +142,12 @@ class ZImageSingleFileTransformerHelper:
             text_encoder_path,
             torch_dtype=model_dtype,
             local_files_only=True,
+            trust_remote_code=False,
         )
         tokenizer = AutoTokenizer.from_pretrained(
             tokenizer_path,
             local_files_only=True,
+            trust_remote_code=False,
         )
         return text_encoder, tokenizer
 
@@ -139,6 +187,7 @@ class ZImageSingleFileTransformerHelper:
         model_path: str,
     ) -> None:
         """Load transformer weights from one safetensors checkpoint."""
+        _check_weights_fit_in_memory(model_path)
         state_dict = load_safetensors(model_path)
         transformer_keys = [
             key

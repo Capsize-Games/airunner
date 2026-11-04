@@ -60,6 +60,7 @@ def policy_dir() -> Iterator[Path]:
 @pytest.fixture(autouse=True)
 def _reset_state(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Clear env switches, injected doubles, policy cache, workers."""
+    monkeypatch.setenv("AIRUNNER_CONTENT_POLICY_MODE", "enforce")
     monkeypatch.delenv(semantic.SEMANTIC_ENV_VAR, raising=False)
     monkeypatch.delenv(semantic.CONTEXTUAL_ENV_VAR, raising=False)
     monkeypatch.delenv(policy_data.POLICY_DATA_ENV_VAR, raising=False)
@@ -236,7 +237,7 @@ def test_s07_image_selection_evidence() -> None:
     assert falconsai.score_to_outcome(0.5, threshold=0.5, band=0.2) is None
     status = image_verdict.EVALUATOR_SELECTION_STATUS
     assert "Falconsai" in status
-    assert "superseded" in status
+    assert "not used" in status
 
 
 def test_safety_budgets_and_switch_names() -> None:

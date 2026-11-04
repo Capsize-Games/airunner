@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from airunner_common.contract_version import CONTRACT_VERSION
 from airunner_common.dev_build_token import current_dev_build_token
-from airunner_common.settings import AIRUNNER_VERSION
+from airunner_services.utils.application.get_version import get_version
 
 
 router = APIRouter()
@@ -25,6 +25,7 @@ class HealthResponse(BaseModel):
     pid: int
     started_at: float
     dev_build_token: Optional[str] = None
+    art_execution_finished_status: bool = False
 
 
 class DaemonStatusResponse(BaseModel):
@@ -49,12 +50,13 @@ def build_health_payload(status: str) -> Dict[str, Any]:
     """Return shared health metadata for legacy and versioned routes."""
     return {
         "status": status,
-        "version": AIRUNNER_VERSION,
+        "version": get_version(),
         "contract_version": CONTRACT_VERSION,
         "uptime": time.time() - _start_time,
         "pid": _start_pid,
         "started_at": _start_time,
         "dev_build_token": _start_dev_build_token,
+        "art_execution_finished_status": True,
     }
 
 
@@ -82,7 +84,7 @@ async def root():
     """Root endpoint with API information."""
     return {
         "message": "AI Runner API",
-        "version": AIRUNNER_VERSION,
+        "version": get_version(),
         "docs": "/docs",
         "redoc": "/redoc",
     }

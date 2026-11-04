@@ -24,9 +24,9 @@ def _detect_chat_format(model_path: str) -> Optional[str]:
     """Detect the appropriate chat format based on model filename."""
     path_lower = model_path.lower()
     if "gpt-oss" in path_lower:
-        if _llama_chat_format_supported("gpt-oss"):
-            return "gpt-oss"
-        return None
+        # llama-server owns format support; parent code must not import the
+        # native llama_cpp package merely to select the Harmony adapter.
+        return "gpt-oss"
     if "qwen" in path_lower:
         # Forcing "chatml" here used to also silently force
         # llama-cpp-python's generic chatml-function-calling handler

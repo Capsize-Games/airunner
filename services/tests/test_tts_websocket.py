@@ -115,7 +115,7 @@ def test_synthesize_frame_returns_base64_audio(
 def test_failed_synthesis_returns_an_error_frame(
     monkeypatch, isolated_token
 ) -> None:
-    """A failed runtime call answers with an error frame."""
+    """A failed runtime call answers with a fixed error code."""
     client, headers, _ = _client(monkeypatch, _failed())
     with client.websocket_connect(
         "/api/v1/tts/ws", headers=headers
@@ -123,7 +123,9 @@ def test_failed_synthesis_returns_an_error_frame(
         ws.send_json({"type": "synthesize", "text": "hello"})
         reply = ws.receive_json()
     assert reply["type"] == "error"
-    assert reply["message"] == "boom"
+    # The runtime's exception text stays in the server log; the wire
+    # carries only a fixed code (API hardening wave 2).
+    assert reply["message"] == "synthesis_failed"
 
 
 def test_empty_text_returns_an_error_frame(
