@@ -30,8 +30,25 @@ def require_runtime_registry(request: Request) -> RuntimeRegistry:
     return runtime_registry
 
 
-def art_runtime_route() -> tuple[RuntimeRoute, str]:
+def _cloud_route(provider: str) -> tuple[RuntimeRoute, str]:
+    """Return the cloud route and missing-route detail for a provider."""
+    route = RuntimeRoute(
+        RuntimeKind.ART,
+        provider=provider,
+        deployment_mode=RuntimeMode.CLOUD.value,
+    )
+    detail = "Muse art runtime unavailable" if provider == "muse" else (
+        "Art runtime unavailable"
+    )
+    return route, detail
+
+
+def art_runtime_route(
+    provider: str = "local",
+) -> tuple[RuntimeRoute, str]:
     """Return the expected art runtime route and missing-route detail."""
+    if provider != "local":
+        return _cloud_route(provider)
     if os.environ.get("AIRUNNER_ART_SIDECAR_PROCESS") == "1":
         route = RuntimeRoute(
             RuntimeKind.ART,
@@ -89,9 +106,11 @@ def has_runtime_route(
     return resolved_route_exists(registry, route)
 
 
-def resolve_art_client(registry: RuntimeRegistry) -> RuntimeClient:
-    """Resolve the art runtime client for the current daemon role."""
-    route, detail = art_runtime_route()
+def resolve_art_client(
+    registry: RuntimeRegistry, provider: str = "local"
+) -> RuntimeClient:
+    """Resolve the art runtime client for one provider, never falling back."""
+    route, detail = art_runtime_route(provider)
     if not has_runtime_route(registry, route):
         raise HTTPException(status_code=503, detail=detail)
     client = registry.resolve(

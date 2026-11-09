@@ -130,6 +130,7 @@ class RuntimeMode(str, Enum):
     LOCAL_FALLBACK = "local_fallback"
     WORKER_PROCESS = "worker_process"
     SIDECAR = "sidecar"
+    CLOUD = "cloud"
 
 
 class TransportKind(str, Enum):

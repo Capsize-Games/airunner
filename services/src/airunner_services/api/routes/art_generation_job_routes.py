@@ -180,12 +180,19 @@ async def cancel_job(job_id: str, req: Request):
     # Cancellation remains best-effort against the runtime because the tracker
     # state is the authoritative source for callers polling this route surface.
     logger.info("Cancel job: %s", job_id)
-    client = resolve_art_client(require_runtime_registry(req))
     tracker = JobTracker()
+    job = await tracker.get_status(job_id)
+    provider = str((getattr(job, "metadata", None) or {}).get(
+        "provider") or "local")
     cancelled = await tracker.cancel_job(job_id)
     if not cancelled:
         raise HTTPException(status_code=400, detail="Job cannot be cancelled")
     try:
+        registry = require_runtime_registry(req)
+        if provider == "local":
+            client = resolve_art_client(registry)
+        else:
+            client = resolve_art_client(registry, provider=provider)
         await asyncio.to_thread(client.cancel, job_id)
     except Exception:
         pass
