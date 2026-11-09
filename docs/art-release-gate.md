@@ -50,9 +50,9 @@ generic passthrough and not `env_file:`. They now forward
 host-exported `MODEL_API_KEY` reaches the container. Never commit
 a real key to a compose file, `.env.example`, or this document.
 
-Known limitation: one process-wide art slot (`capacity=1`) is
-shared by local and Muse jobs, so a long cloud call delays local
-jobs and vice versa. Per-provider capacity is follow-up work.
+Capacity is per provider: local and Muse jobs each get their own
+art slot (`capacity=1` per provider), so a long cloud call does
+not block local GPU jobs and vice versa.
 
 ## Rollback
 
