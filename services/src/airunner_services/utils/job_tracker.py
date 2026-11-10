@@ -122,10 +122,12 @@ class JobTracker:
             if self._art_provider_count(resolved) >= capacity:
                 return None
             job_id = str(uuid.uuid4())
+            stored = dict(metadata or {})
+            stored["provider"] = resolved
             self._jobs[job_id] = JobState(
                 job_id=job_id,
                 status=JobStatus.PENDING,
-                metadata=metadata or {},
+                metadata=stored,
                 execution_finished=False,
             )
             self._futures[job_id] = asyncio.Future()

@@ -209,3 +209,20 @@ def test_bootstrap_bad_muse_env_fails_closed(monkeypatch: Any) -> None:
     _register_muse_art_client(registry)  # must not raise
     assert list(registry.list_routes()) == []
     monkeypatch.delenv("AIRUNNER_MUSE_TIMEOUT_S")
+
+
+@pytest.mark.parametrize("url", [
+    "https://[64:ff9b::7f00:1]/a.png",
+    "https://[64:ff9b::a00:1]/a.png",
+    "https://[64:ff9b::c0a8:101]/a.png",
+    "https://192.88.99.1/a.png",
+    "https://224.0.0.1/a.png",
+    "https://[ff02::1]/a.png",
+])
+def test_image_url_nat64_6to4_multicast_rejected(url: str) -> None:
+    session = _Session(None)
+    settings = MuseArtSettings(api_key=KEY)
+    with pytest.raises(MuseArtError) as exc:
+        fetch_url_image(session, url, settings)
+    assert exc.value.code == "muse_invalid_image_url"
+    assert session.gets == []

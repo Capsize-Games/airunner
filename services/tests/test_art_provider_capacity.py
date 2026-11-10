@@ -51,3 +51,22 @@ def test_legacy_caller_without_provider_counts_as_local() -> None:
         await tracker.finish_art_job(cloud)
 
     asyncio.run(scenario())
+
+
+def test_provider_kwarg_without_metadata_is_counted() -> None:
+    async def scenario() -> None:
+        tracker = _fresh_tracker()
+        first = await tracker.create_art_job(
+            metadata={}, capacity=1, provider="muse")
+        assert first is not None
+        assert await tracker.create_art_job(
+            metadata={}, capacity=1, provider="muse") is None
+        local = await tracker.create_art_job(
+            metadata={}, capacity=1, provider="local")
+        assert local is not None
+        job = await tracker.get_status(first)
+        assert job is not None and job.metadata["provider"] == "muse"
+        await tracker.finish_art_job(first)
+        await tracker.finish_art_job(local)
+
+    asyncio.run(scenario())
