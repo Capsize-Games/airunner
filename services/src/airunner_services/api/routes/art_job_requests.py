@@ -19,6 +19,7 @@ def build_generation_job_metadata(
 ) -> dict:
     """Return JobTracker metadata for one generation request."""
     return {
+        "provider": request.provider,
         "prompt": request.prompt,
         "negative_prompt": request.negative_prompt,
         "width": request.width,
@@ -76,6 +77,7 @@ def build_art_envelope(
         request_id=job_id,
         runtime=RuntimeKind.ART,
         action=RuntimeAction.INVOKE,
-        provider="local",
+        provider=request.provider,
         payload=build_art_payload(request),
+        metadata={"provider": request.provider},
     )

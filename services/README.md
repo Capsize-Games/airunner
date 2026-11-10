@@ -89,6 +89,17 @@ Use `GET /api/v1/tts/voices?model_type=Espeak` to read the voice IDs reported by
 
 The eSpeak renderer accepts speeds from `0.5` through `4.0`, where `1.0` maps to eSpeak rate `100`. The shared HTTP request schema accepts `0.25` through `4.0`; eSpeak returns `422` for values below its supported rate. An unknown voice or model type returns `422`. An unavailable voice catalog or executable returns `503`, and a synthesis timeout returns `504`. OpenVoice is unavailable in this release and returns `503` when selected.
 
+## Art providers
+
+Art generation selects its provider per request with
+`GenerationRequest.provider`: `"local"` (the default) runs on
+the host, and `"muse"` calls the Meta image API. There is no
+silent fallback between providers. Muse reads its key only
+from `MODEL_API_KEY`, with `AIRUNNER_MUSE_*` overrides; see
+the [art providers guide](../docs/art-providers.md) for the
+comparison table, privacy and error behavior, `curl` examples
+for both providers, and launch and rollback steps.
+
 ## Checks
 
 Run focused tests after setting up the documented dependencies:

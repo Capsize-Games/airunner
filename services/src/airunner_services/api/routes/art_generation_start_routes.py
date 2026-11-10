@@ -14,6 +14,7 @@ from airunner_services.content_safety_gate import (
     rejection_message,
 )
 from airunner_services.utils.application import get_logger
+from airunner_services.runtimes.base import RuntimeClient
 from airunner_services.utils.job_tracker import (
     JobTracker,
 )
@@ -93,6 +94,37 @@ def _screen_request_input_image(request: GenerationRequest) -> None:
     )
 
 
+def _reject_muse_incompatible(request: GenerationRequest) -> None:
+    """Reject Muse-incompatible fields before job admission (400)."""
+    if request.provider != "muse":
+        return
+    bad = []
+    if request.negative_prompt:
+        bad.append("negative_prompt")
+    if request.image_b64:
+        bad.append("image_b64")
+    if request.version:
+        bad.append("version")
+    if request.pipeline:
+        bad.append("pipeline")
+    model = request.model or ""
+    if "/" in model or "\\" in model:
+        bad.append("model")
+    if bad:
+        raise HTTPException(status_code=400,
+            detail=f"Unsupported for provider muse: {', '.join(bad)}")
+
+
+def _resolve_provider_client(
+    req: Request, provider: str
+) -> RuntimeClient:
+    """Resolve the client for one provider (local keeps the old call)."""
+    registry = require_runtime_registry(req)
+    if provider == "local":
+        return resolve_art_client(registry)
+    return resolve_art_client(registry, provider=provider)
+
+
 async def create_generation_job(
     request: GenerationRequest,
     req: Request,
@@ -123,13 +155,17 @@ async def create_generation_job(
     # checked through the shared evaluator seam before model resolution
     # or any other side effect.
     _screen_request_input_image(request)
+    _reject_muse_incompatible(request)
 
     # Model resolution runs before any side effect: a version with no
     # model resolves to an installed checkpoint, and a model that is
     # not available locally is rejected, so a bad request never
     # occupies the worker until the timeout (issue #2229).
-    resolved_model = resolve_generation_model(request)
-    client = resolve_art_client(require_runtime_registry(req))
+    is_muse = request.provider == "muse"
+    resolved_model = (
+        request.model if is_muse else resolve_generation_model(request)
+    )
+    client = _resolve_provider_client(req, request.provider)
     tracker = JobTracker()
     seed_value = resolve_seed_value(request.seed)
     # resolved_model is None only when the caller sent neither a model
@@ -167,7 +203,8 @@ async def create_generation_job(
         if callable(register_request):
             register_request(job_id)
             request_registered = True
-        await unload_llm_before_art(req, source="art_generate")
+        if not is_muse:
+            await unload_llm_before_art(req, source="art_generate")
         if not await tracker.mark_art_job_running(job_id):
             finish_request = getattr(client, "finish_request", None)
             if request_registered and callable(finish_request):

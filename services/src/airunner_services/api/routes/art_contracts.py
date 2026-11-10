@@ -3,7 +3,7 @@
 import base64
 import io
 import os
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from PIL import Image
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -87,6 +87,7 @@ class GenerationRequest(BaseModel):
     clamped, so a caller's request is never silently shrunk.
     """
 
+    provider: Literal["local", "muse"] = "local"
     prompt: str = Field(..., min_length=1, max_length=_max_prompt_chars())
     negative_prompt: Optional[str] = Field(
         default="", max_length=_max_prompt_chars()

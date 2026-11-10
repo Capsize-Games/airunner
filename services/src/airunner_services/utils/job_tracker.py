@@ -106,22 +106,45 @@ class JobTracker:
         metadata: Optional[dict[str, Any]] = None,
         *,
         capacity: int = 1,
+        provider: Optional[str] = None,
     ) -> Optional[str]:
-        """Atomically create an art job if provider capacity is available."""
+        """Atomically create an art job if provider capacity is available.
+
+        Capacity is counted per provider (local GPU vs cloud), so a
+        long cloud job does not block local jobs and vice versa.
+        Callers that pass no provider keep the historical behaviour:
+        their jobs are counted as ``local``.
+        """
+        resolved = provider or str(
+            (metadata or {}).get("provider") or "local"
+        )
         async with self._lock:
-            if len(self._art_slots) >= capacity:
+            if self._art_provider_count(resolved) >= capacity:
                 return None
             job_id = str(uuid.uuid4())
+            stored = dict(metadata or {})
+            stored["provider"] = resolved
             self._jobs[job_id] = JobState(
                 job_id=job_id,
                 status=JobStatus.PENDING,
-                metadata=metadata or {},
+                metadata=stored,
                 execution_finished=False,
             )
             self._futures[job_id] = asyncio.Future()
             self._art_slots.add(job_id)
             logger.info("Created reserved art job %s", job_id)
             return job_id
+
+    def _art_provider_count(self, provider: str) -> int:
+        """Return how many reserved art slots one provider owns."""
+        count = 0
+        for slot_id in self._art_slots:
+            job = self._jobs.get(slot_id)
+            owner = str((job.metadata if job else {}).get(
+                "provider") or "local")
+            if owner == provider:
+                count += 1
+        return count
 
     def attach_art_task(self, job_id: str, task: asyncio.Task, client: Any) -> None:
         """Retain the job task and runtime client for supervised shutdown."""
