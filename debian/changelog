@@ -1,3 +1,10 @@
+airunner (6.1.11-1) unstable; urgency=medium
+
+  * Add cloud Muse art provider (provider=muse, opt-in) alongside
+    local Z-Image in the art generation API.
+
+ -- Capsize LLC <contact@capsizegames.com>  Mon, 09 Nov 2026 18:30:00 -0700
+
 airunner (6.1.10-1) unstable; urgency=medium
 
   * Validate CORE publication against the installed recovery receipt schema.
