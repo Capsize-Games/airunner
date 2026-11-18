@@ -228,8 +228,9 @@ multidict==6.9.1 \
     --hash=sha256:7fd79c521f6290c69125fa2b85fa65d9e657e6a8ffaf722dc881b926bef4aa5c
 multiprocess==0.70.16 \
     --hash=sha256:fc0544c531920dde3b00c29863377f87e1632601092ea2daca74e4beb40faa2e
-narwhals==2.26.0 \
-    --hash=sha256:29326d74f107c347fd1009bd58e38d9f7c7c5b51e6de97bc93dbc325d9038b54
+narwhals==2.28.0 \
+    --hash=sha256:1f69d6385ec30e2fa6e1fdeb37c562ecabd0f713f6f3e3b58a668c5c9df9567f \
+    --hash=sha256:2d9860c80d6610820826e94c6e42ce4b1d92d89cdd479586e652a8d211dab345
 networkx==3.4.2 \
     --hash=sha256:df5d4365b724cf81b8c6a7312509d0c22386097011ad1abe274afd5e9d3bbc5f
 nltk==3.10.4 \
