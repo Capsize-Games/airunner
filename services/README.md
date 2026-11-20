@@ -2,7 +2,7 @@
 
 `services/` contains AI Runner's headless daemon and API implementation. It owns request routing, runtime coordination, downloads, persistence, and service lifecycle behavior for the model workers used by other applications.
 
-Importable Python code is under `services/src/airunner_services/`. The main console entry points are declared in [`setup.py`](setup.py): `airunner-daemon`, `airunner-headless`, and `airunner-service`, along with download and maintenance commands.
+Importable Python code is under `services/src/airunner_services/`. The main console entry points are declared in [`setup.py`](setup.py): `airunner-daemon`, `airunner-headless`, and `airunner-service`, along with download and maintenance commands. The `mcp` extra adds the `airunner-mcp` stdio server for image generation; see [mcp-image-generation](../docs/mcp-image-generation.md).
 
 ## Package profiles and dependencies
 

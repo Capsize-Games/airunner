@@ -259,6 +259,14 @@ COMPUTER_USE_REQUIREMENTS = [
     "pygetwindow>=0.0.9;platform_system=='Linux'",
 ]
 
+# Stdio MCP server for image generation (mcp/ package). Stays out of the
+# daemon release aggregates: it is a thin HTTP client over the public art
+# API, installed only where an MCP host needs it.
+MCP_REQUIREMENTS = [
+    "httpx>=0.27",
+    "mcp>=2.0",
+]
+
 SYSTEM_DEP_EXTRAS = {"openvoice_jp", "openvoice_kr"}
 
 # The Linux release bundle keeps the verified local runtime/TTS base
@@ -290,6 +298,7 @@ SERVICE_CONSOLE_SCRIPTS = [
     "airunner-docker-build=airunner_services.bin.docker_build:main",
     "airunner-docker-wrapper=airunner_services.bin.docker_wrapper:main",
     "airunner-generate-cert=airunner_services.bin.generate_cert:main",
+    "airunner-mcp=airunner_services.mcp.server:main",
 ]
 
 
@@ -336,6 +345,7 @@ def _base_extras_require() -> dict[str, list[str]]:
         ),
         "llm_weather": LLM_WEATHER_REQUIREMENTS,
         "llm-weather": LLM_WEATHER_REQUIREMENTS,
+        "mcp": MCP_REQUIREMENTS,
         "tts": TTS_REQUIREMENTS,
         "tts-python": unique_requirements(
             ML_RUNTIME_REQUIREMENTS,
