@@ -18,6 +18,7 @@ MCP host --stdio--> airunner-mcp --HTTP--> daemon :8080
                                     GET  /api/v1/art/result/{job}/{index}
                                     DELETE /api/v1/art/cancel/{job}
                                     GET  /api/v1/art/models[/registry]
+                                    POST /api/v1/art/remove-background
 ```
 
 There is no local MCP runtime before this: the only prior tools were
@@ -72,6 +73,12 @@ console script.)
 | `fetch_generation_result` | Download one finished batch image by index |
 | `cancel_generation` | Cancel a running job (best-effort) |
 | `list_image_models` | Installed models and registry entries for `model`/`version`/`scheduler` input |
+| `remove_background` | Remove the background from one input image (RMBG-2.0), save the PNG, return it |
+
+`remove_background` takes an `input_image_path`, posts it to
+`POST /api/v1/art/remove-background`, and saves the RGBA result as
+`<name>-nobg.png` under the output dir. It is synchronous — no job
+polling — and the same input-image screening applies.
 
 Defaults target Z-Image Turbo: one detailed prompt, guidance
 (`cfg_scale`) `0.0`, ~9 steps. Negative prompts are accepted by the

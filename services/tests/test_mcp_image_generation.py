@@ -15,6 +15,7 @@ from airunner_services.mcp.daemon_client import ArtDaemonClient, DaemonError
 from airunner_services.mcp.payloads import build_generation_payload
 from airunner_services.mcp.server import build_server
 from airunner_services.mcp.server import fetch_result, run_generation
+from airunner_services.mcp.server import run_background_removal
 
 _PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8"
@@ -176,7 +177,51 @@ def test_job_id_traversal_rejected_without_http() -> None:
     assert calls == []
 
 
-def test_server_registers_five_tools(tmp_path: Path) -> None:
+def test_remove_background_end_to_end_saves_png(tmp_path: Path) -> None:
+    """Happy: background removal saves the RGBA PNG and returns it."""
+    source = tmp_path / "cat.png"
+    source.write_bytes(_PNG)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/api/v1/art/remove-background"
+        return httpx.Response(200, content=_PNG)
+
+    client = _client(handler, tmp_path)
+    outcome = run_background_removal(client, _config(tmp_path), str(source))
+    assert outcome[0]["file"].endswith("cat-nobg.png")
+    assert Path(outcome[0]["file"]).read_bytes() == _PNG
+    assert len(outcome) == 2
+
+
+def test_remove_background_missing_input_file(tmp_path: Path) -> None:
+    """Hostile: a missing input fails locally, not at the daemon."""
+    calls: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        return httpx.Response(200, content=_PNG)
+
+    client = _client(handler, tmp_path)
+    with pytest.raises(ValueError):
+        run_background_removal(client, _config(tmp_path), str(tmp_path))
+    assert calls == []
+
+
+def test_remove_background_daemon_error(tmp_path: Path) -> None:
+    """Sad: a daemon failure raises with the status attached."""
+    source = tmp_path / "cat.png"
+    source.write_bytes(_PNG)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(500, text="rmbg exploded")
+
+    client = _client(handler, tmp_path)
+    with pytest.raises(DaemonError) as caught:
+        run_background_removal(client, _config(tmp_path), str(source))
+    assert caught.value.status_code == 500
+
+
+def test_server_registers_six_tools(tmp_path: Path) -> None:
     """Happy: the MCP server exposes the generation tool surface."""
     client = _client(_ok_handler, tmp_path)
     server = build_server(_config(tmp_path), client)
@@ -188,6 +233,7 @@ def test_server_registers_five_tools(tmp_path: Path) -> None:
         "generate_image",
         "get_generation_status",
         "list_image_models",
+        "remove_background",
     ]
 
 

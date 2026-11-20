@@ -9,7 +9,10 @@ from mcp.server.mcpserver import Image, MCPServer
 
 from airunner_services.mcp.config import MCPConfig
 from airunner_services.mcp.daemon_client import ArtDaemonClient, DaemonError
-from airunner_services.mcp.payloads import build_generation_payload
+from airunner_services.mcp.payloads import (
+    build_generation_payload,
+    load_input_image_b64,
+)
 
 SERVER_NAME = "airunner-image"
 
@@ -57,6 +60,22 @@ def fetch_result(
     data = client.fetch_png(job_id, index)
     path = _save_png(config, job_id, index, data)
     return [{"job_id": job_id, "index": index, "file": path}, Image(path=path)]
+
+
+def run_background_removal(
+    client: ArtDaemonClient,
+    config: MCPConfig,
+    input_image_path: str,
+) -> list[Any]:
+    """Remove one background, save the PNG, return metadata + image."""
+    image_b64 = load_input_image_b64(input_image_path)
+    data = client.remove_background(image_b64)
+    target_dir = Path(config.output_dir).expanduser()
+    target_dir.mkdir(parents=True, exist_ok=True)
+    stem = Path(input_image_path).expanduser().stem or "image"
+    path = target_dir / f"{stem}-nobg.png"
+    path.write_bytes(data)
+    return [{"input": input_image_path, "file": str(path)}, Image(path=path)]
 
 
 def build_server(
@@ -109,6 +128,16 @@ def build_server(
             strength,
         )
         return run_generation(owned, resolved, payload)
+
+    @server.tool()
+    def remove_background(input_image_path: str) -> list[Any]:
+        """Remove the background from one image and return its PNG.
+
+        Sends the file to the daemon's RMBG-2.0 background removal,
+        saves the RGBA result under the output dir, and returns
+        metadata plus the image. Synchronous: no job polling.
+        """
+        return run_background_removal(owned, resolved, input_image_path)
 
     @server.tool()
     def get_generation_status(job_id: str) -> dict[str, Any]:

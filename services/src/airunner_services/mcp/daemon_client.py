@@ -100,6 +100,24 @@ class ArtDaemonClient:
             )
         return response.content
 
+    def remove_background(self, image_b64: str) -> bytes:
+        """Return PNG bytes with the background removed."""
+        try:
+            response = self._http.post(
+                "/api/v1/art/remove-background",
+                json={"image_b64": image_b64},
+            )
+        except httpx.HTTPError as exc:
+            raise DaemonError(f"daemon unreachable: {exc}") from exc
+        if response.status_code >= 400:
+            raise DaemonError(
+                f"background removal failed "
+                f"({response.status_code}): "
+                f"{response.text[:200]}",
+                status_code=response.status_code,
+            )
+        return response.content
+
     def cancel_job(self, job_id: str) -> dict[str, Any]:
         """Cancel one job; the daemon call is best-effort."""
         self._checked_job_id(job_id)
