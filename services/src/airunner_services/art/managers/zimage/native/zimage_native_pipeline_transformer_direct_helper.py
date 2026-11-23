@@ -44,10 +44,24 @@ class ZImageNativePipelineTransformerDirectHelper:
             loaded_other,
         )
         self._owner._get_transformer_support().materialize_meta_tensors()
+        self._restore_default_norm_scales()
         self._owner.transformer.eval()
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+
+    def _restore_default_norm_scales(self) -> None:
+        """Reset unfitted final-norm scales to ones.
+
+        Some single-file exports omit norm_final.weight (it trains to
+        ~1 and adds nothing); meta materialization leaves zeros, which
+        would zero the transformer output. Ones match RMSNorm init.
+        """
+        norm_final = getattr(self._owner.transformer, "norm_final", None)
+        weight = getattr(norm_final, "weight", None)
+        if isinstance(weight, nn.Parameter) and not bool((weight != 0).any()):
+            with torch.no_grad():
+                weight.fill_(1.0)
 
     def _log_direct_vram(self) -> None:
         """Log current VRAM before a direct checkpoint load."""
@@ -57,6 +71,39 @@ class ZImageNativePipelineTransformerDirectHelper:
         logger.info(
             "_load_checkpoint_direct: Pre-load VRAM: %.2fGB allocated",
             allocated,
+        )
+
+    @staticmethod
+    def _fp8_layer_slot(
+        fp8_layers: Dict[str, list[Optional[torch.Tensor]]],
+        layer_key: str,
+    ) -> list[Optional[torch.Tensor]]:
+        """Return the [weight, bias, scale] slot for one layer."""
+        slot = fp8_layers.setdefault(layer_key, [None, None, None])
+        while len(slot) < 3:
+            slot.append(None)
+        return slot
+
+    def _collect_direct_scale_weight(
+        self,
+        fp8_layers: Dict[str, list[Optional[torch.Tensor]]],
+        support,
+        key: str,
+        tensor: torch.Tensor,
+    ) -> None:
+        """Capture one legacy ``.scale_weight`` scale for the direct path.
+
+        ``convert_checkpoint_key`` returns None for this naming (the
+        streaming path handles it separately), so derive the layer key
+        from the matching ``.weight`` key instead of dropping the scale.
+        """
+        weight_key = f"{key[: -len('.scale_weight')]}.weight"
+        converted = support.convert_checkpoint_key(weight_key)
+        if converted is None or not converted.endswith(".weight"):
+            return
+        layer_key = converted[: -len(".weight")]
+        self._fp8_layer_slot(fp8_layers, layer_key)[2] = tensor.to(
+            dtype=torch.float32, copy=True
         )
 
     def _collect_direct_checkpoint_tensors(
@@ -69,8 +116,24 @@ class ZImageNativePipelineTransformerDirectHelper:
         non_fp8_weights: Dict[str, torch.Tensor] = {}
         with safe_open(path, framework="pt") as checkpoint:
             for key in checkpoint.keys():
+                if key.endswith(".scale_weight"):
+                    self._collect_direct_scale_weight(
+                        fp8_layers,
+                        support,
+                        key,
+                        checkpoint.get_tensor(key),
+                    )
+                    continue
                 model_key = support.convert_checkpoint_key(key)
                 if model_key is None:
+                    continue
+                if model_key.endswith(".weight_scale"):
+                    layer_key = model_key[: -len(".weight_scale")]
+                    self._fp8_layer_slot(fp8_layers, layer_key)[2] = (
+                        checkpoint.get_tensor(key).to(
+                            dtype=torch.float32, copy=True
+                        )
+                    )
                     continue
                 tensor = checkpoint.get_tensor(key)
                 if tensor.dtype == torch.float8_e4m3fn:
@@ -91,14 +154,14 @@ class ZImageNativePipelineTransformerDirectHelper:
         """Collect one FP8 weight or bias for a direct checkpoint load."""
         if model_key.endswith(".weight"):
             layer_key = model_key[:-7]
-            fp8_layers.setdefault(layer_key, [None, None])[0] = tensor.to(
+            self._fp8_layer_slot(fp8_layers, layer_key)[0] = tensor.to(
                 self._owner.device,
                 copy=True,
             )
             return
         if model_key.endswith(".bias"):
             layer_key = model_key[:-5]
-            fp8_layers.setdefault(layer_key, [None, None])[1] = tensor.to(
+            self._fp8_layer_slot(fp8_layers, layer_key)[1] = tensor.to(
                 device=self._owner.device,
                 dtype=self._owner.dtype,
             )
@@ -113,6 +176,19 @@ class ZImageNativePipelineTransformerDirectHelper:
         for layer_key, layer_data in fp8_layers.items():
             if layer_data[0] is None:
                 continue
+            scale = layer_data[2] if len(layer_data) > 2 else None
+            if scale is not None:
+                self._store_scaled_fp8_weight(
+                    fp8_non_linear,
+                    layer_key,
+                    layer_data[0],
+                    layer_data[1],
+                    scale,
+                )
+                layer_data[0] = None
+                layer_data[2] = None
+                replaced += 1
+                continue
             if self._replace_one_unscaled_fp8_layer(
                 layer_key,
                 layer_data[0],
@@ -120,7 +196,34 @@ class ZImageNativePipelineTransformerDirectHelper:
                 fp8_non_linear,
             ):
                 replaced += 1
+        fp8_layers.clear()
         return replaced, fp8_non_linear
+
+    def _store_scaled_fp8_weight(
+        self,
+        fp8_non_linear: Dict[str, torch.Tensor],
+        layer_key: str,
+        weight: torch.Tensor,
+        bias: Optional[torch.Tensor],
+        scale: torch.Tensor,
+    ) -> None:
+        """Dequantize one ComfyUI scaled-FP8 weight on CPU.
+
+        The raw FP8 copy lives on CUDA from collection; dequantizing on
+        CPU keeps only the final tensor for the materializer, halving
+        peak VRAM for scaled checkpoints. The result is stored in the
+        owner dtype, so scaled weights occupy full-precision memory
+        after a direct load, unlike the streaming path, which keeps
+        them quantized in FP8Linear modules.
+        """
+        dequantized = (
+            weight.to(device="cpu", dtype=torch.float32)
+            * scale.to(device="cpu")
+        ).to(dtype=self._owner.dtype)
+        del weight
+        fp8_non_linear[f"{layer_key}.weight"] = dequantized
+        if bias is not None:
+            fp8_non_linear[f"{layer_key}.bias"] = bias
 
     def _replace_one_unscaled_fp8_layer(
         self,

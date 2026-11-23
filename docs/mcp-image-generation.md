@@ -33,8 +33,13 @@ From this repository:
 uv pip install -e "./services[mcp]"
 ```
 
-Start the daemon first (it serves the art API on loopback by
-default), then register the server with your MCP host:
+The server starts a local daemon on demand: when the first tool
+call finds no daemon listening on a loopback `AIRUNNER_DAEMON_URL`,
+it launches one (the same `airunner-daemon` the GUI supervises) and
+waits for its health endpoint before issuing the art call. A daemon
+that is already running is used as-is and never relaunched. If you
+prefer to manage the daemon yourself, start it first (it serves the
+art API on loopback by default), then register the server:
 
 ```json
 {
@@ -63,6 +68,8 @@ console script.)
 | `AIRUNNER_MCP_GENERATION_TIMEOUT_S` | `600` | Block limit for one `generate_image` call |
 | `AIRUNNER_MCP_POLL_INTERVAL_S` | `2` | Status poll cadence while waiting |
 | `AIRUNNER_MCP_REQUEST_TIMEOUT_S` | `30` | Per-request HTTP timeout |
+| `AIRUNNER_MCP_AUTO_START_DAEMON` | `1` | Start a local daemon when none is listening (loopback URLs only) |
+| `AIRUNNER_MCP_DAEMON_STARTUP_TIMEOUT_S` | `90` | Wait limit for an auto-started daemon to report healthy |
 
 ## Tools
 

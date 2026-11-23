@@ -10,8 +10,9 @@ from typing import Any
 import httpx
 import pytest
 
-from airunner_services.mcp.config import MCPConfig
+from airunner_services.mcp.config import MCPConfig, _parse_bool
 from airunner_services.mcp.daemon_client import ArtDaemonClient, DaemonError
+from airunner_services.mcp.daemon_client import is_loopback_url
 from airunner_services.mcp.payloads import build_generation_payload
 from airunner_services.mcp.server import build_server
 from airunner_services.mcp.server import fetch_result, run_generation
@@ -248,3 +249,201 @@ def test_config_from_env_overrides(
     assert config.daemon_url == "http://10.0.0.2:9999"
     assert config.api_key == "secret"
     assert config.generation_timeout_s == 42.0
+
+
+class _FakeLauncher:
+    """Daemon launcher double recording start calls."""
+
+    def __init__(self) -> None:
+        """Track how many times the client starts the daemon."""
+        self.starts = 0
+
+    def start(self) -> None:
+        """Record one daemon start without spawning a process."""
+        self.starts += 1
+
+
+def _autostart_client(
+    tmp_path: Path,
+    handler: Any,
+    launcher: _FakeLauncher,
+    **overrides: Any,
+) -> ArtDaemonClient:
+    """Return a client wired to a mock transport and fake launcher."""
+    transport = httpx.MockTransport(handler)
+    return ArtDaemonClient(
+        _config(tmp_path, **overrides),
+        transport,
+        lambda: launcher,
+    )
+
+
+def test_is_loopback_url_only_matches_this_host() -> None:
+    """Happy: only loopback daemon URLs qualify for auto-start."""
+    assert is_loopback_url("http://127.0.0.1:8080") is True
+    assert is_loopback_url("http://localhost:8080/health") is True
+    assert is_loopback_url("http://192.168.1.10:8080") is False
+    assert is_loopback_url("http://example.com:8080") is False
+    assert is_loopback_url("not a url") is False
+
+
+def test_autostart_launches_daemon_and_retries(
+    tmp_path: Path,
+) -> None:
+    """Happy: a down daemon is started, then the job runs."""
+    launcher = _FakeLauncher()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if launcher.starts == 0:
+            raise httpx.ConnectError("daemon is not running")
+        if path == "/health":
+            return httpx.Response(200, json={"status": "ok"})
+        if path == "/api/v1/art/generate":
+            return httpx.Response(200, json={"job_id": "job-1"})
+        if path == "/api/v1/art/status/job-1":
+            body = {"job_id": "job-1", "status": "completed"}
+            return httpx.Response(200, json={**body, "image_count": 1})
+        if path == "/api/v1/art/result/job-1/0":
+            return httpx.Response(200, content=_PNG)
+        return httpx.Response(404, text="nope")
+
+    client = _autostart_client(tmp_path, handler, launcher)
+    payload = build_generation_payload("a lighthouse")
+    outcome = run_generation(client, _config(tmp_path), payload)
+    summary = outcome[0]
+    assert summary["job_id"] == "job-1"
+    assert launcher.starts == 1
+    assert Path(summary["files"][0]).read_bytes() == _PNG
+
+
+def test_autostart_skipped_when_daemon_already_up(
+    tmp_path: Path,
+) -> None:
+    """Happy: a reachable daemon is used as-is with no launch."""
+    launcher = _FakeLauncher()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/v1/art/models":
+            return httpx.Response(200, json={"models": []})
+        return httpx.Response(404, text="nope")
+
+    client = _autostart_client(tmp_path, handler, launcher)
+    client.ensure_daemon_running()
+
+    assert launcher.starts == 0
+    assert client.list_models() == {"models": []}
+    assert launcher.starts == 0
+
+
+def test_autostart_disabled_raises_without_launch(
+    tmp_path: Path,
+) -> None:
+    """Sad: opt-out keeps the unreachable error and starts nothing."""
+    launcher = _FakeLauncher()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("daemon is not running")
+
+    client = _autostart_client(
+        tmp_path, handler, launcher, auto_start_daemon=False
+    )
+    with pytest.raises(DaemonError, match="daemon unreachable"):
+        client.list_models()
+
+    assert launcher.starts == 0
+
+
+def test_autostart_refuses_non_loopback_url(
+    tmp_path: Path,
+) -> None:
+    """Hostile: a remote daemon URL is never auto-started locally."""
+    launcher = _FakeLauncher()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("daemon is not running")
+
+    transport = httpx.MockTransport(handler)
+    client = ArtDaemonClient(
+        MCPConfig(
+            daemon_url="http://192.168.1.10:8080",
+            output_dir=str(tmp_path),
+            poll_interval_s=0.0,
+        ),
+        transport,
+        lambda: launcher,
+    )
+    with pytest.raises(DaemonError, match="daemon unreachable"):
+        client.list_models()
+
+    assert launcher.starts == 0
+
+
+def test_autostart_failure_surfaces_launch_error(
+    tmp_path: Path,
+) -> None:
+    """Sad: a launcher failure raises instead of retrying forever."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("daemon is not running")
+
+    transport = httpx.MockTransport(handler)
+    client = ArtDaemonClient(_config(tmp_path), transport)
+    client._launcher_factory = lambda: _FailingLauncher()
+    with pytest.raises(DaemonError, match="auto-start failed"):
+        client.list_models()
+
+
+class _FailingLauncher:
+    """Launcher double whose start always fails."""
+
+    def start(self) -> None:
+        """Raise instead of spawning a daemon process."""
+        raise OSError("no daemon binary")
+
+
+def test_config_from_env_autostart_overrides(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Happy: env vars toggle auto-start and its startup timeout."""
+    monkeypatch.setenv("AIRUNNER_MCP_AUTO_START_DAEMON", "0")
+    monkeypatch.setenv("AIRUNNER_MCP_DAEMON_STARTUP_TIMEOUT_S", "12")
+    config = MCPConfig.from_env()
+    assert config.auto_start_daemon is False
+    assert config.daemon_startup_timeout_s == 12.0
+
+
+def test_read_timeout_does_not_autostart_or_retry(
+    tmp_path: Path,
+) -> None:
+    """Sad: a busy daemon timeout surfaces with no launch or retry."""
+    launcher = _FakeLauncher()
+    posts: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/health":
+            return httpx.Response(200, json={"status": "ok"})
+        if request.url.path == "/api/v1/art/generate":
+            posts.append(request)
+            raise httpx.ReadTimeout("daemon busy")
+        return httpx.Response(404, text="nope")
+
+    client = _autostart_client(tmp_path, handler, launcher)
+    with pytest.raises(DaemonError, match="daemon unreachable"):
+        client.start_generation({"prompt": "x"})
+
+    assert launcher.starts == 0
+    assert len(posts) == 1
+
+
+def test_config_unrecognized_bool_falls_back_to_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sad: an unrecognized boolean env value keeps the default."""
+    monkeypatch.setenv("AIRUNNER_MCP_AUTO_START_DAEMON", "sometimes")
+    config = MCPConfig.from_env()
+    assert config.auto_start_daemon is True
+    assert _parse_bool("sometimes", True) is True
+    assert _parse_bool("sometimes", False) is False
+    assert _parse_bool("yes", False) is True
+    assert _parse_bool("off", True) is False
