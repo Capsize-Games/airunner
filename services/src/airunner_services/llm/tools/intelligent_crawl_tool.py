@@ -194,7 +194,6 @@ def intelligent_crawl(
             page_data, research_goal, pages_scraped, max_pages
         ):
             """Callback invoked by spider for each page."""
-            # Store the page data
             collected_pages.append(page_data)
 
             # Get LLM decision

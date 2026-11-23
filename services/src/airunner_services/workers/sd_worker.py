@@ -4,6 +4,7 @@ import base64
 import io
 import os
 import threading
+import time
 from functools import partial
 from typing import Dict, Optional
 
@@ -39,6 +40,7 @@ from airunner_services.utils.application.enum_resolver import (
 )
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 from airunner_services.utils.application.get_logger import get_logger
+from airunner_services.utils.application.runtime_primitives import QTimer
 from airunner_services.utils.memory import apply_cudnn_benchmark
 from airunner_services.workers.worker import QueueType, Worker
 
@@ -91,6 +93,15 @@ class SDWorker(Worker):
 		self._active_api_art_request_id: Optional[str] = None
 		self._cancelled_api_art_request_ids: set[str] = set()
 		self._queued_api_art_request_ids: set[str] = set()
+		self._last_art_request_time: Optional[float] = None
+		self._art_inactivity_timer: Optional[object] = None
+		# Art models (Z-Image weighs several GB in RAM/VRAM) unload
+		# after a period without use. Both knobs stay ON/5-minutes
+		# by default so idle daemons free the GPU without a restart.
+		self._art_inactivity_timeout = self._parse_art_timeout()
+		self._art_auto_unload_enabled = (
+			os.environ.get("AIRUNNER_ART_AUTO_UNLOAD", "1") == "1"
+		)
 		super().__init__()
 		apply_cudnn_benchmark(self.memory_settings)
 		self.__requested_action = ModelAction.NONE
@@ -157,6 +168,7 @@ class SDWorker(Worker):
 			self.model_manager.settings_changed(data)
 
 	def on_load_art_signal(self, data: Dict = None):
+		self._update_art_activity_timestamp()
 		self.add_to_queue(
 			{
 				"action": ModelAction.LOAD,
@@ -403,10 +415,21 @@ class SDWorker(Worker):
 		)
 
 	def unload_model_manager(self, data: Dict = None):
+		with self._model_manager_lock:
+			self._unload_model_manager_locked()
+		if data:
+			callback = data.get("callback", None)
+			if callback is not None:
+				callback(data)
+
+	def _unload_model_manager_locked(self):
+		# Caller must hold _model_manager_lock. Direct field writes
+		# avoid re-acquiring the plain Lock via the model_manager
+		# setter, which would deadlock.
 		if self._model_manager is not None:
 			manager_ref = self._model_manager
 			self._model_manager.unload()
-			self.model_manager = None
+			self._model_manager = None
 
 			if manager_ref is self._sd:
 				self.logger.info(">>> Unloading SD model manager")
@@ -432,10 +455,84 @@ class SDWorker(Worker):
 
 			self._clear_loaded_model_signature()
 
-		if data:
-			callback = data.get("callback", None)
-			if callback is not None:
-				callback(data)
+	@staticmethod
+	def _parse_art_timeout() -> int:
+		"""Return the art idle timeout in seconds (default 300)."""
+		try:
+			value = int(
+				os.environ.get(
+					"AIRUNNER_ART_INACTIVITY_TIMEOUT_SECONDS", "300"
+				)
+			)
+		except ValueError:
+			return 300
+		return value if value > 0 else 300
+
+	def _update_art_activity_timestamp(self) -> None:
+		"""Refresh the last-request timestamp for inactivity tracking."""
+		self._last_art_request_time = time.time()
+
+	def _start_art_inactivity_timer(self) -> None:
+		"""Start the inactivity monitoring timer when auto-unload is on."""
+		if not self._art_auto_unload_enabled:
+			return
+		if self._art_inactivity_timer is not None:
+			return
+
+		self._art_inactivity_timer = QTimer()
+		self._art_inactivity_timer.timeout.connect(
+			self._check_art_inactivity
+		)
+		self._art_inactivity_timer.start(60000)
+		self.logger.info(
+			"Art auto-unload timer started "
+			f"({int(self._art_inactivity_timeout / 60)} minute timeout)"
+		)
+
+	def _check_art_inactivity(self) -> None:
+		"""Unload the art model after extended inactivity when enabled."""
+		if not self._art_auto_unload_enabled:
+			return
+		if not self._last_art_request_time:
+			return
+		if self._is_generating:
+			return
+		if self._active_api_art_request_id is not None:
+			return
+		if getattr(self, "_queued_api_art_request_ids", None):
+			return
+
+		# Hold the lock for the loaded check through the unload so
+		# a generation starting in this tick (which needs the lock
+		# via the model_manager getter) cannot race the unload.
+		# _unload_model_manager_locked writes _model_manager
+		# directly instead of via the setter, so the plain Lock
+		# is not re-acquired and cannot deadlock.
+		with self._model_manager_lock:
+			if self._is_generating:
+				return
+			if self._active_api_art_request_id is not None:
+				return
+			if getattr(self, "_queued_api_art_request_ids", None):
+				return
+			if not self._last_art_request_time:
+				return
+
+			manager = self._model_manager
+			if manager is None:
+				return
+			if not getattr(manager, "model_is_loaded", False):
+				return
+
+			inactive_time = time.time() - self._last_art_request_time
+
+			if inactive_time >= self._art_inactivity_timeout:
+				self.logger.info(
+					"Art model idle for "
+					f"{int(inactive_time / 60)} minutes - auto-unloading"
+				)
+				self._unload_model_manager_locked()
+				self._last_art_request_time = None
 
 	def on_tokenizer_load_signal(self, data: Dict = None):
 		if self.model_manager:
@@ -452,6 +549,7 @@ class SDWorker(Worker):
 		pass
 
 	def on_do_generate_signal(self, message: Dict):
+		self._update_art_activity_timestamp()
 		request_id = message.get("request_id")
 		if request_id:
 			with self._api_art_request_lock:
@@ -594,11 +692,31 @@ class SDWorker(Worker):
 		self.__requested_action = ModelAction.NONE
 
 	def start_worker_thread(self):
+		if self._art_auto_unload_enabled:
+			self._start_art_inactivity_timer()
 		if not self.application_settings.sd_enabled:
 			return
 		model_manager = self.model_manager
 		if model_manager is not None:
 			model_manager.load()
+
+	def run(self) -> None:
+		"""Start the queue loop and the art inactivity timer.
+
+		``create_worker`` wires ``worker_thread.started`` directly to
+		``run()``, so the timer must start here (not only in
+		``start_worker_thread``, which no production code calls).
+		The timer is idempotent, so an extra compatibility-path
+		call is harmless.
+		"""
+		self._start_art_inactivity_timer()
+		super().run()
+
+	def stop(self) -> None:
+		"""Stop the queue loop and the art inactivity timer."""
+		if self._art_inactivity_timer is not None:
+			self._art_inactivity_timer.stop()
+		super().stop()
 
 	def handle_message(self, message: Optional[Dict] = None):
 		if message is None:
@@ -1176,6 +1294,7 @@ class SDWorker(Worker):
 				self.send_missing_model_alert(failure_message)
 			finally:
 				self._is_generating = False
+				self._update_art_activity_timestamp()
 				if self._pending_scheduler is not None:
 					pending = self._pending_scheduler
 					self._pending_scheduler = None

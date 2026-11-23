@@ -77,6 +77,10 @@ def _seed_art_runtime_settings(
     version: str,
     scheduler: str,
     pipeline_action: str,
+    width: int = 512,
+    height: int = 512,
+    steps: int = 4,
+    dtype: str = "bfloat16",
 ) -> None:
     app_settings = _ensure_row(ApplicationSettings)
     ApplicationSettings.objects.update(
@@ -87,8 +91,8 @@ def _seed_art_runtime_settings(
         stt_enabled=False,
         nsfw_filter=False,
         auto_export_images=False,
-        working_width=512,
-        working_height=512,
+        working_width=width,
+        working_height=height,
     )
 
     path_settings = _ensure_row(PathSettings)
@@ -104,9 +108,10 @@ def _seed_art_runtime_settings(
         pipeline_action=pipeline_action,
         version=version,
         scheduler=scheduler,
-        steps=4,
+        steps=steps,
         scale=500,
         use_compel=True,
+        dtype=dtype,
     )
 
 
@@ -135,6 +140,11 @@ def _build_request(
     mask_path: Path | None,
     strength: float | None,
     active_rect: dict[str, int] | None,
+    width: int = 512,
+    height: int = 512,
+    steps: int = 4,
+    seed: int = 1234,
+    guidance: float = 5.0,
 ) -> RequestEnvelope:
     metadata = {
         "version": version,
@@ -155,11 +165,11 @@ def _build_request(
         prompt=prompt,
         negative_prompt="",
         model=str(model_path),
-        width=512,
-        height=512,
-        steps=4,
-        cfg_scale=5.0,
-        seed=1234,
+        width=width,
+        height=height,
+        steps=steps,
+        cfg_scale=guidance,
+        seed=seed,
         num_images=1,
         metadata=metadata,
     ).model_dump()
@@ -225,24 +235,62 @@ def _cuda_ready() -> tuple[bool, str]:
     return True, ""
 
 
+def _batch_jobs(args) -> list[dict]:
+    """One job per batch entry, or the single CLI request as a job."""
+    if args.batch:
+        jobs = []
+        for i, entry in enumerate(json.loads(Path(args.batch).read_text())):
+            jobs.append({
+                "prompt": entry["prompt"],
+                "seed": int(entry.get("seed", args.seed)),
+                "width": int(entry.get("width", args.width)),
+                "height": int(entry.get("height", args.height)),
+                "steps": int(entry.get("steps", args.steps)),
+                "guidance": float(entry.get("guidance", args.guidance)),
+                "out": str(entry.get("out", f"probe_image_{i}.png")),
+            })
+        return jobs
+    return [{
+        "prompt": args.prompt,
+        "seed": args.seed,
+        "width": args.width,
+        "height": args.height,
+        "steps": args.steps,
+        "guidance": args.guidance,
+        "out": "probe_image.png",
+    }]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-path", required=True)
     parser.add_argument("--version", required=True)
     parser.add_argument("--scheduler", required=True)
     parser.add_argument("--pipeline-action", default="txt2img")
-    parser.add_argument("--prompt", required=True)
+    parser.add_argument("--prompt", default="")
+    parser.add_argument("--batch", default="",
+        help="JSON list of jobs: prompt, seed, width, height, steps, "
+        "guidance, out name. One model load serves every job.")
     parser.add_argument("--image-path")
     parser.add_argument("--mask-path")
     parser.add_argument("--strength", type=float)
     parser.add_argument("--active-rect")
     parser.add_argument("--runtime-root", required=True)
     parser.add_argument("--output-root", required=True)
+    parser.add_argument("--width", type=int, default=512)
+    parser.add_argument("--height", type=int, default=512)
+    parser.add_argument("--steps", type=int, default=4)
+    parser.add_argument("--seed", type=int, default=1234)
+    parser.add_argument("--guidance", type=float, default=5.0)
+    parser.add_argument("--dtype", type=str, default="bfloat16")
     args = parser.parse_args()
 
     model_path = Path(args.model_path)
     if not model_path.exists():
         _emit_result("failed", reason=f"Missing model path: {model_path}")
+        return 1
+    if not args.prompt and not args.batch:
+        _emit_result("failed", reason="Need --prompt or --batch")
         return 1
 
     image_path = Path(args.image_path) if args.image_path else None
@@ -316,6 +364,10 @@ def main() -> int:
         version=args.version,
         scheduler=args.scheduler,
         pipeline_action=args.pipeline_action,
+        width=args.width,
+        height=args.height,
+        steps=args.steps,
+        dtype=args.dtype,
     )
 
     app = None
@@ -325,47 +377,76 @@ def main() -> int:
             initialize_headless_lifecycle=True,
         )
         client = LocalFallbackArtClient(signal_source=app)
-        progress_updates = []
-        response = client.invoke_with_progress(
-            _build_request(
-                model_path=model_path,
-                version=args.version,
-                scheduler=args.scheduler,
-                prompt=args.prompt,
-                pipeline_action=args.pipeline_action,
-                image_path=image_path,
-                mask_path=mask_path,
-                strength=args.strength,
-                active_rect=active_rect,
-            ),
-            progress_updates.append,
-        )
-        if response.status is not EnvelopeStatus.SUCCEEDED:
+        jobs = _batch_jobs(args)
+        failures = 0
+        for job in jobs:
+            progress_updates = []
+            response = client.invoke_with_progress(
+                _build_request(
+                    model_path=model_path,
+                    version=args.version,
+                    scheduler=args.scheduler,
+                    prompt=job["prompt"],
+                    pipeline_action=args.pipeline_action,
+                    image_path=image_path,
+                    mask_path=mask_path,
+                    strength=args.strength,
+                    active_rect=active_rect,
+                    width=job["width"],
+                    height=job["height"],
+                    steps=job["steps"],
+                    seed=job["seed"],
+                    guidance=job["guidance"],
+                ),
+                progress_updates.append,
+            )
+            if response.status is not EnvelopeStatus.SUCCEEDED:
+                _emit_result(
+                    "failed",
+                    reason="Art invocation did not succeed",
+                    response_status=response.status.value,
+                    out=job["out"],
+                )
+                failures += 1
+                continue
+
+            images = response.payload.get("images") or []
+            if not images:
+                _emit_result(
+                    "failed",
+                    reason="Art invocation returned no images",
+                    response_status=response.status.value,
+                    out=job["out"],
+                )
+                failures += 1
+                continue
+
+            raw_image = base64.b64decode(images[0])
+            saved_path = output_root / job["out"]
+            saved_path.write_bytes(raw_image)
+            with Image.open(io.BytesIO(raw_image)) as image:
+                _emit_result(
+                    "succeeded",
+                    response_status=response.status.value,
+                    image_count=len(images),
+                    image_size=list(image.size),
+                    progress_count=len(progress_updates),
+                    image_path=str(saved_path),
+                    out=job["out"],
+                )
+        if failures and args.batch:
             _emit_result(
                 "failed",
-                reason="Art invocation did not succeed",
-                response_status=response.status.value,
+                reason=(
+                    f"Batch failed: {failures} of {len(jobs)} "
+                    "jobs failed"
+                ),
+                failures=failures,
+                failure_count=failures,
+                failed_count=failures,
+                total_jobs=len(jobs),
             )
-            return 1
-
-        images = response.payload.get("images") or []
-        if not images:
-            _emit_result(
-                "failed",
-                reason="Art invocation returned no images",
-                response_status=response.status.value,
-            )
-            return 1
-
-        with Image.open(io.BytesIO(base64.b64decode(images[0]))) as image:
-            _emit_result(
-                "succeeded",
-                response_status=response.status.value,
-                image_count=len(images),
-                image_size=list(image.size),
-                progress_count=len(progress_updates),
-            )
-        return 0
+        return 1 if failures else 0
     except Exception as exc:
         _emit_result("failed", reason=str(exc))
         return 1

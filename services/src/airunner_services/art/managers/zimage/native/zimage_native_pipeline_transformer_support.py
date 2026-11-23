@@ -90,6 +90,8 @@ class ZImageNativePipelineTransformerSupport:
                 break
         if "scale_weight" in key:
             return None
+        if "comfy_quant" in key:
+            return None
         return key
 
     def set_module_tensor_to_device(

@@ -1,0 +1,59 @@
+{
+  "activation": "not_activated",
+  "artifact": {
+    "archive_digest_independently_verified": true,
+    "archive_sha256": "138d6a236e439f36a42b406f59ddb0aa2351d4f0b0d4430a6a39a3140989e579",
+    "expires_at": "2026-11-16T18:40:31Z",
+    "id": 13169936299,
+    "name": "runtime-hardening-candidates-41502697808-1"
+  },
+  "artifacts": [
+    {
+      "crc": "passed",
+      "distribution": "nvidia-nvshmem-cu12",
+      "filename": "nvidia_nvshmem_cu12-3.4.5+capsize.1-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "record": "passed",
+      "record_rows": 62,
+      "sha256": "f2297cd80f097e40e0544672186c020d2ae12ddfa438f50626053e2de72c94ea",
+      "size_bytes": 139017640,
+      "version": "3.4.5+capsize.1"
+    },
+    {
+      "crc": "passed",
+      "distribution": "torchaudio",
+      "filename": "torchaudio-2.11.0+cu129.capsize.1-cp313-cp313-manylinux_2_28_x86_64.whl",
+      "record": "passed",
+      "record_rows": 90,
+      "sha256": "442827154e36ff0643036d0065ce96b9f65cdaee224b9f6b5c4318e6e3f1620c",
+      "size_bytes": 1579655,
+      "version": "2.11.0+cu129.capsize.1"
+    },
+    {
+      "crc": "passed",
+      "distribution": "torchvision",
+      "filename": "torchvision-0.28.0+cu129.capsize.1-cp313-cp313-manylinux_2_28_x86_64.whl",
+      "record": "passed",
+      "record_rows": 206,
+      "sha256": "fb59f03148302906a39abe711bd4dcffe62973c741884a879b3247a2fa7f5d40",
+      "size_bytes": 9492586,
+      "version": "0.28.0+cu129.capsize.1"
+    }
+  ],
+  "exclusions": [
+    "Triton excluded pending validated external-toolchain integration",
+    "no package installation/import or model/GPU acceptance in this build",
+    "full ML lock and frozen artifact validation remain pending",
+    "Actions retention is temporary; final immutable release must carry durable wheels and notices"
+  ],
+  "inputs": {
+    "path": "package/runtime-wheel-hardening-inputs.json",
+    "sha256": "715e49adc27227beb719e9419dc9c0a4e2bbfdadfc2a3bc3cc93a1eb9b3d1e15"
+  },
+  "profile": "linux-release",
+  "repository": "Capsize-Games/airunner",
+  "run_id": 41502697808,
+  "schema_version": 1,
+  "source_sha": "ac1fc6206a8388e4ce19068209a714296cc21290",
+  "status": "reviewed-isolated-candidates",
+  "workflow": ".github/workflows/runtime-wheel-hardening.yml"
+}

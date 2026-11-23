@@ -1,0 +1,26 @@
+Metadata-Version: 2.4
+Name: openmeteo_sdk
+Version: 1.28.0
+Summary: Open-Meteo Python SDK
+Project-URL: Documentation, https://github.com/open-meteo/sdk/tree/main#readme
+Project-URL: Source, https://github.com/open-meteo/sdk
+Project-URL: Tracker, https://github.com/open-meteo/sdk/issues
+Author-email: Patrick Zippenfenig <info@open-meteo.com>
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.8.1
+Requires-Dist: flatbuffers==25.9.23
+Description-Content-Type: text/markdown
+
+
+# Open-Meteo Python SDK
+
+https://pypi.org/project/openmeteo-sdk/
+
+`pip install openmeteo-sdk`
