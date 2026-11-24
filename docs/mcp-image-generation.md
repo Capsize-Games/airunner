@@ -76,6 +76,7 @@ console script.)
 | Tool | Behavior |
 | --- | --- |
 | `generate_image` | Start a job, wait for completion, save PNGs, return a summary plus the images |
+| `generate_image_batch` | One image per prompt (max 8), sequentially, model stays warm; shared seed increments per prompt |
 | `get_generation_status` | Poll progress/state for one job id |
 | `fetch_generation_result` | Download one finished batch image by index |
 | `cancel_generation` | Cancel a running job (best-effort) |

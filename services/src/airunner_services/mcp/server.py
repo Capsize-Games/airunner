@@ -10,6 +10,7 @@ from mcp.server.mcpserver import Image, MCPServer
 from airunner_services.mcp.config import MCPConfig
 from airunner_services.mcp.daemon_client import ArtDaemonClient, DaemonError
 from airunner_services.mcp.payloads import (
+    build_batch_payloads,
     build_generation_payload,
     load_input_image_b64,
 )
@@ -48,6 +49,29 @@ def run_generation(
         "files": saved,
     }
     return [summary, *(Image(path=item) for item in saved)]
+
+
+def run_generation_batch(
+    client: ArtDaemonClient,
+    config: MCPConfig,
+    payloads: list[dict[str, Any]],
+) -> list[Any]:
+    """Run each payload sequentially, returning summaries + images."""
+    summaries: list[dict[str, Any]] = []
+    images: list[Any] = []
+    files: list[str] = []
+    for payload in payloads:
+        outcome = run_generation(client, config, payload)
+        summaries.append(outcome[0])
+        images.extend(outcome[1:])
+        files.extend(outcome[0].get("files", []))
+    summary = {
+        "job_count": len(summaries),
+        "job_ids": [item.get("job_id") for item in summaries],
+        "jobs": summaries,
+        "files": files,
+    }
+    return [summary, *images]
 
 
 def fetch_result(
@@ -128,6 +152,44 @@ def build_server(
             strength,
         )
         return run_generation(owned, resolved, payload)
+
+    @server.tool()
+    def generate_image_batch(
+        prompts: list[str],
+        width: int = 1024,
+        height: int = 1024,
+        steps: int = 9,
+        cfg_scale: float = 0.0,
+        seed: int | None = None,
+        model: str | None = None,
+        version: str | None = None,
+        scheduler: str | None = None,
+        provider: str = "local",
+        input_image_path: str | None = None,
+        strength: float | None = None,
+    ) -> list[Any]:
+        """Generate one image per prompt, sequentially.
+
+        Runs each prompt as its own daemon job (the model stays warm
+        between prompts). At most 8 prompts, one image each. A shared
+        ``seed`` is incremented per prompt.
+        """
+        payloads = build_batch_payloads(
+            prompts,
+            width,
+            height,
+            steps,
+            cfg_scale,
+            seed,
+            1,
+            model,
+            version,
+            scheduler,
+            provider,
+            input_image_path,
+            strength,
+        )
+        return run_generation_batch(owned, resolved, payloads)
 
     @server.tool()
     def remove_background(input_image_path: str) -> list[Any]:

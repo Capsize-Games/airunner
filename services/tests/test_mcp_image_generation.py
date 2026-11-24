@@ -16,7 +16,7 @@ from airunner_services.mcp.daemon_client import is_loopback_url
 from airunner_services.mcp.payloads import build_generation_payload
 from airunner_services.mcp.server import build_server
 from airunner_services.mcp.server import fetch_result, run_generation
-from airunner_services.mcp.server import run_background_removal
+from airunner_services.mcp.server import run_background_removal, run_generation_batch
 
 _PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8"
@@ -112,6 +112,42 @@ def test_generate_end_to_end_saves_pngs(tmp_path: Path) -> None:
     for path in summary["files"]:
         assert Path(path).read_bytes() == _PNG
     assert len(outcome) == 3
+
+
+def test_batch_end_to_end_saves_all(tmp_path: Path) -> None:
+    """Happy: run_generation_batch runs each prompt, returns images."""
+    from airunner_services.mcp.payloads import build_batch_payloads
+
+    counter = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path == "/api/v1/art/generate":
+            counter["n"] += 1
+            return httpx.Response(200, json={"job_id": f"job-{counter['n']}"})
+        if path.startswith("/api/v1/art/status/"):
+            job_id = path.rsplit("/", 1)[-1]
+            return httpx.Response(
+                200,
+                json={
+                    "job_id": job_id,
+                    "status": "completed",
+                    "image_count": 1,
+                },
+            )
+        if path.startswith("/api/v1/art/result/"):
+            return httpx.Response(200, content=_PNG)
+        return httpx.Response(404, text="nope")
+
+    client = _client(handler, tmp_path)
+    payloads = build_batch_payloads(["a lighthouse", "a red fox"])
+    outcome = run_generation_batch(client, _config(tmp_path), payloads)
+    summary = outcome[0]
+    assert summary["job_count"] == 2
+    assert summary["job_ids"] == ["job-1", "job-2"]
+    assert len(outcome) == 3
+    for path in summary["files"]:
+        assert Path(path).read_bytes() == _PNG
 
 
 def test_fetch_result_returns_saved_image(tmp_path: Path) -> None:
@@ -222,7 +258,7 @@ def test_remove_background_daemon_error(tmp_path: Path) -> None:
     assert caught.value.status_code == 500
 
 
-def test_server_registers_six_tools(tmp_path: Path) -> None:
+def test_server_registers_seven_tools(tmp_path: Path) -> None:
     """Happy: the MCP server exposes the generation tool surface."""
     client = _client(_ok_handler, tmp_path)
     server = build_server(_config(tmp_path), client)
@@ -232,10 +268,49 @@ def test_server_registers_six_tools(tmp_path: Path) -> None:
         "cancel_generation",
         "fetch_generation_result",
         "generate_image",
+        "generate_image_batch",
         "get_generation_status",
         "list_image_models",
         "remove_background",
     ]
+
+
+def test_payload_batch_targets_zimage_turbo() -> None:
+    """Happy: batch builder returns one payload per prompt, seeds increment."""
+    from airunner_services.mcp.payloads import build_batch_payloads
+
+    payloads = build_batch_payloads(["a lighthouse", "a red fox"], seed=10)
+    assert len(payloads) == 2
+    assert [p["prompt"] for p in payloads] == ["a lighthouse", "a red fox"]
+    assert [p["seed"] for p in payloads] == [10, 11]
+    assert all(p["steps"] == 9 for p in payloads)
+
+
+def test_payload_batch_rejects_empty_and_oversize() -> None:
+    """Sad: empty or oversize batches fail before any HTTP call."""
+    from airunner_services.mcp.payloads import build_batch_payloads
+
+    for bad in ([], ["ok"] * 9):
+        with pytest.raises(ValueError):
+            build_batch_payloads(bad)
+
+
+def test_payload_batch_rejects_blank_prompt() -> None:
+    """Sad: a blank prompt inside the batch fails before any HTTP call."""
+    from airunner_services.mcp.payloads import build_batch_payloads
+
+    with pytest.raises(ValueError):
+        build_batch_payloads(["ok", "   "])
+
+
+def test_payload_batch_rejects_non_list_and_multi_images() -> None:
+    """Bad: non-list input and num_images != 1 are rejected."""
+    from airunner_services.mcp.payloads import build_batch_payloads
+
+    with pytest.raises(ValueError):
+        build_batch_payloads("not a list")
+    with pytest.raises(ValueError):
+        build_batch_payloads(["ok"], num_images=2)
 
 
 def test_config_from_env_overrides(

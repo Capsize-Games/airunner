@@ -22,6 +22,8 @@ MIN_CFG_SCALE = 0.0
 MAX_CFG_SCALE = 100.0
 MIN_IMAGES = 1
 MAX_IMAGES = 8
+MIN_BATCH_PROMPTS = 1
+MAX_BATCH_PROMPTS = 8
 MIN_STRENGTH = 0.0
 MAX_STRENGTH = 1.0
 MAX_SEED = 2**31 - 1
@@ -51,6 +53,18 @@ def validate_dimensions(width: int, height: int) -> tuple[int, int]:
                 f"got {value}"
             )
     return width, height
+
+
+def validate_prompts(prompts: list[str]) -> list[str]:
+    """Validate a batch of prompts, returning stripped texts."""
+    if not isinstance(prompts, list):
+        raise ValueError("prompts must be a list of strings")
+    if not MIN_BATCH_PROMPTS <= len(prompts) <= MAX_BATCH_PROMPTS:
+        raise ValueError(
+            f"prompts must contain {MIN_BATCH_PROMPTS}.."
+            f"{MAX_BATCH_PROMPTS} entries, got {len(prompts)}"
+        )
+    return [validate_prompt(prompt) for prompt in prompts]
 
 
 def validate_options(
@@ -134,3 +148,47 @@ def build_generation_payload(
     if input_image_path:
         payload["image_b64"] = load_input_image_b64(input_image_path)
     return payload
+
+
+def build_batch_payloads(
+    prompts: list[str],
+    width: int = 1024,
+    height: int = 1024,
+    steps: int = 9,
+    cfg_scale: float = 0.0,
+    seed: int | None = None,
+    num_images: int = 1,
+    model: str | None = None,
+    version: str | None = None,
+    scheduler: str | None = None,
+    provider: str = LOCAL_PROVIDER,
+    input_image_path: str | None = None,
+    strength: float | None = None,
+) -> list[dict[str, Any]]:
+    """Validate batch arguments and return one payload per prompt.
+
+    Each prompt gets one image (``num_images`` must be 1) so the
+    batch total stays within daemon bounds. A shared ``seed`` is
+    incremented per prompt for variation.
+    """
+    texts = validate_prompts(prompts)
+    if num_images != 1:
+        raise ValueError("batch uses one image per prompt (num_images=1)")
+    return [
+        build_generation_payload(
+            text,
+            width,
+            height,
+            steps,
+            cfg_scale,
+            None if seed is None else seed + index,
+            num_images,
+            model,
+            version,
+            scheduler,
+            provider,
+            input_image_path,
+            strength,
+        )
+        for index, text in enumerate(texts)
+    ]
