@@ -1254,11 +1254,19 @@ class SDWorker(Worker):
 						message.get("image_request", None)
 					)
 					return
-				self.logger.info(
-					"Model not loaded yet, skipping generation "
-					"(download may be in progress)"
-				)
-				return
+				if getattr(mm, "_pipe", None) is not None:
+					self.logger.warning(
+						"Pipeline present but model status is %s; "
+						"proceeding with present pipeline instead of "
+						"stranding the request",
+						mm.model_status.get(mm.model_type, "unknown"),
+					)
+				else:
+					self.logger.info(
+						"Model not loaded yet, skipping generation "
+						"(download may be in progress)"
+					)
+					return
 
 			try:
 				self._is_generating = True

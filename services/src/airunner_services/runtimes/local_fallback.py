@@ -1199,7 +1199,30 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         if component == "safety_checker":
             return self._unload_safety_checker_component(request.request_id)
 
+        # Fast-path when nothing is loaded: emitting SD_UNLOAD_SIGNAL and
+        # waiting 120s for an UNLOADED that never comes is what hung the
+        # 60s HTTP client in the port-collision state.
+        manager = self._art_model_manager(create=False)
+        if manager is None or (
+            not getattr(manager, "model_is_loaded", False)
+            and getattr(manager, "_pipe", None) is None
+        ):
+            self._art_model_metadata = {}
+            return ResponseEnvelope(
+                request_id=request.request_id,
+                status=EnvelopeStatus.SUCCEEDED,
+                payload={"accepted": True, "model_status": "unloaded"},
+            )
+
         self._art_model_metadata = {}
+        import os as _os
+
+        try:
+            unload_timeout = float(
+                _os.environ.get("AIRUNNER_ART_UNLOAD_TIMEOUT_SECONDS", "30")
+            )
+        except ValueError:
+            unload_timeout = 30.0
         response = self._wait_for_model_status(
             request.request_id,
             emit_code=SignalCode.SD_UNLOAD_SIGNAL,
@@ -1208,6 +1231,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             timeout_code="art_unload_timeout",
             failure_code="art_unload_failed",
             action_name="Art unload",
+            timeout_seconds=max(1.0, unload_timeout),
         )
         if response.status is not EnvelopeStatus.SUCCEEDED:
             return response

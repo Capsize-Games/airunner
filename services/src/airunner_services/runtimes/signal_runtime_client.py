@@ -296,6 +296,7 @@ class _SignalRuntimeClient(RuntimeClient):
         timeout_code: str,
         failure_code: str,
         action_name: str,
+        timeout_seconds: float | None = None,
     ) -> ResponseEnvelope:
         """Emit a control signal and wait for the matching model status."""
         from airunner_common.contract_enums import ModelStatus, SignalCode
@@ -318,7 +319,13 @@ class _SignalRuntimeClient(RuntimeClient):
         try:
             self._emit_signal(emit_code, emit_data)
             try:
-                status = status_queue.get(timeout=self._timeout_seconds)
+                status = status_queue.get(
+                    timeout=(
+                        self._timeout_seconds
+                        if timeout_seconds is None
+                        else timeout_seconds
+                    )
+                )
             except Empty:
                 return self._failure_response(
                     request_id,

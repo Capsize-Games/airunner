@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from mcp.server.mcpserver import Image, MCPServer
+from mcp_types import ContentBlock, ImageContent, TextContent  # noqa: F401
 
 from airunner_services.mcp.config import MCPConfig
 from airunner_services.mcp.daemon_client import ArtDaemonClient, DaemonError
@@ -27,6 +28,29 @@ def _save_png(
     path = target_dir / f"{job_id}-{index}.png"
     path.write_bytes(data)
     return str(path)
+
+
+def _to_content_list(outcome: list[Any]) -> list[ContentBlock]:
+    """Convert [summary, *Image] into serializable content blocks."""
+    import base64
+    import json
+
+    summary = outcome[0] if outcome else {}
+    text = json.dumps(summary, indent=2) if not isinstance(summary, str) else summary
+    content: list[ContentBlock] = [TextContent(type="text", text=text)]
+    for item in outcome[1:]:
+        if isinstance(item, Image) and item.path is not None:
+            data = base64.b64encode(item.path.read_bytes()).decode()
+            content.append(
+                ImageContent(type="image", data=data, mime_type=item._mime_type)
+            )
+        elif isinstance(item, Image):
+            assert item.data is not None
+            data = base64.b64encode(item.data).decode()
+            content.append(
+                ImageContent(type="image", data=data, mime_type=item._mime_type)
+            )
+    return content
 
 
 def run_generation(
@@ -111,7 +135,7 @@ def build_server(
     owned = client or ArtDaemonClient(resolved)
     server = MCPServer(SERVER_NAME)
 
-    @server.tool()
+    @server.tool(structured_output=False)
     def generate_image(
         prompt: str,
         width: int = 1024,
@@ -126,7 +150,7 @@ def build_server(
         provider: str = "local",
         input_image_path: str | None = None,
         strength: float | None = None,
-    ) -> list[Any]:
+    ) -> list[ContentBlock]:
         """Generate images with AI Runner and return PNGs.
 
         Starts a daemon art job, waits for completion, saves each
@@ -151,9 +175,9 @@ def build_server(
             input_image_path,
             strength,
         )
-        return run_generation(owned, resolved, payload)
+        return _to_content_list(run_generation(owned, resolved, payload))
 
-    @server.tool()
+    @server.tool(structured_output=False)
     def generate_image_batch(
         prompts: list[str],
         width: int = 1024,
@@ -167,7 +191,7 @@ def build_server(
         provider: str = "local",
         input_image_path: str | None = None,
         strength: float | None = None,
-    ) -> list[Any]:
+    ) -> list[ContentBlock]:
         """Generate one image per prompt, sequentially.
 
         Runs each prompt as its own daemon job (the model stays warm
@@ -189,29 +213,33 @@ def build_server(
             input_image_path,
             strength,
         )
-        return run_generation_batch(owned, resolved, payloads)
+        return _to_content_list(
+            run_generation_batch(owned, resolved, payloads)
+        )
 
-    @server.tool()
-    def remove_background(input_image_path: str) -> list[Any]:
+    @server.tool(structured_output=False)
+    def remove_background(input_image_path: str) -> list[ContentBlock]:
         """Remove the background from one image and return its PNG.
 
         Sends the file to the daemon's RMBG-2.0 background removal,
         saves the RGBA result under the output dir, and returns
         metadata plus the image. Synchronous: no job polling.
         """
-        return run_background_removal(owned, resolved, input_image_path)
+        return _to_content_list(
+            run_background_removal(owned, resolved, input_image_path)
+        )
 
     @server.tool()
     def get_generation_status(job_id: str) -> dict[str, Any]:
         """Return progress and state for one generation job."""
         return owned.get_status(job_id)
 
-    @server.tool()
+    @server.tool(structured_output=False)
     def fetch_generation_result(
         job_id: str, index: int = 0
-    ) -> list[Any]:
+    ) -> list[ContentBlock]:
         """Fetch one finished image by index and return its PNG."""
-        return fetch_result(owned, resolved, job_id, index)
+        return _to_content_list(fetch_result(owned, resolved, job_id, index))
 
     @server.tool()
     def cancel_generation(job_id: str) -> dict[str, Any]:

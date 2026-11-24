@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import List
 
 from fastapi import APIRouter, HTTPException, Request
@@ -111,7 +112,8 @@ async def load_runtime(
         runtime_name,
         runtime,
     )
-    return invoke_runtime_action(
+    return await asyncio.to_thread(
+        invoke_runtime_action,
         client,
         runtime,
         RuntimeAction.LOAD_MODEL,
@@ -151,7 +153,8 @@ async def unload_runtime(
         route_request.provider,
         route_request.deployment_mode,
     )
-    return invoke_runtime_action(
+    return await asyncio.to_thread(
+        invoke_runtime_action,
         client,
         runtime,
         RuntimeAction.UNLOAD_MODEL,
@@ -175,11 +178,15 @@ async def cancel_runtime(
         client = registry_for(request.app).authorized_client(request_id, owner)
         if client is None:
             raise HTTPException(status_code=404, detail="Active request not found")
-        return cancel_runtime_action(client, route_request)
+        return await asyncio.to_thread(
+            cancel_runtime_action, client, route_request
+        )
     client = resolve_runtime_client(
         request,
         runtime,
         route_request.provider,
         route_request.deployment_mode,
     )
-    return cancel_runtime_action(client, route_request)
+    return await asyncio.to_thread(
+        cancel_runtime_action, client, route_request
+    )
