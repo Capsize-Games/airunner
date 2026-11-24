@@ -66,9 +66,13 @@ def _make_owner(signals: list) -> SimpleNamespace:
     ids=["live", "publication_gated"],
 )
 def test_streaming_callback_joins_subwords_without_spaces(
-    module: Any,
+    module: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Subword fragments must join with no inserted boundary spaces."""
+    if module is generation_stream_support:
+        # The gated variant only buffers without publishing when content
+        # policy enforcement is enabled; pin it on for this case.
+        monkeypatch.setattr(module, "content_policy_is_enforced", lambda: True)
     signals: list = []
     owner = _make_owner(signals)
     request = SimpleNamespace(node_id="node-chunk-join")
