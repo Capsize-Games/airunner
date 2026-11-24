@@ -105,9 +105,17 @@ class ArtDaemonClient:
     def _checked(self, response: httpx.Response) -> Any:
         """Raise DaemonError on error statuses, else decode JSON."""
         if response.status_code >= 400:
+            hint = ""
+            if response.status_code == 401 and ":8080" in self._config.daemon_url:
+                hint = (
+                    " [hint: :8080 is the engine daemon (Bearer auth); "
+                    "the desktop daemon for MCP is :8188 with loopback-token "
+                    "auth — set AIRUNNER_DAEMON_URL=http://127.0.0.1:8188 "
+                    "and remove AIRUNNER_API_KEY]"
+                )
             raise DaemonError(
                 f"daemon refused {response.status_code}: "
-                f"{response.text[:200]}",
+                f"{response.text[:200]}{hint}",
                 status_code=response.status_code,
             )
         return response.json()

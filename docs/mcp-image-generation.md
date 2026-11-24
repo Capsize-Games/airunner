@@ -12,7 +12,7 @@ the heavy lifting: Z-Image/SD pipelines, content-safety gates,
 capacity admission, and PNG export.
 
 ```text
-MCP host --stdio--> airunner-mcp --HTTP--> daemon :8080
+MCP host --stdio--> airunner-mcp --HTTP--> daemon :8188
                                     POST /api/v1/art/generate
                                     GET  /api/v1/art/status/{job}
                                     GET  /api/v1/art/result/{job}/{index}
@@ -47,7 +47,7 @@ art API on loopback by default), then register the server:
     "airunner-image": {
       "command": "airunner-mcp",
       "env": {
-        "AIRUNNER_DAEMON_URL": "http://127.0.0.1:8080",
+        "AIRUNNER_DAEMON_URL": "http://127.0.0.1:8188",
         "AIRUNNER_MCP_OUTPUT_DIR": "~/.local/share/airunner/mcp-images"
       }
     }
@@ -62,7 +62,7 @@ console script.)
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `AIRUNNER_DAEMON_URL` | `http://127.0.0.1:8080` | Daemon base URL |
+| `AIRUNNER_DAEMON_URL` | `http://127.0.0.1:8188` | Daemon base URL |
 | `AIRUNNER_API_KEY` | _(empty)_ | Bearer token; needed only for non-loopback binds |
 | `AIRUNNER_MCP_OUTPUT_DIR` | `~/.local/share/airunner/mcp-images` | Where finished PNGs are saved |
 | `AIRUNNER_MCP_GENERATION_TIMEOUT_S` | `600` | Block limit for one `generate_image` call |
