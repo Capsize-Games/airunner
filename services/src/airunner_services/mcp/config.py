@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-DEFAULT_DAEMON_URL = "http://127.0.0.1:8080"
+DEFAULT_DAEMON_URL = "http://127.0.0.1:8188"
 DEFAULT_REQUEST_TIMEOUT_S = 30.0
 DEFAULT_GENERATION_TIMEOUT_S = 600.0
 DEFAULT_POLL_INTERVAL_S = 2.0

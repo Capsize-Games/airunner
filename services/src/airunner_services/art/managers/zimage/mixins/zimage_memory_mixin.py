@@ -53,7 +53,7 @@ class ZImageMemoryMixin:
             if torch.cuda.is_available():
                 vram_gb = self._get_vram_gb()
                 self._apply_vram_optimizations(vram_gb)
-                self._enable_slicing_optimizations()
+                self._enable_slicing_optimizations(vram_gb=vram_gb)
                 self._set_memory_flags(vram_gb)
             else:
                 self.logger.warning("CUDA not available, running on CPU")
@@ -151,6 +151,15 @@ class ZImageMemoryMixin:
             # Quantized models handle device placement via device_map='auto'
             # Just move VAE to GPU since it's not quantized
             self._move_vae_to_gpu()
+            # Native FP8 keeps transformer on GPU during denoising but must
+            # free it before VAE decode to avoid a ~6GB decode spike on
+            # 16GB cards. Enable the native per-stage offload flag.
+            if getattr(self._pipe, "is_native_fp8", False):
+                try:
+                    self._pipe.enable_model_cpu_offload()
+                    self.logger.info("Enabled native FP8 transformer offload for decode")
+                except Exception as exc:
+                    self.logger.debug(f"Could not enable native offload: {exc}")
             
             # For cards with <= 16GB VRAM, keep VAE in float16 instead of float32
             # to save ~200MB and reduce decode memory spikes
@@ -237,12 +246,14 @@ class ZImageMemoryMixin:
             except Exception as e:
                 self.logger.debug(f"Could not optimize VAE for low VRAM: {e}")
 
-    def _enable_slicing_optimizations(self):
+    def _enable_slicing_optimizations(self, vram_gb: float | None = None):
         """Enable VAE slicing optimizations for lower VRAM usage.
-        
+
         VAE slicing and tiling reduce peak memory during decode by processing
         the image in smaller chunks. This is critical for avoiding OOM on
-        16GB cards when using 8-bit quantization.
+        16GB cards when using 8-bit quantization. Tile sizes are shrunk so
+        1024+ images page in instead of decoding in one shot (the bundled
+        VAE defaults to a 1024 tile, which never triggers at 1024).
         """
         vae = getattr(self._pipe, "vae", None)
 
@@ -268,6 +279,26 @@ class ZImageMemoryMixin:
                 self.logger.debug("Enabled VAE tiling (direct)")
         except Exception as e:
             self.logger.debug(f"Could not enable VAE tiling: {e}")
+
+        try:
+            if vae is None:
+                return
+            vram = vram_gb
+            if vram is None and torch.cuda.is_available():
+                vram = self._get_vram_gb()
+            sample = 512
+            if vram is not None and vram <= 18:
+                sample = 256
+            vae.tile_sample_min_size = sample
+            vae.tile_latent_min_size = sample // 8
+            self.logger.info(
+                "VAE tiling tiles: sample=%d latent=%d (vram=%s)",
+                sample,
+                sample // 8,
+                f"{vram:.1f}GB" if vram is not None else "unknown",
+            )
+        except Exception as e:
+            self.logger.debug(f"Could not set VAE tile sizes: {e}")
 
     def _set_memory_flags(self, vram_gb: float):
         """Set memory optimization flags based on VRAM size."""

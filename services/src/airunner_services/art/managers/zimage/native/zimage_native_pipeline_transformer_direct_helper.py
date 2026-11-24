@@ -11,6 +11,7 @@ import torch.nn as nn
 from safetensors import safe_open
 
 from airunner_services.art.managers.zimage.native.fp8_ops import (
+    FP8Linear,
     UnscaledFP8Linear,
 )
 from airunner_services.art.managers.zimage.native.nextdit_model import (
@@ -106,6 +107,23 @@ class ZImageNativePipelineTransformerDirectHelper:
             dtype=torch.float32, copy=True
         )
 
+    def _collect_direct_weight_scale(
+        self,
+        fp8_layers: Dict[str, list[Optional[torch.Tensor]]],
+        support,
+        key: str,
+        tensor: torch.Tensor,
+    ) -> None:
+        """Capture one ComfyUI ``.weight_scale`` scale for the direct path."""
+        weight_key = f"{key[: -len('.weight_scale')]}.weight"
+        converted = support.convert_checkpoint_key(weight_key)
+        if converted is None or not converted.endswith(".weight"):
+            return
+        layer_key = converted[: -len(".weight")]
+        self._fp8_layer_slot(fp8_layers, layer_key)[2] = tensor.to(
+            dtype=torch.float32, copy=True
+        )
+
     def _collect_direct_checkpoint_tensors(
         self,
         path: str,
@@ -124,16 +142,16 @@ class ZImageNativePipelineTransformerDirectHelper:
                         checkpoint.get_tensor(key),
                     )
                     continue
+                if key.endswith(".weight_scale"):
+                    self._collect_direct_weight_scale(
+                        fp8_layers,
+                        support,
+                        key,
+                        checkpoint.get_tensor(key),
+                    )
+                    continue
                 model_key = support.convert_checkpoint_key(key)
                 if model_key is None:
-                    continue
-                if model_key.endswith(".weight_scale"):
-                    layer_key = model_key[: -len(".weight_scale")]
-                    self._fp8_layer_slot(fp8_layers, layer_key)[2] = (
-                        checkpoint.get_tensor(key).to(
-                            dtype=torch.float32, copy=True
-                        )
-                    )
                     continue
                 tensor = checkpoint.get_tensor(key)
                 if tensor.dtype == torch.float8_e4m3fn:
@@ -170,7 +188,7 @@ class ZImageNativePipelineTransformerDirectHelper:
         self,
         fp8_layers: Dict[str, list[Optional[torch.Tensor]]],
     ) -> tuple[int, Dict[str, torch.Tensor]]:
-        """Replace unscaled FP8 linear layers and collect fallbacks."""
+        """Replace FP8 linear layers, keeping scaled weights quantized."""
         replaced = 0
         fp8_non_linear: Dict[str, torch.Tensor] = {}
         for layer_key, layer_data in fp8_layers.items():
@@ -178,6 +196,14 @@ class ZImageNativePipelineTransformerDirectHelper:
                 continue
             scale = layer_data[2] if len(layer_data) > 2 else None
             if scale is not None:
+                if self._replace_one_scaled_fp8_layer(
+                    layer_key,
+                    layer_data[0],
+                    layer_data[1],
+                    scale,
+                ):
+                    replaced += 1
+                    continue
                 self._store_scaled_fp8_weight(
                     fp8_non_linear,
                     layer_key,
@@ -185,8 +211,6 @@ class ZImageNativePipelineTransformerDirectHelper:
                     layer_data[1],
                     scale,
                 )
-                layer_data[0] = None
-                layer_data[2] = None
                 replaced += 1
                 continue
             if self._replace_one_unscaled_fp8_layer(
@@ -198,6 +222,48 @@ class ZImageNativePipelineTransformerDirectHelper:
                 replaced += 1
         fp8_layers.clear()
         return replaced, fp8_non_linear
+
+    def _replace_one_scaled_fp8_layer(
+        self,
+        layer_key: str,
+        weight: torch.Tensor,
+        bias: Optional[torch.Tensor],
+        scale: torch.Tensor,
+    ) -> bool:
+        """Replace one scaled FP8 layer with an FP8Linear module."""
+        try:
+            support = self._owner._get_transformer_support()
+            parent = support.resolve_module(
+                self._owner.transformer,
+                layer_key.split(".")[:-1],
+            )
+            layer_name = layer_key.split(".")[-1]
+            linear = getattr(parent, layer_name, None)
+            if linear is None or (
+                not isinstance(linear, nn.Linear)
+                and not hasattr(linear, "in_features")
+            ):
+                return False
+            fp8_linear = FP8Linear(
+                weight.shape[1],
+                weight.shape[0],
+                bias=bias is not None,
+                device=self._owner.device,
+                compute_dtype=self._owner.dtype,
+            )
+            fp8_linear.set_fp8_weight(
+                weight.to(self._owner.device),
+                scale.to(self._owner.device),
+            )
+            if bias is not None:
+                fp8_linear.bias.data.copy_(
+                    bias.to(dtype=self._owner.dtype, device=self._owner.device)
+                )
+            setattr(parent, layer_name, fp8_linear)
+            return True
+        except Exception as exc:
+            logger.debug("Could not replace scaled %s: %s", layer_key, exc)
+            return False
 
     def _store_scaled_fp8_weight(
         self,

@@ -97,7 +97,13 @@ class ZImageModelManager(
     def use_quantization(self) -> bool:
         """Check if quantization should be used based on dtype setting."""
         dtype_setting = getattr(self.generator_settings, "dtype", None)
-        return dtype_setting in ("4bit", "8bit", "float8")
+        if dtype_setting in ("4bit", "8bit", "float8"):
+            return True
+        # FP8 checkpoints are already quantized; keep the text encoder
+        # 4-bit even when the persisted dtype is still bfloat16.
+        if self._is_fp8_filename():
+            return True
+        return False
 
     @property
     def quantization_bits(self) -> Optional[int]:
@@ -109,7 +115,17 @@ class ZImageModelManager(
             return 8
         if dtype_setting == "float8":
             return 8
+        if self._is_fp8_filename():
+            return 4
         return None
+
+    def _is_fp8_filename(self) -> bool:
+        """Return True when the selected checkpoint name signals FP8."""
+        model_path = getattr(self, "model_path", None)
+        if not model_path:
+            return False
+        name = str(model_path).lower()
+        return any(marker in name for marker in ("fp8", "e4m3", "e5m2"))
 
     @property
     def img2img_pipelines(self) -> tuple:

@@ -41,7 +41,7 @@ def _quantized_cache_path(
     dtype_name: str,
 ) -> Path:
     """Return the cache path for one quantized text encoder source."""
-    source = os.path.abspath(model_path)
+    source = str(Path(model_path).resolve())
     fingerprint = "|".join(
         [
             source,

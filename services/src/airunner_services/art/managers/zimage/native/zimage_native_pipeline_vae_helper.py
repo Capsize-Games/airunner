@@ -60,6 +60,34 @@ class ZImageNativePipelineVaeHelper:
         """Store the owning native pipeline."""
         self._owner = owner
 
+    def _apply_tiled_decode_profile(self) -> None:
+        """Shrink tile sizes so large images page in instead of one shot.
+
+        The bundled VAE ships with ``sample_size 1024``, so its default
+        tile only triggers above 1024 and 1024 decodes in one shot,
+        spiking VRAM. A 512 (256 on <=18GB cards) tile makes 1024+
+        split automatically while 512 stays single-shot.
+        """
+        vae = self._owner.vae
+        try:
+            vram_gb = 99.0
+            if torch.cuda.is_available():
+                vram_gb = (
+                    torch.cuda.get_device_properties(0).total_memory / (1024**3)
+                )
+            sample = 512 if vram_gb > 18 else 256
+            latent = sample // 8
+            vae.tile_sample_min_size = sample
+            vae.tile_latent_min_size = latent
+            logger.info(
+                "VAE tiling tiles: sample=%d latent=%d (vram=%.1fGB)",
+                sample,
+                latent,
+                vram_gb,
+            )
+        except Exception as exc:
+            logger.debug(f"Could not set VAE tile sizes: {exc}")
+
     def ensure_image_processor(self) -> None:
         """Create the lightweight VAE image processor on first use."""
         if self._owner.image_processor is not None:
@@ -98,6 +126,7 @@ class ZImageNativePipelineVaeHelper:
             self._owner.vae.enable_slicing()
         if hasattr(self._owner.vae, "enable_tiling"):
             self._owner.vae.enable_tiling()
+            self._apply_tiled_decode_profile()
         self.ensure_image_processor()
         self._owner._loaded_components.append("vae")
         logger.info("VAE loaded successfully")

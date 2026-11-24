@@ -47,7 +47,10 @@ class ZImageNativePipelineTransformerSupport:
         has_scale_key = False
         with safe_open(path, framework="pt") as checkpoint:
             all_keys = list(checkpoint.keys())
-            has_scale_key = any("scale_weight" in key for key in all_keys)
+            has_scale_key = any(
+                "scale_weight" in key or "weight_scale" in key
+                for key in all_keys
+            )
             for index, key in enumerate(all_keys):
                 if index > 50:
                     break
@@ -88,7 +91,7 @@ class ZImageNativePipelineTransformerSupport:
             if key.startswith(prefix):
                 key = key[len(prefix):]
                 break
-        if "scale_weight" in key:
+        if "scale_weight" in key or "weight_scale" in key:
             return None
         if "comfy_quant" in key:
             return None

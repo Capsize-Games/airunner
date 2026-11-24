@@ -51,6 +51,10 @@ class DaemonLauncher:
         daemon_executable = bundle_layout.daemon_executable()
         if daemon_executable is not None and os.environ.get("DEV_ENV", "1") != "1":
             command = [str(daemon_executable)]
+        elif os.environ.get("DEV_ENV", "1") == "1":
+            import sys as _sys
+
+            command = daemon_module_command(_sys.executable)
         else:
             command = daemon_module_command(bundle_layout.python_executable)
         if self.config_path is not None:

@@ -47,6 +47,21 @@ def _default_launcher_factory() -> Any:
     return DaemonLauncher()
 
 
+def _loopback_token_header(url: str, api_key: str) -> dict[str, str]:
+    """Return the loopback token header for loopback daemon URLs."""
+    if api_key or not is_loopback_url(url):
+        return {}
+    try:
+        from airunner_services.api.loopback_token import (
+            get_or_create_loopback_token,
+        )
+
+        token = get_or_create_loopback_token()
+    except Exception:
+        return {}
+    return {"X-Airunner-Token": token} if token else {}
+
+
 class ArtDaemonClient:
     """Thin wrapper over the daemon art routes (no model code here)."""
 
@@ -60,6 +75,7 @@ class ArtDaemonClient:
         headers = {"Accept": "application/json"}
         if config.api_key:
             headers["Authorization"] = f"Bearer {config.api_key}"
+        headers.update(_loopback_token_header(config.daemon_url, config.api_key))
         self._config = config
         self._http = httpx.Client(
             base_url=config.daemon_url,

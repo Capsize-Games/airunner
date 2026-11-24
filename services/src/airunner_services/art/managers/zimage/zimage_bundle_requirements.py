@@ -206,7 +206,7 @@ def _checkpoint_uses_fp8(handle: safe_open, name_hint: bool) -> bool:
     """Return True when sampled tensors indicate an FP8 checkpoint."""
     has_scale = False
     for index, key in enumerate(handle.keys()):
-        has_scale = has_scale or "scale_weight" in key
+        has_scale = has_scale or "scale_weight" in key or "weight_scale" in key
         tensor = handle.get_tensor(key)
         if tensor.dtype in _float8_types():
             return True

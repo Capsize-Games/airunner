@@ -54,7 +54,7 @@ class ZImageNativePipelineTransformerLoaderHelper:
         logger.info("Transformer loaded successfully")
 
     def load_fp8_checkpoint_streaming(self, path: str) -> None:
-        """Stream one scaled FP8 checkpoint into the transformer."""
+        """Stream one scaled FP8 checkpoint without staging full weights."""
         support = self._owner._get_transformer_support()
         n_layers = support.detect_layer_count(path)
         logger.info("Detected %s layers in checkpoint", n_layers)
@@ -63,15 +63,73 @@ class ZImageNativePipelineTransformerLoaderHelper:
             device=torch.device("meta"),
             dtype=self._owner.dtype,
         )
-        scale_dict, all_weights = self._collect_fp8_checkpoint_tensors(path)
-        fp8_layers = self._build_fp8_layer_map(scale_dict, all_weights)
-        del all_weights
-        gc.collect()
-        self._replace_fp8_layers(fp8_layers)
+        self._stream_fp8_checkpoint(path)
+        support.materialize_meta_tensors()
+        self._restore_default_norm_scales()
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
         self._owner.transformer.eval()
+
+    def _stream_fp8_checkpoint(self, path: str) -> None:
+        """Load FP8 weights one at a time, keeping only tiny maps."""
+        support = self._owner._get_transformer_support()
+        scale_dict: Dict[str, torch.Tensor] = {}
+        bias_dict: Dict[str, torch.Tensor] = {}
+        with safe_open(path, framework="pt") as checkpoint:
+            keys = list(checkpoint.keys())
+            for key in keys:
+                if "scale_weight" in key or "weight_scale" in key:
+                    scale_dict[key] = checkpoint.get_tensor(key)
+                elif key.endswith(".bias"):
+                    model_key = support.convert_checkpoint_key(key)
+                    if model_key is not None:
+                        bias_dict[model_key.rsplit(".", 1)[0]] = (
+                            checkpoint.get_tensor(key)
+                        )
+            logger.info("Found %s scale weights", len(scale_dict))
+            logger.info("Found %s biases", len(bias_dict))
+            replaced = 0
+            for key in keys:
+                if "scale_weight" in key or "weight_scale" in key:
+                    continue
+                if key.endswith(".bias"):
+                    continue
+                tensor = checkpoint.get_tensor(key)
+                model_key = support.convert_checkpoint_key(key)
+                if model_key is None:
+                    continue
+                scale = scale_dict.get(key.replace(".weight", ".scale_weight"))
+                if scale is None:
+                    scale = scale_dict.get(key.replace(".weight", ".weight_scale"))
+                layer_key = (
+                    model_key.rsplit(".", 1)[0]
+                    if model_key.endswith(".weight")
+                    else None
+                )
+                if (
+                    tensor.dtype == torch.float8_e4m3fn
+                    and scale is not None
+                    and layer_key is not None
+                ):
+                    bias = bias_dict.get(layer_key)
+                    if self._replace_one_fp8_layer(
+                        layer_key, tensor, scale, bias
+                    ):
+                        replaced += 1
+                    else:
+                        self._materialize_tensor(model_key, tensor)
+                else:
+                    self._materialize_tensor(model_key, tensor)
+            logger.info("Replaced %s Linear layers with FP8Linear", replaced)
+
+    def _restore_default_norm_scales(self) -> None:
+        """Reset unfitted final-norm scales to ones (matches direct path)."""
+        norm_final = getattr(self._owner.transformer, "norm_final", None)
+        weight = getattr(norm_final, "weight", None)
+        if isinstance(weight, nn.Parameter) and not bool((weight != 0).any()):
+            with torch.no_grad():
+                weight.fill_(1.0)
 
     def _model_config(self, n_layers: int) -> Dict[str, int]:
         """Return a model config adjusted for the current layer count."""
@@ -95,11 +153,11 @@ class ZImageNativePipelineTransformerLoaderHelper:
         with safe_open(path, framework="pt") as checkpoint:
             keys = list(checkpoint.keys())
             for key in keys:
-                if "scale_weight" in key:
+                if "scale_weight" in key or "weight_scale" in key:
                     scale_dict[key] = checkpoint.get_tensor(key)
             logger.info("Found %s scale weights", len(scale_dict))
             for key in keys:
-                if "scale_weight" not in key:
+                if "scale_weight" not in key and "weight_scale" not in key:
                     all_weights[key] = checkpoint.get_tensor(key)
         return scale_dict, all_weights
 
@@ -162,6 +220,8 @@ class ZImageNativePipelineTransformerLoaderHelper:
             bias_dict[model_key.rsplit(".", 1)[0]] = tensor
             return
         scale = scale_dict.get(key.replace(".weight", ".scale_weight"))
+        if scale is None:
+            scale = scale_dict.get(key.replace(".weight", ".weight_scale"))
         if self._store_fp8_layer(fp8_layers, model_key, tensor, scale):
             return
         self._materialize_tensor(model_key, tensor)
