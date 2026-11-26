@@ -15,6 +15,8 @@ from airunner_services.mcp.payloads import (
     build_generation_payload,
     load_input_image_b64,
 )
+from airunner_services.mcp.video_client import VideoDaemonClient
+from airunner_services.mcp.video_payloads import build_video_payload
 
 SERVER_NAME = "airunner-image"
 
@@ -253,6 +255,54 @@ def build_server(
             "models": owned.list_models(),
             "registry": owned.list_registry_models(),
         }
+
+    video = VideoDaemonClient(resolved)
+
+    @server.tool()
+    def generate_video(
+        prompt: str,
+        width: int = 1280,
+        height: int = 720,
+        num_frames: int = 97,
+        fps: int = 24,
+        steps: int = 8,
+        seed: int | None = None,
+        input_image_path: str | None = None,
+        checkpoint: str = "fp8",
+    ) -> dict[str, Any]:
+        """Generate an LTX-2.3 clip with synced audio; return its path.
+
+        Defaults are the validated target: 720p, 97 frames, 24 fps
+        (~4 s). num_frames must be 1 mod 8. The MP4 is saved under
+        the daemon output dir; this call blocks until it is ready.
+        """
+        payload = build_video_payload(
+            prompt, width, height, num_frames, fps, steps, seed,
+            input_image_path, checkpoint,
+        )
+        job_id = video.start_video(payload)
+        status = video.wait_for_completion(job_id)
+        data = video.fetch_mp4(job_id)
+        out_dir = Path(resolved.output_dir).expanduser() / "video"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        path = out_dir / f"{job_id}.mp4"
+        path.write_bytes(data)
+        return {"job_id": job_id, "file": str(path), **status}
+
+    @server.tool()
+    def get_video_status(job_id: str) -> dict[str, Any]:
+        """Return progress/state for one video job."""
+        return video.get_status(job_id)
+
+    @server.tool()
+    def cancel_video(job_id: str) -> dict[str, Any]:
+        """Cancel a running video job (best-effort)."""
+        return video.cancel(job_id)
+
+    @server.tool()
+    def list_video_models() -> dict[str, Any]:
+        """List LTX checkpoints and 720p VRAM estimates."""
+        return {"models": video.list_models()}
 
     return server
 

@@ -38,6 +38,7 @@ from airunner_services.api.routes import (
     stt,
     tts,
     tts_ws,
+    video,
 )
 from airunner_services.api.routes.client_bundle import mount_client_bundle
 from airunner_services.api.routes import legacy as legacy_routes
@@ -490,6 +491,9 @@ def create_app(
         tags=["workspace"],
     )
     app.include_router(art.router, prefix="/api/v1/art", tags=["art"])
+    app.include_router(
+        video.router, prefix="/api/v1/video", tags=["video"]
+    )
     app.include_router(
         downloads.router,
         prefix="/api/v1/downloads",
