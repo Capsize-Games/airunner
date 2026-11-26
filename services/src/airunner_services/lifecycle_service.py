@@ -258,6 +258,16 @@ class CoreLifecycleService:
             self.logger.error("Cannot load LLM: no model manager available")
             return
         model_manager.load()
+        try:
+            from airunner_common.contract_enums import ModelStatus as _LS
+            from airunner_common.contract_enums import ModelType as _LT
+
+            if model_manager.model_status.get(_LT.LLM) == _LS.LOADED:
+                updater = getattr(worker, "_update_activity_timestamp", None)
+                if callable(updater):
+                    updater()
+        except Exception:
+            pass
         self.logger.info("LLM model load dispatched to worker")
 
     def _attach_state(self) -> None:

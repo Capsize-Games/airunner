@@ -363,6 +363,10 @@ class SDWorker(Worker):
 				pass
 			if mm.model_is_loaded:
 				self._record_loaded_model_signature(image_request)
+				try:
+					self._update_art_activity_timestamp()
+				except Exception:
+					pass
 		if data and mm and mm.model_is_loaded:
 			callback = data.get("callback", None)
 			if callback is not None:
@@ -422,13 +426,16 @@ class SDWorker(Worker):
 			if callback is not None:
 				callback(data)
 
-	def _unload_model_manager_locked(self):
+	def _unload_model_manager_locked(self, force: bool = False):
 		# Caller must hold _model_manager_lock. Direct field writes
 		# avoid re-acquiring the plain Lock via the model_manager
 		# setter, which would deadlock.
 		if self._model_manager is not None:
 			manager_ref = self._model_manager
-			self._model_manager.unload()
+			try:
+				self._model_manager.unload(force=force)
+			except TypeError:
+				self._model_manager.unload()
 			self._model_manager = None
 
 			if manager_ref is self._sd:
@@ -493,8 +500,6 @@ class SDWorker(Worker):
 		"""Unload the art model after extended inactivity when enabled."""
 		if not self._art_auto_unload_enabled:
 			return
-		if not self._last_art_request_time:
-			return
 		if self._is_generating:
 			return
 		if self._active_api_art_request_id is not None:
@@ -515,24 +520,43 @@ class SDWorker(Worker):
 				return
 			if getattr(self, "_queued_api_art_request_ids", None):
 				return
-			if not self._last_art_request_time:
-				return
 
 			manager = self._model_manager
 			if manager is None:
 				return
-			if not getattr(manager, "model_is_loaded", False):
+
+			now = time.time()
+			if getattr(manager, "model_is_loaded", False):
+				if not self._last_art_request_time:
+					self._last_art_request_time = now
+					return
+				inactive_time = now - self._last_art_request_time
+				if inactive_time >= self._art_inactivity_timeout:
+					self.logger.info(
+						"Art model idle for "
+						f"{int(inactive_time / 60)} minutes - auto-unloading"
+					)
+					self._unload_model_manager_locked(force=True)
+					self._last_art_request_time = None
 				return
 
-			inactive_time = time.time() - self._last_art_request_time
-
-			if inactive_time >= self._art_inactivity_timeout:
-				self.logger.info(
-					"Art model idle for "
-					f"{int(inactive_time / 60)} minutes - auto-unloading"
-				)
-				self._unload_model_manager_locked()
-				self._last_art_request_time = None
+			try:
+				status = manager.model_status.get(manager.model_type)
+			except Exception:
+				return
+			if status is ModelStatus.LOADING:
+				if not self._last_art_request_time:
+					self._last_art_request_time = now
+					return
+				stuck_time = now - self._last_art_request_time
+				if stuck_time >= self._art_inactivity_timeout:
+					self.logger.warning(
+						"Art model stuck in LOADING for "
+						f"{int(stuck_time / 60)} minutes - forcing unload "
+						"to allow retry"
+					)
+					self._unload_model_manager_locked(force=True)
+					self._last_art_request_time = None
 
 	def on_tokenizer_load_signal(self, data: Dict = None):
 		if self.model_manager:
@@ -699,6 +723,11 @@ class SDWorker(Worker):
 		model_manager = self.model_manager
 		if model_manager is not None:
 			model_manager.load()
+			try:
+				if getattr(model_manager, "model_is_loaded", False):
+					self._update_art_activity_timestamp()
+			except Exception:
+				pass
 
 	def run(self) -> None:
 		"""Start the queue loop and the art inactivity timer.

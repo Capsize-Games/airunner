@@ -269,6 +269,85 @@ class AIRunnerDaemon:
         logger.info("Received SIGHUP, scheduling configuration reload...")
         self._reload_requested = True
 
+    def _apply_model_persistence_config(
+        self, update_workers: bool = False
+    ) -> None:
+        """Export the daemon idle timeout so workers honor daemon.yaml.
+
+        Workers read their timeouts once at construction from
+        ``AIRUNNER_*_INACTIVITY_TIMEOUT_SECONDS``. The daemon file's
+        ``models.timeout_minutes`` is the source of truth when no
+        explicit environment override exists, so export it via
+        ``setdefault`` before workers are created. Explicit environment
+        values always win. On SIGHUP reload, refresh live workers that
+        are still on the config-derived value.
+        """
+        try:
+            timeout_seconds = self.config.model_idle_timeout_seconds()
+        except Exception:
+            timeout_seconds = 300
+        if not hasattr(self, "_explicit_idle_env"):
+            self._explicit_idle_env = {
+                "AIRUNNER_LLM_INACTIVITY_TIMEOUT_SECONDS": (
+                    "AIRUNNER_LLM_INACTIVITY_TIMEOUT_SECONDS" in os.environ
+                ),
+                "AIRUNNER_ART_INACTIVITY_TIMEOUT_SECONDS": (
+                    "AIRUNNER_ART_INACTIVITY_TIMEOUT_SECONDS" in os.environ
+                ),
+            }
+        os.environ.setdefault(
+            "AIRUNNER_LLM_INACTIVITY_TIMEOUT_SECONDS", str(timeout_seconds)
+        )
+        os.environ.setdefault(
+            "AIRUNNER_ART_INACTIVITY_TIMEOUT_SECONDS", str(timeout_seconds)
+        )
+        if not update_workers:
+            return
+        explicit = getattr(self, "_explicit_idle_env", {})
+        lifecycle = getattr(self, "lifecycle_service", None)
+        worker = None
+        if lifecycle is not None:
+            try:
+                worker = lifecycle.llm_generate_worker
+            except Exception:
+                worker = None
+        if worker is not None and not explicit.get(
+            "AIRUNNER_LLM_INACTIVITY_TIMEOUT_SECONDS", False
+        ):
+            try:
+                worker._inactivity_timeout = timeout_seconds
+            except Exception:
+                pass
+            try:
+                os.environ["AIRUNNER_LLM_INACTIVITY_TIMEOUT_SECONDS"] = str(
+                    timeout_seconds
+                )
+            except Exception:
+                pass
+        manager = None
+        if lifecycle is not None:
+            try:
+                manager = getattr(
+                    getattr(lifecycle, "worker_manager", None),
+                    "_sd_worker",
+                    None,
+                )
+            except Exception:
+                manager = None
+        if manager is not None and not explicit.get(
+            "AIRUNNER_ART_INACTIVITY_TIMEOUT_SECONDS", False
+        ):
+            try:
+                manager._art_inactivity_timeout = timeout_seconds
+            except Exception:
+                pass
+            try:
+                os.environ["AIRUNNER_ART_INACTIVITY_TIMEOUT_SECONDS"] = str(
+                    timeout_seconds
+                )
+            except Exception:
+                pass
+
     def _perform_reload(self) -> None:
         """Re-read the config file and swap it in atomically."""
         try:
@@ -280,6 +359,7 @@ class AIRunnerDaemon:
             )
             return
         self.config = reloaded
+        self._apply_model_persistence_config(update_workers=True)
         logger.info("Configuration reloaded")
 
     def start(self):
@@ -296,6 +376,7 @@ class AIRunnerDaemon:
             sys.exit(1)
 
         try:
+            self._apply_model_persistence_config()
             self._init_app_or_degraded()
             # ServiceApp construction installs its own SIGINT/SIGTERM
             # handlers; reinstall so the daemon stays the single

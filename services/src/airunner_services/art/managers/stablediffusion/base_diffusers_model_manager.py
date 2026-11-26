@@ -366,7 +366,7 @@ class BaseDiffusersModelManager(
         self._finalize_load_stable_diffusion()
         resource_manager.model_loaded(self.model_path, "text_to_image")
 
-    def unload(self):
+    def unload(self, force: bool = False):
         """
         Unload the Stable Diffusion model and all components.
 
@@ -378,7 +378,9 @@ class BaseDiffusersModelManager(
 
         Includes aggressive memory clearing between steps.
         """
-        if self.sd_is_loading or self.sd_is_unloaded:
+        if self.sd_is_unloaded:
+            return
+        if self.sd_is_loading and not force:
             return
         elif self._current_state in (
             HandlerState.PREPARING_TO_GENERATE,

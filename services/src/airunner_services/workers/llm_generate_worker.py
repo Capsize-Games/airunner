@@ -423,23 +423,53 @@ class LLMGenerateWorker(
 
 	def _check_inactivity(self) -> None:
 		"""Unload the model after extended inactivity when enabled."""
-		if not self._auto_unload_enabled or not self._last_request_time:
+		if not self._auto_unload_enabled:
 			return
 
 		if not self._model_manager or not self.has_model_manager:
 			return
 
-		if self._model_manager.model_status.get(ModelType.LLM) != ModelStatus.LOADED:
+		try:
+			status = self._model_manager.model_status.get(ModelType.LLM)
+		except Exception:
 			return
 
-		inactive_time = time.time() - self._last_request_time
+		now = time.time()
+		if status == ModelStatus.LOADED:
+			if not self._last_request_time:
+				self._last_request_time = now
+				return
+			inactive_time = now - self._last_request_time
+			if inactive_time >= self._inactivity_timeout:
+				self.logger.info(
+					f"LLM model idle for {int(inactive_time/60)} minutes - auto-unloading"
+				)
+				self.unload_llm()
+				self._last_request_time = None
+			return
 
-		if inactive_time >= self._inactivity_timeout:
-			self.logger.info(
-				f"LLM model idle for {int(inactive_time/60)} minutes - auto-unloading"
-			)
-			self.unload_llm()
-			self._last_request_time = None
+		if status == ModelStatus.LOADING:
+			if not self._last_request_time:
+				self._last_request_time = now
+				return
+			stuck_time = now - self._last_request_time
+			if stuck_time >= self._inactivity_timeout:
+				self.logger.warning(
+					"LLM model stuck in LOADING for "
+					f"{int(stuck_time/60)} minutes - forcing unload "
+					"to allow retry"
+				)
+				try:
+					try:
+						self._model_manager.unload(force=True)
+					except TypeError:
+						self._model_manager.unload()
+				except Exception:
+					self.logger.exception(
+						"Forced LLM unload after stuck LOADING failed"
+					)
+				self._last_request_time = None
+			return
 
 	def _update_activity_timestamp(self) -> None:
 		"""Refresh the last-request timestamp for inactivity tracking."""
@@ -1032,8 +1062,17 @@ class LLMGenerateWorker(
 	def _load_llm(self, data: Optional[Dict] = None) -> None:
 		"""Load the LLM model and execute an optional callback."""
 		data = data or {}
-		if self._model_manager is not None:
-			self._model_manager.load()
+		try:
+			manager = self.model_manager
+		except Exception:
+			manager = self._model_manager
+		if manager is not None:
+			manager.load()
+			try:
+				if manager.model_status.get(ModelType.LLM) == ModelStatus.LOADED:
+					self._update_activity_timestamp()
+			except Exception:
+				pass
 		callback = data.get("callback", None)
 		if callback:
 			callback(data)

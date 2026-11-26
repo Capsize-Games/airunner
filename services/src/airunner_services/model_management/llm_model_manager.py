@@ -313,18 +313,17 @@ class LLMModelManager(
 		model_info = LLMProviderConfig.get_model_info("local", model_id)
 		return str(model_info.get("name", "") or model_id)
 
-	def unload(self) -> None:
+	def unload(self, force: bool = False) -> None:
 		"""Unload under the same manager lock used by embedding inference."""
 		with self._runtime_activity_lock:
-			return self._unload_model_locked()
+			return self._unload_model_locked(force=force)
 
-	def _unload_model_locked(self) -> None:
+	def _unload_model_locked(self, force: bool = False) -> None:
 		"""Unload all LLM components and clear reserved resources."""
 		current_status = self.model_status[ModelType.LLM]
-		if current_status in (
-			ModelStatus.LOADING,
-			ModelStatus.UNLOADED,
-		):
+		if current_status == ModelStatus.UNLOADED:
+			return
+		if current_status == ModelStatus.LOADING and not force:
 			return
 
 		current_model_id = self._resolve_model_id_from_path(

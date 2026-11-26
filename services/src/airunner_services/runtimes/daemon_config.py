@@ -66,6 +66,23 @@ class DaemonConfig:
             )
         return {**self._default_config(), **config}
 
+    def model_idle_timeout_seconds(self) -> int:
+        """Return the configured model idle timeout in seconds.
+
+        Reads ``models.timeout_minutes`` from the loaded config so the
+        daemon file is the source of truth when no explicit environment
+        override is present. Falls back to 300s on missing or invalid
+        values to match the worker defaults.
+        """
+        models = self.config.get("models", {}) or {}
+        try:
+            minutes = int(models.get("timeout_minutes", 30))
+        except (TypeError, ValueError):
+            return 300
+        if minutes <= 0:
+            return 300
+        return minutes * 60
+
     def _default_config(self) -> dict[str, Any]:
         """Get default configuration."""
         layout = build_runtime_directory_layout()
