@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 from langchain_core.messages import AIMessage
 
 from airunner_services.llm.adapters.chat_gguf_tool_parsing_common import (
+    _tool_call,
     normalize_tool_payload,
 )
 from airunner_services.llm.adapters.chat_gguf_tool_parsing_gpt_oss_commentary import (
