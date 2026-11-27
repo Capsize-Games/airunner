@@ -6768,6 +6768,64 @@
       ],
       "missing_module": "xlstm.xlstm_large",
       "rationale": "The import sites are confined to the optional Transformers xLSTM model implementation (transformers.models.xlstm.modeling_xlstm). The service model catalog does not register an xLSTM model. The tolerance is limited to these importer modules; it does not alter the surrounding package or other registered service paths."
+    },
+    {
+      "allowlist": true,
+      "category": "optional MCP extra (airunner-mcp console script, not in CORE profile)",
+      "importers": [
+        {
+          "imports": [
+            {
+              "context": [],
+              "line": 10,
+              "source_line": "import httpx",
+              "statement": "import httpx"
+            }
+          ],
+          "module": "airunner_services.mcp.daemon_client",
+          "source": "services/src/airunner_services/mcp/daemon_client.py",
+          "source_sha256": "f0af119d652e3514b1d766b7ae751a055bed0ac95adb31983db941b2fdf878e6",
+          "tags": "optional"
+        },
+        {
+          "imports": [
+            {
+              "context": [],
+              "line": 8,
+              "source_line": "import httpx",
+              "statement": "import httpx"
+            }
+          ],
+          "module": "airunner_services.mcp.video_client",
+          "source": "services/src/airunner_services/mcp/video_client.py",
+          "source_sha256": "fcf034c8bc3a017c2da100f98afe16e2ae1925d640e256a0d8509f9f227b700b",
+          "tags": "optional"
+        }
+      ],
+      "missing_module": "httpx",
+      "rationale": "httpx is imported only by the airunner-mcp daemon/video clients. The mcp extra is not installed in the CORE profile, so the module is absent from the CORE freeze; invoking airunner-mcp without the extra fails on import, which is the declared optional-extra boundary."
+    },
+    {
+      "allowlist": true,
+      "category": "optional MCP extra (airunner-mcp console script, not in CORE profile)",
+      "importers": [
+        {
+          "imports": [
+            {
+              "context": [],
+              "line": 9,
+              "source_line": "from mcp_types import ContentBlock, ImageContent, TextContent  # noqa: F401",
+              "statement": "from mcp_types import ContentBlock, ImageContent, TextContent"
+            }
+          ],
+          "module": "airunner_services.mcp.server",
+          "source": "services/src/airunner_services/mcp/server.py",
+          "source_sha256": "5bcd49f94ae721b5488b274d2efb2cd9f5bf9a6df02ea5001b5adf36a3ea8ea2",
+          "tags": "optional"
+        }
+      ],
+      "missing_module": "mcp_types",
+      "rationale": "mcp_types is imported only by the airunner-mcp server module. The mcp extra (which now declares mcp-types directly) is not installed in the CORE profile, so the module is absent from the CORE freeze; invoking airunner-mcp without the extra fails on import, which is the declared optional-extra boundary."
     }
   ],
   "schema_version": 1,
