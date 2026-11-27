@@ -128,4 +128,4 @@ jobs:
             packaging/licenses/nvidia-nvshmem-cu12-3.4.5-supplement/
             packaging/licenses/cuda-toolkit-12.9.1-supplement/
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 90
