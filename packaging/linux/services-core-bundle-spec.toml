@@ -10,6 +10,14 @@ required = false
 [warn_allowlist]
 # CORE has no full-profile ML importers. Its own TOC/warning gates still apply.
 source_evidence = ""
+# The airunner-mcp console script is an optional pip extra; CORE does not
+# install its httpx/mcp-types dependencies. Tolerate exactly those missing
+# modules from exactly the MCP client modules that import them; invoking
+# airunner-mcp from the CORE bundle without the extra fails on import.
+importer_scoped = [
+    { module = "httpx", importers = ["airunner_services.mcp.daemon_client", "airunner_services.mcp.video_client"] },
+    { module = "mcp_types", importers = ["airunner_services.mcp.server"] },
+]
 
 [bundle]
 name = "airunner-services-core"
