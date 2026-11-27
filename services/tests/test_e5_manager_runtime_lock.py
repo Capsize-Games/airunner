@@ -51,10 +51,10 @@ def test_llm_load_and_unload_hold_the_runtime_activity_lock() -> None:
         assert not manager._request_state_lock._is_owned()
         called.append("load")
 
-    def unload_locked():
+    def unload_locked(force=False):
         _assert_rlock_owned(manager._runtime_activity_lock)
         assert not manager._request_state_lock._is_owned()
-        called.append("unload")
+        called.append(("unload", force))
 
     manager._load_model_locked = load_locked
     manager._unload_model_locked = unload_locked
@@ -62,7 +62,7 @@ def test_llm_load_and_unload_hold_the_runtime_activity_lock() -> None:
     manager.load()
     manager.unload()
 
-    assert called == ["load", "unload"]
+    assert called == ["load", ("unload", False)]
 
 
 @pytest.mark.parametrize("operation", ["load", "unload"])
@@ -74,7 +74,7 @@ def test_embedding_waits_for_physical_model_transition(operation: str) -> None:
     allow_transition = threading.Event()
     embedding_started = threading.Event()
 
-    def transition_body():
+    def transition_body(*_args, **_kwargs):
         _assert_rlock_owned(manager.runtime_activity_lock)
         assert not manager._request_state_lock._is_owned()
         transition_started.set()

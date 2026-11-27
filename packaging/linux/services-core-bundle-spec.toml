@@ -79,6 +79,7 @@ hidden_imports = [
     "airunner_services.bin.docker_build",
     "airunner_services.bin.docker_wrapper",
     "airunner_services.bin.generate_cert",
+    "airunner_services.mcp.server",
 ]
 extension_modules = []
 collect_submodules = []

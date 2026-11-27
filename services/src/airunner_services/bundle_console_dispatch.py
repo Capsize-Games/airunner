@@ -25,6 +25,7 @@ _ENTRY_POINTS = {
     "airunner-docker-build": ("airunner_services.bin.docker_build", "main"),
     "airunner-docker-wrapper": ("airunner_services.bin.docker_wrapper", "main"),
     "airunner-generate-cert": ("airunner_services.bin.generate_cert", "main"),
+    "airunner-mcp": ("airunner_services.mcp.server", "main"),
 }
 
 
