@@ -285,6 +285,32 @@ def test_known_import_distribution_alias_is_respected():
     }
 
 
+def test_mcp_types_declared_only_by_inactive_mcp_extra_is_not_undeclared():
+    # Regression for Hybrid Runtime CI packaging-gates: server.py imports
+    # mcp_types at module scope and services declares mcp-types only
+    # under the mcp extra, so a clean base install must classify it as
+    # declared-by-inactive-extra, not UNDECLARED.
+    distribution = _Distribution(
+        "airunner-services",
+        extras=("mcp",),
+        requires=("mcp-types>=2.0; extra == 'mcp'",),
+    )
+    undeclared, _allowed, inactive = classify_missing_imports(
+        {"mcp_types": ["airunner_services/mcp/server.py"]},
+        {},
+        [distribution],
+        set(),
+    )
+
+    assert undeclared == {}
+    assert inactive == {
+        "mcp_types": (
+            ["airunner_services/mcp/server.py"],
+            ["airunner-services[mcp]"],
+        )
+    }
+
+
 def test_lingua_import_uses_declared_detector_extra():
     distribution = _Distribution(
         "airunner-services",

@@ -265,6 +265,10 @@ COMPUTER_USE_REQUIREMENTS = [
 MCP_REQUIREMENTS = [
     "httpx>=0.27",
     "mcp>=2.0",
+    # mcp/server.py imports mcp_types at module scope; mcp only pulls it
+    # in transitively (mcp 2.0.0 pins mcp-types==2.0.0), so the direct
+    # import needs its own declaration or the artifact gate fails.
+    "mcp-types>=2.0",
 ]
 
 SYSTEM_DEP_EXTRAS = {"openvoice_jp", "openvoice_kr"}

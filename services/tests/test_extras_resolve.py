@@ -79,6 +79,23 @@ def test_readme_extras_references_all_exist() -> None:
             )
 
 
+def test_mcp_extra_declares_mcp_types() -> None:
+    """mcp/server.py imports mcp_types at module scope (Hybrid Runtime CI).
+
+    `mcp` only pulls mcp-types in transitively, so without a direct
+    declaration the static artifact gate reports mcp_types UNDECLARED
+    and packaging-gates fails in a clean base install.
+    """
+    from packaging.requirements import Requirement
+
+    names = {
+        Requirement(dep).name.lower().replace("_", "-")
+        for dep in _extras()["mcp"]
+    }
+    assert "mcp" in names
+    assert "mcp-types" in names
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize("extra_name", sorted(_extras()))
 def test_extra_resolves_with_pip_dry_run(extra_name: str) -> None:
