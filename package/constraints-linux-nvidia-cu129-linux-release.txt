@@ -195,7 +195,7 @@ lingua-language-detector==2.1.0+capsize.1 \
 llama-cloud==0.1.23 \
     --hash=sha256:ce95b0705d85c99b3b27b0af0d16a17d9a81b14c96bf13c1063a1bd13d8d0446
 llama-cpp-python==0.3.21+capsize.3 \
-    --hash=sha256:3732bbd0f9f2a79d7dc69ff0558ca9d228f69408c0c66461ca5f993638485e3a
+    --hash=sha256:ae7e4d77cdaba651bdbda4f1728f5d0f66a571df470914f11fe2fa4ea29442a6
 llvmlite==0.50.0 \
     --hash=sha256:425845f415a06dc50db08db033c6b568e0d85c4937e932c605a4d49e1514b2da
 loguru==0.7.3 \
