@@ -1224,6 +1224,11 @@ importer_scoped = [
     { module = "h2.exceptions", importers = ["httpcore._async.http2", "httpcore._sync.http2", "httpcore2._async.http2", "httpcore2._sync.http2", "scrapy.core.downloader.handlers._httpx", "scrapy.core.http2.protocol", "scrapy.core.http2.stream", "twisted.web._http2"] },
     { module = "h2.settings", importers = ["httpcore._async.http2", "httpcore._sync.http2", "httpcore2._async.http2", "httpcore2._sync.http2"] },
     { module = "httpx2_jsfetch", importers = ["httpx2._transports"] },
+    # airunner-mcp is an optional extra; the CORE profile does not install
+    # its httpx/mcp-types dependencies. Tolerate exactly those missing
+    # modules from exactly the MCP modules that import them.
+    { module = "httpx", importers = ["airunner_services.mcp.daemon_client", "airunner_services.mcp.video_client"] },
+    { module = "mcp_types", importers = ["airunner_services.mcp.server"] },
     { module = "importlib_resources", importers = ["alembic.util.compat", "jsonschema_specifications._core", "pycountry", "setuptools._vendor.jaraco.text", "tqdm.cli"] },
     { module = "ipyniivue", importers = ["datasets.features.nifti"] },
     { module = "isoduration", importers = ["jsonschema._format"] },
