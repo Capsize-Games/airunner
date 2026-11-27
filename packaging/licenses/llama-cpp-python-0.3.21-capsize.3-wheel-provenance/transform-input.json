@@ -15,7 +15,7 @@
       "wrapper_patch_sha256": "0f8dca544d67ea72851daab1c6116fdb4b6dc96f72a30bb7dbfde5bc3e91205b",
       "wrapper_version": "0.3.21+capsize.3"
     },
-    "sha256": "92b38e1ece8a0794fe074dcfeecd2b3062601703c3cf527d052f2ed27aa8f39d",
+    "sha256": "8065516f7e7d152b7fb5b1460772e8f27cc4fec2091c585f5cde295708858a44",
     "size_bytes": 5479
   },
   "distribution": {
@@ -24,8 +24,8 @@
   },
   "input_wheel": {
     "filename": "llama_cpp_python-0.3.21+capsize.3-py3-none-linux_x86_64.whl",
-    "sha256": "ef4d73c5fbdf3731968b1ebd27f609567c1662ade843322a8d690a614abbf3aa",
-    "size_bytes": 155743277
+    "sha256": "a4a1032a1db2dc1565858725c423767f35cd3d4186b353095ee3434b761dc825",
+    "size_bytes": 155743272
   },
   "metadata": {
     "license_files": [
@@ -58,13 +58,13 @@
     }
   ],
   "producer_artifact": {
-    "archive_sha256": "479dd565f8c0e04a6f438806933f7ef0a60b13a694dbd29d712389c981dfc5c1",
-    "archive_size_bytes": 154461319,
-    "artifact_id": 13189084154,
-    "expires_at": "2026-11-16T23:52:35Z",
+    "archive_sha256": "49d904ad4d23bb64e5aaacde0abd529482b108cc12a3e22485e69eca7a2e0a67",
+    "archive_size_bytes": 154461322,
+    "artifact_id": 15210821970,
+    "expires_at": "2027-02-25T15:04:12Z",
     "name": "llama-cpp-python-cu129-sm120a",
     "repository": "Capsize-Games/airunner",
-    "run_id": 41545665728
+    "run_id": 46021551860
   },
   "purpose": "offline-notice-completion-inputs; not source or build provenance for the output wheel",
   "schema_version": 1,

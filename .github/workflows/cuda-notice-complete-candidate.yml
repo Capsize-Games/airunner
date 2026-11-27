@@ -44,7 +44,7 @@ jobs:
             --destination "$RUNNER_TEMP/compiled-input" \
             --archive-copy "$RUNNER_TEMP/compiled-artifact.zip"
           test "$(sha256sum "$RUNNER_TEMP/compiled-artifact.zip" | cut -d ' ' -f 1)" \
-            = 479dd565f8c0e04a6f438806933f7ef0a60b13a694dbd29d712389c981dfc5c1
+            = 49d904ad4d23bb64e5aaacde0abd529482b108cc12a3e22485e69eca7a2e0a67
 
       - name: Run transformation regression tests and package candidate offline
         shell: bash
@@ -80,9 +80,9 @@ jobs:
             uid="$3"
             gid="$4"
             printf "%s  %s\n" \
-              3732bbd0f9f2a79d7dc69ff0558ca9d228f69408c0c66461ca5f993638485e3a \
+              ae7e4d77cdaba651bdbda4f1728f5d0f66a571df470914f11fe2fa4ea29442a6 \
               "$wheel" | sha256sum --check --status
-            test "$(stat -c %s "$wheel")" = 154412863
+            test "$(stat -c %s "$wheel")" = 154412859
             chown "$uid:$gid" "$wheel" "$receipt"
             chmod 0644 "$wheel" "$receipt"
           ' bash \
@@ -96,10 +96,10 @@ jobs:
           build = pathlib.Path(sys.argv[2])
           wheel = output / "llama_cpp_python-0.3.21+capsize.3-py3-none-linux_x86_64.whl"
           receipt = json.loads((output / "transform-receipt.json").read_text())
-          expected_sha = "3732bbd0f9f2a79d7dc69ff0558ca9d228f69408c0c66461ca5f993638485e3a"
+          expected_sha = "ae7e4d77cdaba651bdbda4f1728f5d0f66a571df470914f11fe2fa4ea29442a6"
           assert hashlib.sha256(wheel.read_bytes()).hexdigest() == expected_sha
-          assert wheel.stat().st_size == 154412863
-          assert hashlib.sha256(build.read_bytes()).hexdigest() == "92b38e1ece8a0794fe074dcfeecd2b3062601703c3cf527d052f2ed27aa8f39d"
+          assert wheel.stat().st_size == 154412859
+          assert hashlib.sha256(build.read_bytes()).hexdigest() == "8065516f7e7d152b7fb5b1460772e8f27cc4fec2091c585f5cde295708858a44"
           assert receipt["output_wheel"]["sha256"] == expected_sha
           assert receipt["output_zip_member_count"] == receipt["output_record_row_count"] == 98
           assert receipt["preserved_original_member_count"] == 94

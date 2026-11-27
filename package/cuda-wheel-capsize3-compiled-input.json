@@ -1,14 +1,14 @@
 {
   "artifact": {
-    "created_at": "2026-11-02T23:52:36Z",
-    "expires_at": "2026-11-16T23:52:35Z",
-    "id": 13189084154,
+    "created_at": "2026-11-27T15:19:47Z",
+    "expires_at": "2027-02-25T15:04:12Z",
+    "id": 15210821970,
     "name": "llama-cpp-python-cu129-sm120a",
-    "retention_days": 14,
-    "run_id": 41545665728,
-    "source_revision": "cfa99f2e033d678e180d16d457d77e179db4d283",
-    "zip_sha256": "479dd565f8c0e04a6f438806933f7ef0a60b13a694dbd29d712389c981dfc5c1",
-    "zip_size_bytes": 154461319
+    "retention_days": 90,
+    "run_id": 46021551860,
+    "source_revision": "ddea47cfbe9dca36927301e323af6bce0a44eda4",
+    "zip_sha256": "49d904ad4d23bb64e5aaacde0abd529482b108cc12a3e22485e69eca7a2e0a67",
+    "zip_size_bytes": 154461322
   },
   "build": {
     "backend_wheels": {
@@ -51,8 +51,8 @@
       "jinja2>=2.11.3"
     ],
     "requires_python": ">=3.8",
-    "sha256": "ef4d73c5fbdf3731968b1ebd27f609567c1662ade843322a8d690a614abbf3aa",
-    "size_bytes": 155743277,
+    "sha256": "a4a1032a1db2dc1565858725c423767f35cd3d4186b353095ee3434b761dc825",
+    "size_bytes": 155743272,
     "tag": "py3-none-linux_x86_64",
     "version": "0.3.21+capsize.3"
   },

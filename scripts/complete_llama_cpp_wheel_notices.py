@@ -21,11 +21,11 @@ from typing import Any
 
 WHEEL_NAME = "llama_cpp_python-0.3.21+capsize.3-py3-none-linux_x86_64.whl"
 DIST_INFO = "llama_cpp_python-0.3.21+capsize.3.dist-info"
-EXPECTED_WHEEL_SHA256 = "ef4d73c5fbdf3731968b1ebd27f609567c1662ade843322a8d690a614abbf3aa"
-EXPECTED_WHEEL_SIZE = 155743277
-EXPECTED_ARTIFACT_SHA256 = "479dd565f8c0e04a6f438806933f7ef0a60b13a694dbd29d712389c981dfc5c1"
-EXPECTED_ARTIFACT_SIZE = 154461319
-EXPECTED_BUILD_MANIFEST_SHA256 = "92b38e1ece8a0794fe074dcfeecd2b3062601703c3cf527d052f2ed27aa8f39d"
+EXPECTED_WHEEL_SHA256 = "a4a1032a1db2dc1565858725c423767f35cd3d4186b353095ee3434b761dc825"
+EXPECTED_WHEEL_SIZE = 155743272
+EXPECTED_ARTIFACT_SHA256 = "49d904ad4d23bb64e5aaacde0abd529482b108cc12a3e22485e69eca7a2e0a67"
+EXPECTED_ARTIFACT_SIZE = 154461322
+EXPECTED_BUILD_MANIFEST_SHA256 = "8065516f7e7d152b7fb5b1460772e8f27cc4fec2091c585f5cde295708858a44"
 EXPECTED_BUILD_MANIFEST_SIZE = 5479
 WRAPPER_REPOSITORY = "Capsize-Games/llama-cpp-python-maintenance"
 WRAPPER_REVISION = "5156c34af6d4920cddc5aba75618b1dd1c23e590"
@@ -175,12 +175,12 @@ def _manifest_inputs(manifest_path: Path) -> tuple[dict[str, Any], bytes, dict[s
     producer = manifest["producer_artifact"]
     expected_producer = {
         "repository": "Capsize-Games/airunner",
-        "run_id": 41545665728,
-        "artifact_id": 13189084154,
+        "run_id": 46021551860,
+        "artifact_id": 15210821970,
         "name": "llama-cpp-python-cu129-sm120a",
         "archive_sha256": EXPECTED_ARTIFACT_SHA256,
         "archive_size_bytes": EXPECTED_ARTIFACT_SIZE,
-        "expires_at": "2026-11-16T23:52:35Z",
+        "expires_at": "2027-02-25T15:04:12Z",
     }
     if producer != expected_producer:
         raise NoticeWheelError("producer Actions artifact identity differs from verified run")
