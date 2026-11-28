@@ -100,7 +100,7 @@ class AudioProcessorWorker(Worker):
 		if self._executor:
 			self._executor.unload()
 
-	def on_stt_process_audio_signal(self, message):
+	def on_stt_process_audio_signal(self, message: dict) -> None:
 		"""Queue one incoming audio payload for transcription."""
 		self.logger.debug(
 			"on_stt_process_audio_signal called, message keys: %s",
@@ -108,7 +108,7 @@ class AudioProcessorWorker(Worker):
 		)
 		self.add_to_queue(message)
 
-	def handle_message(self, audio_data):
+	def handle_message(self, audio_data: dict) -> None:
 		"""Process one queued audio or STT control message."""
 		message_type = audio_data.get("_message_type") if audio_data else None
 		if message_type == "stt_load":
