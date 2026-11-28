@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import torch
 from transformers import BitsAndBytesConfig as TransformersBnBConfig
@@ -49,19 +49,8 @@ class ZImageSingleFileLoaderHelper:
             model_dtype,
         )
         model_dir = self._resolve_model_dir(model_path)
-        max_memory = self.compute_max_memory_for_text_encoder(is_fp8_checkpoint)
-        text_encoder_cfg = self._build_text_encoder_quantization_config(
-            use_quant,
-            quant_bits,
-            is_fp8_checkpoint,
-        )
-        helper = self._owner._get_pretrained_loader_helper()
-        text_encoder, tokenizer = helper.load_text_encoder_from_pretrained(
-            os.path.join(model_dir, "text_encoder"),
-            os.path.join(model_dir, "tokenizer"),
-            text_encoder_cfg,
-            model_dtype,
-            max_memory,
+        text_encoder, tokenizer = self._load_single_file_text_encoder(
+            model_dir, use_quant, quant_bits, is_fp8_checkpoint, model_dtype
         )
         if text_encoder is None:
             raise RuntimeError("Failed to load text encoder")
@@ -171,6 +160,12 @@ class ZImageSingleFileLoaderHelper:
             quant_bits,
         )
         model_dir = os.path.dirname(model_path)
+        helper = self._owner._get_pretrained_loader_helper()
+        max_memory = helper.compute_max_memory_for_models(use_quant)
+        transformer_cfg = self._transformer_helper.build_transformer_quantization_config(
+            use_quant,
+            quant_bits,
+        )
         self._assemble_fallback_pipeline(
             pipeline_class,
             model_path,
@@ -186,6 +181,30 @@ class ZImageSingleFileLoaderHelper:
         self._owner.logger.info(
             "Fallback loading successful - pipeline assembled (dtype: %s)",
             model_dtype,
+        )
+
+    def _load_single_file_text_encoder(
+        self,
+        model_dir: str,
+        use_quant,
+        quant_bits,
+        is_fp8_checkpoint,
+        model_dtype,
+    ) -> Tuple:
+        """Load one text encoder and tokenizer for single-file loading."""
+        max_memory = self.compute_max_memory_for_text_encoder(is_fp8_checkpoint)
+        text_encoder_cfg = self._build_text_encoder_quantization_config(
+            use_quant,
+            quant_bits,
+            is_fp8_checkpoint,
+        )
+        helper = self._owner._get_pretrained_loader_helper()
+        return helper.load_text_encoder_from_pretrained(
+            os.path.join(model_dir, "text_encoder"),
+            os.path.join(model_dir, "tokenizer"),
+            text_encoder_cfg,
+            model_dtype,
+            max_memory,
         )
 
     def _assemble_fallback_pipeline(
