@@ -11,6 +11,7 @@ from PIL import Image
 from airunner_services.art.utils.nsfw_checker import check_images_mandatory
 from airunner_services.ipc.messages import EnvelopeStatus, RequestEnvelope
 from airunner_services.runtimes.base import RuntimeClient
+from airunner_services.utils.image.convert_binary_to_image import MAX_IMAGE_PIXELS
 from airunner_services.utils.job_tracker import JobTracker
 
 from .art_contracts import GenerationRequest
@@ -92,6 +93,17 @@ def gate_response_images(images_bytes: List[bytes]) -> bool:
     for raw in images_bytes:
         try:
             image = Image.open(io.BytesIO(raw))
+            width, height = image.size
+            if (
+                width < 1
+                or height < 1
+                or width * height > MAX_IMAGE_PIXELS
+            ):
+                logger.warning(
+                    "Art output withheld: one batch image exceeds "
+                    "the supported pixel limit"
+                )
+                return False
             image.load()
             pil_images.append(image.convert("RGB"))
         except Exception:

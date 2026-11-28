@@ -246,3 +246,19 @@ def test_valid_png_fails_when_mandatory_seam_withholds(
 
     monkeypatch.setattr(art_job_response, "check_images_mandatory", _withhold)
     assert gate_response_images([_tiny_png()]) is False
+
+
+def test_oversize_cloud_image_is_withheld_before_mandatory_seam(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Oversized dimensions fail closed without reaching the image seam."""
+    calls: list[object] = []
+
+    def _fake(images: object) -> tuple:
+        calls.append(images)
+        return ([], [], _allowed_batch(1))
+
+    monkeypatch.setattr(art_job_response, "check_images_mandatory", _fake)
+    monkeypatch.setattr(art_job_response, "MAX_IMAGE_PIXELS", 3)
+    assert gate_response_images([_tiny_png()]) is False
+    assert calls == []
