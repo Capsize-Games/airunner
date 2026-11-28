@@ -32,6 +32,7 @@ from airunner_services.runtimes.sidecar_tts_client import SidecarTTSClient
 def muse_art_enabled(
     environ: Optional[Mapping[str, str]] = None,
 ) -> bool:
+    """Return whether the Muse art provider is enabled by its API key."""
     source = os.environ if environ is None else environ
     return bool(source.get("MODEL_API_KEY", "").strip())
 
