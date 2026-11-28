@@ -5,6 +5,8 @@ from sqlalchemy import Column, Integer, String
 
 
 class Embedding(BaseModel):
+    """Legacy embedding model record retained for compatibility."""
+
     __tablename__ = "embeddings"
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, default="")
