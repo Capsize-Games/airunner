@@ -59,7 +59,6 @@ class ZImageNativePipelineSamplingHelper:
         strength: float,
     ) -> torch.Tensor:
         """Prepare text2img or img2img latents for the denoising loop."""
-        vae_helper = self._owner._get_vae_helper()
         if not is_img2img:
             return self._prepare_text2img_latents(
                 height,
@@ -68,6 +67,30 @@ class ZImageNativePipelineSamplingHelper:
                 latents,
                 generator,
             )
+        return self._prepare_img2img_latents(
+            image,
+            height,
+            width,
+            batch_size,
+            latents,
+            generator,
+            timesteps,
+            strength,
+        )
+
+    def _prepare_img2img_latents(
+        self,
+        image: Optional[Any],
+        height: int,
+        width: int,
+        batch_size: int,
+        latents: Optional[torch.Tensor],
+        generator: Optional[torch.Generator],
+        timesteps: torch.Tensor,
+        strength: float,
+    ) -> torch.Tensor:
+        """Prepare img2img latents by encoding the input image through the VAE."""
+        vae_helper = self._owner._get_vae_helper()
         if self._owner.vae is None:
             raise RuntimeError("VAE must be loaded for img2img generation")
         vae_helper.ensure_image_processor()
@@ -82,16 +105,7 @@ class ZImageNativePipelineSamplingHelper:
         shift_factor = getattr(self._owner.vae.config, "shift_factor", 0.0)
         scaling_factor = getattr(self._owner.vae.config, "scaling_factor", 1.0)
         image_latents = (image_latents - shift_factor) * scaling_factor
-        if batch_size > image_latents.shape[0]:
-            if batch_size % image_latents.shape[0] != 0:
-                raise ValueError(
-                    "Cannot duplicate image latents of batch size "
-                    f"{image_latents.shape[0]} to {batch_size}"
-                )
-            repeat_count = batch_size // image_latents.shape[0]
-            image_latents = torch.cat([image_latents] * repeat_count, dim=0)
-        else:
-            image_latents = image_latents[:batch_size]
+        image_latents = self._fit_latent_batch(image_latents, batch_size)
         image_latents = image_latents.to(device=self._owner.device, dtype=torch.float32)
         if latents is not None:
             return latents.to(device=self._owner.device, dtype=torch.float32)
@@ -108,6 +122,20 @@ class ZImageNativePipelineSamplingHelper:
             timestep_ratio,
         )
         return (1.0 - timestep_ratio) * image_latents + timestep_ratio * noise
+
+    def _fit_latent_batch(
+        self, image_latents: torch.Tensor, batch_size: int
+    ) -> torch.Tensor:
+        """Repeat or trim image latents to exactly batch_size entries."""
+        if batch_size > image_latents.shape[0]:
+            if batch_size % image_latents.shape[0] != 0:
+                raise ValueError(
+                    "Cannot duplicate image latents of batch size "
+                    f"{image_latents.shape[0]} to {batch_size}"
+                )
+            repeat_count = batch_size // image_latents.shape[0]
+            return torch.cat([image_latents] * repeat_count, dim=0)
+        return image_latents[:batch_size]
 
     def _randn(
         self,
