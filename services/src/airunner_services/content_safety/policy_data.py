@@ -23,7 +23,8 @@ then the packaged ``data/policy_terms.dat``. The variable is a
 development and test hook only; when the explicit signed-policy
 requirement (see :func:`is_packaged_mode`) is enabled, the path is
 locked and only the packaged set is considered.
-Unusable data yields an empty set plus one content-free warning;
+Unusable data yields an empty set plus one content-free warning; the
+matcher denies in enforce mode until a policy set is generated.
 :func:`parse_policy_artifact` raises instead.
 
 Pass ``verify_signature=True`` to :func:`load_policy_hashes` to verify
@@ -352,6 +353,9 @@ def load_policy_hashes(
     trusted_keys: Mapping[str, bytes] | None = None,
 ) -> frozenset[str]:
     """Return the cached policy hash set; unusable data yields empty.
+
+    Unusable data also emits a content-free warning; the matcher denies
+    in enforce mode until a policy set is generated.
 
     With ``verify_signature``, the sidecar signature is verified
     over the exact artifact bytes before decoding or parsing, and
