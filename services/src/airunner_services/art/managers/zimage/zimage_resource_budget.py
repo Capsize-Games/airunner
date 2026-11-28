@@ -142,10 +142,12 @@ class ComponentMemoryEstimate:
 
     @property
     def estimated_resident_gib(self) -> float:
+        """Return estimated resident memory in gibibytes."""
         return self.estimated_resident_bytes / _GIB
 
     @property
     def largest_shard_workspace_gib(self) -> float:
+        """Return largest shard load workspace in gibibytes."""
         return math.ceil(
             self.largest_shard_bytes * _LOAD_WORKSPACE_FACTOR
         ) / _GIB
@@ -178,6 +180,7 @@ class ZImageMemoryPlan:
 
     @property
     def estimated_vram_gib(self) -> float:
+        """Return estimated VRAM use including the activation reserve."""
         # Keep activation memory in the coordinator reservation too. Otherwise
         # another in-flight allocation could consume headroom that the staged
         # component checks assume remains free.
@@ -185,6 +188,7 @@ class ZImageMemoryPlan:
 
     @property
     def estimated_ram_gib(self) -> float:
+        """Return estimated RAM use with a four-gibibyte floor."""
         return max(4.0, self.cpu_weight_budget_gib + self.cpu_workspace_gib)
 
 
