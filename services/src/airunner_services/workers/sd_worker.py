@@ -913,13 +913,8 @@ class SDWorker(Worker):
 		)
 		return False
 
-	def _generate_image(self, message: Dict):
-		"""Correlate service API work before entering the shared worker path."""
-		request_id = message.get("request_id")
-		if not request_id:
-			return self._generate_image_owned(message)
-		image_request = message.get("image_request")
-		original_callback = getattr(image_request, "callback", None)
+	def _make_request_callbacks(self, original_callback):
+		"""Build the once-only terminal result callbacks for one request."""
 		callback_lock = threading.Lock()
 		callback_called = False
 		worker_call_finished = False
@@ -959,6 +954,19 @@ class SDWorker(Worker):
 				worker_call_finished = True
 				result = callback_result
 			deliver_callback(result)
+
+		return complete_once, finish_worker_call
+
+	def _generate_image(self, message: Dict):
+		"""Correlate service API work before entering the shared worker path."""
+		request_id = message.get("request_id")
+		if not request_id:
+			return self._generate_image_owned(message)
+		image_request = message.get("image_request")
+		original_callback = getattr(image_request, "callback", None)
+		complete_once, finish_worker_call = self._make_request_callbacks(
+			original_callback
+		)
 
 		if image_request is not None and callable(original_callback):
 			image_request.callback = complete_once
