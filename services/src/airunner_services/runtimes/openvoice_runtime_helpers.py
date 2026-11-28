@@ -66,9 +66,16 @@ class StreamingToneColorConverter(ToneColorConverter):
         message: str = "default",
     ) -> Any:
         """Convert audio tone color using the specified parameters."""
+        audio = self._load_reference_audio(audio_src_path)
+        if audio is None:
+            return None
+        return self._convert_spectrogram(audio, src_se, tgt_se, tau)
+
+    def _load_reference_audio(self, audio_src_path: str):
+        """Load reference audio, returning None on failure or empty audio."""
         hps = self.hps
         try:
-            audio, sample_rate = librosa.load(
+            audio, _sample_rate = librosa.load(
                 audio_src_path,
                 sr=hps.data.sampling_rate,
                 mono=True,
@@ -87,7 +94,11 @@ class StreamingToneColorConverter(ToneColorConverter):
                 audio_src_path,
             )
             return None
+        return audio
 
+    def _convert_spectrogram(self, audio, src_se, tgt_se, tau: float):
+        """Run spectrogram-based voice conversion, returning None on error."""
+        hps = self.hps
         audio = torch.tensor(audio).float()
         with torch.no_grad():
             y = torch.FloatTensor(audio).to(self.device).unsqueeze(0)
