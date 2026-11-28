@@ -5,6 +5,8 @@ from sqlalchemy import Column, Integer, String
 
 
 class FineTunedModel(BaseModel):
+    """Legacy fine-tuned model record retained for compatibility."""
+
     __tablename__ = "fine_tuned_models"
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, default="")
