@@ -407,29 +407,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
 
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
         try:
-            if self.model is not None:
-                self.model.unload()
-                self.model = None
-
-            initialize_start = perf_counter()
-            self._initialize()
-            initialize_elapsed = perf_counter() - initialize_start
-
-            model_start = perf_counter()
-            self.model = TTS(
-                language=self.language,
-                device=self.device,
-            )
-            self._warm_model_components()
-            model_elapsed = perf_counter() - model_start
-
-            self.logger.info(
-                "OpenVoice load timings: initialize=%.3fs "
-                "tts_init=%.3fs total=%.3fs",
-                initialize_elapsed,
-                model_elapsed,
-                perf_counter() - load_start,
-            )
+            self._initialize_tts_model(load_start)
         except Exception:
             self.model = None
             self.change_model_status(ModelType.TTS, ModelStatus.FAILED)
@@ -437,6 +415,29 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
 
         self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
         return True
+
+    def _initialize_tts_model(self, load_start: float) -> None:
+        """Unload the old model and construct the replacement TTS model."""
+        if self.model is not None:
+            self.model.unload()
+            self.model = None
+        initialize_start = perf_counter()
+        self._initialize()
+        initialize_elapsed = perf_counter() - initialize_start
+        model_start = perf_counter()
+        self.model = TTS(
+            language=self.language,
+            device=self.device,
+        )
+        self._warm_model_components()
+        model_elapsed = perf_counter() - model_start
+        self.logger.info(
+            "OpenVoice load timings: initialize=%.3fs "
+            "tts_init=%.3fs total=%.3fs",
+            initialize_elapsed,
+            model_elapsed,
+            perf_counter() - load_start,
+        )
 
     def _prepare_for_load(self) -> bool:
         """Run the download check, returning True when init may proceed."""
