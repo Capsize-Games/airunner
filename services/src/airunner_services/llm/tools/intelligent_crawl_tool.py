@@ -29,6 +29,40 @@ from airunner_services.utils.application.log_hygiene import fingerprint_value
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
+def _send_crawler_decision(api, prompt, llm_request, action, request_id):
+    """Send one crawler decision request and return the raw response data.
+
+    Registers the pending request with the signal mediator, sends the
+    request, waits up to 30 seconds for the decision, and always cleans
+    up the pending registration.
+    """
+    from airunner_services.utils.application.signal_mediator import (
+        SignalMediator,
+    )
+
+    mediator = SignalMediator()
+    mediator.register_pending_request(request_id)
+
+    logger.debug(
+        f"Sending LLM crawler decision request with id={request_id}"
+    )
+
+    try:
+        api.llm.send_request(
+            prompt=prompt,
+            llm_request=llm_request,
+            action=action,
+            do_tts_reply=False,  # No TTS for crawler decisions
+            request_id=request_id,
+        )
+
+        # Wait for response with 30 second timeout
+        return mediator.wait_for_response(request_id, timeout=30.0)
+    finally:
+        # Clean up pending request
+        mediator.unregister_pending_request(request_id)
+
+
 @tool(
     name="intelligent_crawl",
     category=ToolCategory.RESEARCH,
@@ -106,9 +140,6 @@ def intelligent_crawl(
                     LLMRequest,
                 )
                 from airunner_common.contract_enums import LLMActionType
-                from airunner_services.utils.application.signal_mediator import (
-                    SignalMediator,
-                )
 
                 # Create a request optimized for decision-making
                 llm_request = LLMRequest.for_action(LLMActionType.DECISION)
@@ -121,30 +152,13 @@ def intelligent_crawl(
                 # Generate unique request ID for correlation
                 request_id = str(uuid.uuid4())
 
-                # Register pending request with signal mediator
-                mediator = SignalMediator()
-                mediator.register_pending_request(request_id)
-
-                logger.debug(
-                    f"Sending LLM crawler decision request with id={request_id}"
+                response_data = _send_crawler_decision(
+                    api,
+                    prompt,
+                    llm_request,
+                    LLMActionType.DECISION,
+                    request_id,
                 )
-
-                # Send the LLM request
-                api.llm.send_request(
-                    prompt=prompt,
-                    llm_request=llm_request,
-                    action=LLMActionType.DECISION,
-                    do_tts_reply=False,  # No TTS for crawler decisions
-                    request_id=request_id,
-                )
-
-                # Wait for response with 30 second timeout
-                response_data = mediator.wait_for_response(
-                    request_id, timeout=30.0
-                )
-
-                # Clean up pending request
-                mediator.unregister_pending_request(request_id)
 
                 if response_data and "response" in response_data:
                     # Extract the message from the LLMResponse object
