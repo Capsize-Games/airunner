@@ -396,6 +396,7 @@ def _ollama_chat_stream(app, prompt: str, model: str, llm_request: LLMRequest, r
     accumulated_response: List[str] = []
 
     def error_frame(reason: str) -> bytes:
+        """Return one NDJSON chat error payload for a stream failure."""
         error = "Request timeout" if reason == "timeout" else (
             "Response exceeded the configured output limit"
             if reason == "overflow"
@@ -412,6 +413,7 @@ def _ollama_chat_stream(app, prompt: str, model: str, llm_request: LLMRequest, r
     )
 
     def callback(data: dict[str, Any]) -> None:
+        """Publish one streaming Ollama chat update."""
         response = data.get("response")
         if not response:
             return
@@ -509,6 +511,7 @@ def _ollama_chat_non_stream(app, prompt: str, model: str, llm_request: LLMReques
     )
 
     def callback(data: dict[str, Any]) -> None:
+        """Publish one non-streaming Ollama chat update."""
         response = data.get("response")
         if not response:
             return
@@ -644,6 +647,7 @@ def _ollama_generate_stream(app, prompt: str, model: str, llm_request: LLMReques
     start_time = time.monotonic()
 
     def error_frame(reason: str) -> bytes:
+        """Return one NDJSON generate error payload for a stream failure."""
         error = "Request timeout" if reason == "timeout" else (
             "Response exceeded the configured output limit"
             if reason == "overflow"
@@ -658,6 +662,7 @@ def _ollama_generate_stream(app, prompt: str, model: str, llm_request: LLMReques
     )
 
     def callback(data: dict[str, Any]) -> None:
+        """Publish one streaming Ollama generate update."""
         response = data.get("response")
         if not response:
             return
@@ -718,6 +723,7 @@ def _ollama_generate_non_stream(app, prompt: str, model: str, llm_request: LLMRe
     )
 
     def callback(data: dict[str, Any]) -> None:
+        """Publish one non-streaming Ollama generate update."""
         response = data.get("response")
         if not response:
             return
