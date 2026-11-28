@@ -145,6 +145,7 @@ class LocalFallbackSTTClient(_SignalRuntimeClient):
         transcription_queue: Queue[Any] = Queue()
 
         def on_transcription(data: dict[str, Any]) -> None:
+            """Queue a matching transcription result for this request."""
             if data.get("request_id", request.request_id) != request.request_id:
                 return
             transcription = data.get("transcription")
