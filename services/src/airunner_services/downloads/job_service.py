@@ -336,6 +336,7 @@ class DownloadJobService:
         stop_watch = threading.Event()
 
         def handle_signal(code: object, data: dict[str, Any] | None = None) -> None:
+            """Fold one worker signal into job progress or completion."""
             nonlocal completion, failure
             payload = data or {}
             if code == WorkerSignalCode.UPDATE_DOWNLOAD_LOG:
@@ -360,6 +361,7 @@ class DownloadJobService:
                 failure = str(payload.get("error") or "Download failed")
 
         def watch_cancel() -> None:
+            """Propagate job cancellation into the download worker."""
             while not stop_watch.is_set():
                 if cancel_event.is_set():
                     worker.is_cancelled = True
@@ -430,6 +432,7 @@ class DownloadJobService:
         last_progress = -1.0
 
         def progress(downloaded: int, total: int) -> None:
+            """Report throttled progress for one Hugging Face file job."""
             nonlocal last_progress
             current_progress = _coerce_progress(downloaded, total)
             if current_progress < 100.0 and current_progress - last_progress < 1.0:
@@ -629,6 +632,7 @@ class DownloadJobService:
         last_progress = -1.0
 
         def progress(downloaded: int, total: int) -> None:
+            """Report throttled progress for one URL download job."""
             nonlocal last_progress
             current_progress = _coerce_progress(downloaded, total)
             if current_progress < 100.0 and current_progress - last_progress < 1.0:
@@ -923,6 +927,7 @@ def _progress_reporter(
     last_progress = -1.0
 
     def report(_filename: str, downloaded: int, total: int) -> None:
+        """Report throttled progress for one Hugging Face download."""
         nonlocal last_progress
         progress = _coerce_progress(downloaded, total)
         if progress < 100.0 and progress - last_progress < 1.0:
@@ -943,6 +948,7 @@ def _civitai_progress_reporter(
     last_progress = -1.0
 
     def report(downloaded: int, total: int) -> None:
+        """Report throttled overall progress for one CivitAI download."""
         nonlocal last_progress
         overall_total = total_bytes or total
         overall_progress = _coerce_progress(completed_bytes + downloaded, overall_total)
