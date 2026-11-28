@@ -425,33 +425,15 @@ class WebContentExtractor:
             - publish_date: Publication date if available
             Returns None if extraction fails.
         """
-        try:
-            validate_url_for_fetch(url)
-        except (SSRFBlocked, OfflineModeBlocked) as e:
-            logger.warning("Blocked URL (%s): %s", fingerprint_value(url, label="url"), e)
+        if not WebContentExtractor._url_admissible_for_extract(url):
             return None
 
-        # Check if this domain is blocked
-        if WebContentExtractor._is_blocked(url):
-            logger.info(
-                "Skipping blocked domain (%s)", fingerprint_value(WebContentExtractor._get_base_url(url), label="domain"),
-            )
-            return None
-
-        # Check cache first (metadata includes both raw and summarized)
         if use_cache:
-            cached_metadata = WebContentExtractor.get_cached_metadata(url)
-            if cached_metadata:
-                # If cache has the content type we need, return it
-                if summarize and "content" in cached_metadata:
-                    logger.debug("Using cached summarized metadata for %s", fingerprint_value(url, label="url"))
-                    return cached_metadata
-                elif not summarize and "raw_content" in cached_metadata:
-                    logger.debug("Using cached raw metadata for %s", fingerprint_value(url, label="url"))
-                    # Return with raw content as 'content'
-                    result = cached_metadata.copy()
-                    result["content"] = result.pop("raw_content")
-                    return result
+            cached = WebContentExtractor._cached_extraction_result(
+                url, summarize
+            )
+            if cached is not None:
+                return cached
 
         try:
             html_content = WebContentExtractor._safe_fetch_html(url)
@@ -462,49 +444,9 @@ class WebContentExtractor:
                 WebContentExtractor._add_to_blocklist(url)
                 return None
 
-            # Extract main text content
-            main_text = trafilatura.extract(
-                html_content,
-                include_comments=False,
-                include_tables=True,
+            return WebContentExtractor._extract_html_metadata(
+                url, html_content, summarize, use_cache
             )
-
-            if not main_text:
-                logger.warning("No main text extracted from %s", fingerprint_value(url, label="url"))
-                # Add to blocklist - likely blocking scrapers
-                WebContentExtractor._add_to_blocklist(url)
-                return None
-
-            # Extract metadata
-            metadata = trafilatura.extract_metadata(html_content)
-
-            # Store both raw and summarized content
-            summarized_text = WebContentExtractor._summarize_text(main_text)
-            content_text = summarized_text if summarize else main_text
-
-            result = {
-                "content": content_text,
-                "title": metadata.title if metadata else None,
-                "description": metadata.description if metadata else None,
-                "author": metadata.author if metadata else None,
-                "publish_date": (
-                    str(metadata.date) if metadata and metadata.date else None
-                ),
-            }
-
-            # Cache both versions for future use
-            if use_cache:
-                cache_entry = result.copy()
-                cache_entry["raw_content"] = main_text  # Store raw for later
-                cache_entry["content"] = (
-                    summarized_text  # Default to summarized
-                )
-                WebContentExtractor.set_metadata_cache(url, cache_entry)
-                logger.debug(
-                    "Cached raw and summarized content for %s", fingerprint_value(url, label="url"),
-                )
-
-            return result
 
         except Exception as e:
             logger.error(
@@ -514,6 +456,88 @@ class WebContentExtractor:
             # Add to blocklist on exception - likely blocking scrapers
             WebContentExtractor._add_to_blocklist(url)
             return None
+
+    @staticmethod
+    def _url_admissible_for_extract(url: str) -> bool:
+        """Validate the URL policy and the domain blocklist for extraction."""
+        try:
+            validate_url_for_fetch(url)
+        except (SSRFBlocked, OfflineModeBlocked) as e:
+            logger.warning("Blocked URL (%s): %s", fingerprint_value(url, label="url"), e)
+            return False
+
+        # Check if this domain is blocked
+        if WebContentExtractor._is_blocked(url):
+            logger.info(
+                "Skipping blocked domain (%s)", fingerprint_value(WebContentExtractor._get_base_url(url), label="domain"),
+            )
+            return False
+        return True
+
+    @staticmethod
+    def _cached_extraction_result(url: str, summarize: bool):
+        """Return cache metadata in the requested content form, if present."""
+        cached_metadata = WebContentExtractor.get_cached_metadata(url)
+        if not cached_metadata:
+            return None
+        # If cache has the content type we need, return it
+        if summarize and "content" in cached_metadata:
+            logger.debug("Using cached summarized metadata for %s", fingerprint_value(url, label="url"))
+            return cached_metadata
+        elif not summarize and "raw_content" in cached_metadata:
+            logger.debug("Using cached raw metadata for %s", fingerprint_value(url, label="url"))
+            # Return with raw content as 'content'
+            result = cached_metadata.copy()
+            result["content"] = result.pop("raw_content")
+            return result
+        return None
+
+    @staticmethod
+    def _extract_html_metadata(url, html_content, summarize, use_cache):
+        """Extract main text and metadata, returning the result dict or None."""
+        # Extract main text content
+        main_text = trafilatura.extract(
+            html_content,
+            include_comments=False,
+            include_tables=True,
+        )
+
+        if not main_text:
+            logger.warning("No main text extracted from %s", fingerprint_value(url, label="url"))
+            # Add to blocklist - likely blocking scrapers
+            WebContentExtractor._add_to_blocklist(url)
+            return None
+
+        # Extract metadata
+        metadata = trafilatura.extract_metadata(html_content)
+
+        # Store both raw and summarized content
+        summarized_text = WebContentExtractor._summarize_text(main_text)
+        content_text = summarized_text if summarize else main_text
+
+        result = {
+            "content": content_text,
+            "title": metadata.title if metadata else None,
+            "description": metadata.description if metadata else None,
+            "author": metadata.author if metadata else None,
+            "publish_date": (
+                str(metadata.date) if metadata and metadata.date else None
+            ),
+        }
+
+        # Cache both versions for future use
+        if use_cache:
+            cache_entry = result.copy()
+            cache_entry["raw_content"] = main_text  # Store raw for later
+            cache_entry["content"] = (
+                summarized_text  # Default to summarized
+            )
+            WebContentExtractor.set_metadata_cache(url, cache_entry)
+            logger.debug(
+                "Cached raw and summarized content for %s", fingerprint_value(url, label="url"),
+            )
+
+        return result
 
     @staticmethod
     def fetch_and_extract_with_metadata(
