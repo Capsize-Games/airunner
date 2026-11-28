@@ -52,15 +52,7 @@ class NodeResearchPostToolHelper:
         """Return the research-mode instruction for the current phase."""
         url_hint = self._url_hint(search_urls)
         if scrape_attempts == 0 and tool_call_count <= 2:
-            return (
-                "\n\n=== DEEP RESEARCH WORKFLOW - PHASE 1: SCRAPE SOURCES ===\n"
-                "You've completed initial searches. Now you MUST scrape the most relevant URLs.\n\n"
-                "**YOUR NEXT ACTION:**\n"
-                "Call `scrape_website` on 2-3 URLs from your search results above.\n"
-                "IMPORTANT: Only use URLs that appeared in your search results!"
-                f"{url_hint}\n"
-                "**DO NOT** write a response yet. You need more detailed content first."
-            )
+            return self._scrape_sources_instruction(url_hint)
         if scrape_attempts > 0 and successful_scrapes == 0 and failed_scrapes > 0:
             return (
                 "\n\n=== DEEP RESEARCH WORKFLOW - SCRAPE ERROR RECOVERY ===\n"
@@ -72,14 +64,7 @@ class NodeResearchPostToolHelper:
                 "**DO NOT** give up. Try 2-3 more URLs before proceeding."
             )
         if successful_scrapes < 2 and tool_call_count < 8:
-            return (
-                "\n\n=== DEEP RESEARCH WORKFLOW - PHASE 2: EXPAND SOURCE COVERAGE ===\n"
-                f"You've successfully scraped {successful_scrapes} source(s). Gather at least one or two more high-value sources before summarizing.\n\n"
-                "**YOUR NEXT ACTION:**\n"
-                "1. Call `scrape_website` on additional strong URLs from your search results\n"
-                "2. Prefer sources that add new facts, dates, or perspectives\n\n"
-                "**DO NOT** respond to the user yet. Strengthen the evidence first."
-            )
+            return self._expand_coverage_instruction(successful_scrapes)
         if successful_scrapes > 0:
             return (
                 "\n\n=== DEEP RESEARCH WORKFLOW - PHASE 3: SYNTHESIZE & RESPOND ===\n"
@@ -99,6 +84,31 @@ class NodeResearchPostToolHelper:
             "2. A brief summary of your sources\n"
             "3. Any notable uncertainty or missing evidence\n\n"
             "**DO NOT** call more tools. Respond with your findings."
+        )
+
+    @staticmethod
+    def _scrape_sources_instruction(url_hint: str) -> str:
+        """Return the phase-1 scrape-sources instruction."""
+        return (
+            "\n\n=== DEEP RESEARCH WORKFLOW - PHASE 1: SCRAPE SOURCES ===\n"
+            "You've completed initial searches. Now you MUST scrape the most relevant URLs.\n\n"
+            "**YOUR NEXT ACTION:**\n"
+            "Call `scrape_website` on 2-3 URLs from your search results above.\n"
+            "IMPORTANT: Only use URLs that appeared in your search results!"
+            f"{url_hint}\n"
+            "**DO NOT** write a response yet. You need more detailed content first."
+        )
+
+    @staticmethod
+    def _expand_coverage_instruction(successful_scrapes: int) -> str:
+        """Return the phase-2 expand-coverage instruction."""
+        return (
+            "\n\n=== DEEP RESEARCH WORKFLOW - PHASE 2: EXPAND SOURCE COVERAGE ===\n"
+            f"You've successfully scraped {successful_scrapes} source(s). Gather at least one or two more high-value sources before summarizing.\n\n"
+            "**YOUR NEXT ACTION:**\n"
+            "1. Call `scrape_website` on additional strong URLs from your search results\n"
+            "2. Prefer sources that add new facts, dates, or perspectives\n\n"
+            "**DO NOT** respond to the user yet. Strengthen the evidence first."
         )
 
     @staticmethod
