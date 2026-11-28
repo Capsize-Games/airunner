@@ -1,5 +1,9 @@
 # AIRunner Architecture Complexity Audit
 
+> Historical assessment (2026-08-16): covers the whole tree including the
+> `src/` desktop client removed on 2026-10-25. Current direction is the
+> services-only architecture in `release-planning/services/ARCHITECTURE.md`.
+
 Date: 2026-08-16
 Scope: whole-repository architecture assessment focused on structural
 complexity, duplication, coupling, and drift — plus strengths and weaknesses.

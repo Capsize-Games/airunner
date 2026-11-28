@@ -1,5 +1,9 @@
 # GUI-Independent Service Audit
 
+> Historical assessment (PySide6 GUI era): the question it answers predates
+> the `src/` desktop client removal (2026-10-25). Current direction is the
+> services-only architecture in `release-planning/services/ARCHITECTURE.md`.
+
 ## Direct Answer
 
 No. AIRunner does not currently match the target architecture where the

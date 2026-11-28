@@ -1,5 +1,9 @@
 # RAG extraction audit
 
+> Historical snapshot (written 2026-09-19 against `5d5a5685d`): predates
+> the `src/` removal and the `shared/` package split. File paths referencing
+> the old tree are historical.
+
 Status: audit and recommendation for the repository-split work tracked in
 [#2185](https://github.com/Capsize-Games/airunner/issues/2185). No code
 changes are required by this document alone. Written 2026-09-19 against
