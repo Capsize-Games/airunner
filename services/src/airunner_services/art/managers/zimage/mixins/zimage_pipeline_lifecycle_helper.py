@@ -63,17 +63,7 @@ class ZImagePipelineLifecycleHelper:
     ) -> None:
         """Choose the correct loading path for one Z-Image model selection."""
         if is_single_file and is_fp8_checkpoint:
-            self._owner.logger.info(
-                "FP8 scaled checkpoint detected (%s). Using native FP8 "
-                "pipeline for memory-efficient loading.",
-                model_path.name,
-            )
-            self._owner._get_runtime_loader_helper().load_native_fp8_pipeline(
-                str(model_path),
-                str(model_dir),
-                pipeline_class,
-                data,
-            )
+            self._load_fp8_pipeline(model_path, model_dir, pipeline_class, data)
             return
         if is_single_file and self._owner.use_from_single_file:
             self._owner.logger.info(
@@ -103,6 +93,20 @@ class ZImagePipelineLifecycleHelper:
             return
         self._owner._load_from_pretrained(
             self._owner.model_path,
+            pipeline_class,
+            data,
+        )
+
+    def _load_fp8_pipeline(self, model_path: Path, model_dir: Path, pipeline_class, data: Dict) -> None:
+        """Load one FP8 checkpoint through the native FP8 pipeline."""
+        self._owner.logger.info(
+            "FP8 scaled checkpoint detected (%s). Using native FP8 "
+            "pipeline for memory-efficient loading.",
+            model_path.name,
+        )
+        self._owner._get_runtime_loader_helper().load_native_fp8_pipeline(
+            str(model_path),
+            str(model_dir),
             pipeline_class,
             data,
         )
