@@ -36,7 +36,7 @@ try:
     from diffusers.models.attention_dispatch import dispatch_attention_fn
 except ImportError:
     # Fallback for older diffusers versions
-    def dispatch_attention_fn(query, key, value, attn_mask=None, dropout_p=0.0, is_causal=False, **kwargs):
+    def dispatch_attention_fn(query: torch.Tensor, key: torch.Tensor, value: torch.Tensor, attn_mask: Optional[torch.Tensor] = None, dropout_p: float = 0.0, is_causal: bool = False, **kwargs) -> torch.Tensor:
         """Dispatch scaled dot-product attention for older diffusers versions."""
         return F.scaled_dot_product_attention(
             query.transpose(1, 2),
@@ -84,7 +84,7 @@ class TimestepEmbedder(nn.Module):
         self.frequency_embedding_size = frequency_embedding_size
 
     @staticmethod
-    def timestep_embedding(t, dim, max_period=10000):
+    def timestep_embedding(t: torch.Tensor, dim: int, max_period: int = 10000) -> torch.Tensor:
         """Create sinusoidal timestep embeddings."""
         with torch.amp.autocast("cuda", enabled=False):
             half = dim // 2
@@ -97,7 +97,7 @@ class TimestepEmbedder(nn.Module):
                 embedding = torch.cat([embedding, torch.zeros_like(embedding[:, :1])], dim=-1)
             return embedding
 
-    def forward(self, t):
+    def forward(self, t: torch.Tensor) -> torch.Tensor:
         """Embed one timestep batch."""
         t_freq = self.timestep_embedding(t, self.frequency_embedding_size)
         weight_dtype = self.mlp[0].weight.dtype
@@ -201,7 +201,7 @@ class FeedForward(nn.Module):
     def _forward_silu_gating(self, x1, x3):
         return F.silu(x1) * x3
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Apply the SwiGLU feed-forward transformation."""
         return self.w2(self._forward_silu_gating(self.w1(x), self.w3(x)))
 
@@ -258,7 +258,7 @@ class ZImageTransformerBlock(nn.Module):
         attn_mask: torch.Tensor,
         freqs_cis: torch.Tensor,
         adaln_input: Optional[torch.Tensor] = None,
-    ):
+    ) -> torch.Tensor:
         """Run one transformer block with optional AdaLN modulation."""
         if self.modulation:
             assert adaln_input is not None
@@ -311,7 +311,7 @@ class FinalLayer(nn.Module):
             nn.Linear(min(hidden_size, ADALN_EMBED_DIM), hidden_size, bias=True),
         )
 
-    def forward(self, x, c):
+    def forward(self, x: torch.Tensor, c: torch.Tensor) -> torch.Tensor:
         """Apply final modulation and project to the output channels."""
         scale = 1.0 + self.adaLN_modulation(c)
         x = self.norm_final(x) * scale.unsqueeze(1)
@@ -335,7 +335,7 @@ class RopeEmbedder:
         self.freqs_cis = None
 
     @staticmethod
-    def precompute_freqs_cis(dim: List[int], end: List[int], theta: float = 256.0):
+    def precompute_freqs_cis(dim: List[int], end: List[int], theta: float = 256.0) -> List[torch.Tensor]:
         """Precompute complex rotary frequencies for each axis."""
         with torch.device("cpu"):
             freqs_cis = []
@@ -469,7 +469,7 @@ class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOr
 
         self.rope_embedder = RopeEmbedder(theta=rope_theta, axes_dims=axes_dims, axes_lens=axes_lens)
 
-    def unpatchify(self, x: List[torch.Tensor], size: List[Tuple], patch_size, f_patch_size) -> List[torch.Tensor]:
+    def unpatchify(self, x: List[torch.Tensor], size: List[Tuple], patch_size: int, f_patch_size: int) -> List[torch.Tensor]:
         """Reconstruct original image tensors from patched tokens."""
         pH = pW = patch_size
         pF = f_patch_size
@@ -488,7 +488,7 @@ class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOr
         return x
 
     @staticmethod
-    def create_coordinate_grid(size, start=None, device=None):
+    def create_coordinate_grid(size: Tuple[int, ...], start: Optional[Tuple[int, ...]] = None, device: Optional[torch.device] = None) -> torch.Tensor:
         """Create a coordinate grid for one tensor shape."""
         if start is None:
             start = (0 for _ in size)
@@ -503,7 +503,7 @@ class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOr
         all_cap_feats: List[torch.Tensor],
         patch_size: int,
         f_patch_size: int,
-    ):
+    ) -> Tuple[List[torch.Tensor], List[torch.Tensor], List[Tuple], List[torch.Tensor], List[torch.Tensor], List[torch.Tensor], List[torch.Tensor]]:
         """Patchify images and captions with padding and position ids."""
         pH = pW = patch_size
         pF = f_patch_size
@@ -601,11 +601,11 @@ class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOr
     def forward(
         self,
         x: List[torch.Tensor],
-        t,
+        t: torch.Tensor,
         cap_feats: List[torch.Tensor],
-        patch_size=2,
-        f_patch_size=1,
-    ):
+        patch_size: int = 2,
+        f_patch_size: int = 1,
+    ) -> Tuple[List[torch.Tensor], dict]:
         """Run the transformer forward pass for one image batch."""
         assert patch_size in self.all_patch_size
         assert f_patch_size in self.all_f_patch_size

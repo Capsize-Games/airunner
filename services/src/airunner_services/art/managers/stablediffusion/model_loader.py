@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 
 from diffusers import SchedulerMixin
 
+from airunner_services.database.models.path_settings import PathSettings
 from airunner_services.database.models.schedulers import Schedulers
 from airunner_common.settings import AIRUNNER_LOCAL_FILES_ONLY, AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
@@ -69,7 +70,7 @@ class SomeModelClass:  # legacy test helper
     def __init__(self, path):
         self.path = path
 
-    def unload(self):
+    def unload(self) -> bool:
         """Report a successful unload for this stand-in model."""
         return True
 
@@ -93,7 +94,7 @@ class SomeDeepCacheClass:  # legacy test helper
 
 
 def load_scheduler(
-    scheduler_name: str, path_settings, version: str, logger: Any
+    scheduler_name: str, path_settings: PathSettings, version: str, logger: Any
 ) -> Optional[SchedulerMixin]:
     """Load one allowlisted scheduler from local files."""
     base_path = path_settings.base_path
@@ -179,31 +180,31 @@ def unload_deep_cache_helper(deep_cache_helper: Any, logger: Any) -> None:
         logger.warning(f"Failed to unload DeepCacheSDHelper: {e}")
 
 
-def load_model(path):
+def load_model(path: str) -> SomeModelClass:
     """Return a stand-in model for legacy loader tests."""
     return SomeModelClass(path)
 
 
-def unload_model(model):
+def unload_model(model: SomeModelClass) -> bool:
     """Unload one stand-in model for legacy loader tests."""
     return model.unload()
 
 
-def load_compel(*args, **kwargs):
+def load_compel(*args, **kwargs) -> SomeCompelClass:
     """Return a stand-in Compel object for legacy loader tests."""
     return SomeCompelClass(*args, **kwargs)
 
 
-def load_deep_cache(*args, **kwargs):
+def load_deep_cache(*args, **kwargs) -> SomeDeepCacheClass:
     """Return a stand-in DeepCache object for legacy loader tests."""
     return SomeDeepCacheClass(*args, **kwargs)
 
 
-def load_scheduler(*args, **kwargs):
+def load_scheduler(*args, **kwargs) -> SomeSchedulerClass:
     """Return a stand-in scheduler for legacy loader tests."""
     return SomeSchedulerClass()
 
 
-def unload_deep_cache(instance):
+def unload_deep_cache(instance: Any) -> Any:
     """Unload one stand-in DeepCache object for legacy loader tests."""
     return instance.unload()
