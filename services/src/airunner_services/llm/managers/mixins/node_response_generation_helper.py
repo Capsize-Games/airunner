@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from langchain_core.messages import AIMessage, BaseMessage
 
@@ -81,7 +81,7 @@ class NodeResponseGenerationHelper:
             self._owner._token_callback(response_content)
         return response_content
 
-    def generate_response(self, formatted_prompt, generation_kwargs: Dict) -> Optional[AIMessage]:
+    def generate_response(self, formatted_prompt: Any, generation_kwargs: Dict) -> Optional[AIMessage]:
         """Generate one response using streaming when available."""
         if hasattr(self._owner._chat_model, "stream"):
             return self._owner._get_streaming_response_helper().generate_streaming_response(
@@ -154,7 +154,7 @@ class NodeResponseGenerationHelper:
             tool_calls=tool_calls or [],
         )
 
-    def generate_invoke_response(self, formatted_prompt) -> AIMessage:
+    def generate_invoke_response(self, formatted_prompt: Any) -> AIMessage:
         """Generate one non-streaming response and strip thinking tags."""
         response_message = self._owner._chat_model.invoke(formatted_prompt)
         if hasattr(response_message, "content") and response_message.content:

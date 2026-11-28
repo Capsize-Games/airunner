@@ -110,7 +110,7 @@ class RAGLifecycleMixin:
         if not getattr(self, "_is_unloading", False):
             self.reload_rag()
 
-    def unload_rag(self):
+    def unload_rag(self) -> None:
         """Unload all RAG components.
 
         Completely unloads the RAG system including the embedding model

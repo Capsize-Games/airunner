@@ -20,7 +20,7 @@ class NodeForcedResponseHelper:
         """Store the owning workflow manager."""
         self._owner = owner
 
-    def force_response_node(self, state) -> Dict[str, Any]:
+    def force_response_node(self, state: Any) -> Dict[str, Any]:
         """Generate one forced response when tool execution must stop."""
         ai_message_with_tools = None
         for message in reversed(state["messages"]):

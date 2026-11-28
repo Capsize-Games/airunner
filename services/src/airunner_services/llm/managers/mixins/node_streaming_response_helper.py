@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from langchain_core.messages import AIMessage, BaseMessage
 
@@ -28,7 +28,7 @@ class NodeStreamingResponseHelper:
 
     def generate_streaming_response(
         self,
-        formatted_prompt,
+        formatted_prompt: Any,
         generation_kwargs: Dict,
     ) -> Optional[AIMessage]:
         """Generate one streamed response with thinking suppression."""

@@ -5,7 +5,7 @@ This tool uses LLM decision-making to intelligently navigate websites,
 following relevant links and gathering comprehensive information.
 """
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Dict
 
 from scrapy.crawler import CrawlerProcess
 
@@ -191,8 +191,8 @@ def intelligent_crawl(
 
         # Create decision callback that uses the controller
         def decision_callback(
-            page_data, research_goal, pages_scraped, max_pages
-        ):
+            page_data: Dict, research_goal: str, pages_scraped: int, max_pages: int
+        ) -> Dict[str, Any]:
             """Callback invoked by spider for each page."""
             collected_pages.append(page_data)
 

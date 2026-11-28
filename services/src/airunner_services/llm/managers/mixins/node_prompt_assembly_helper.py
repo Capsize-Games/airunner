@@ -17,7 +17,7 @@ class NodePromptAssemblyHelper:
         """Store the owning workflow manager."""
         self._owner = owner
 
-    def call_model(self, state) -> Dict[str, Any]:
+    def call_model(self, state: Any) -> Dict[str, Any]:
         """Call the model with trimmed message history."""
         messages = state["messages"]
         self._owner.logger.info(
@@ -92,7 +92,7 @@ class NodePromptAssemblyHelper:
             start_on="human",
         )
 
-    def build_prompt(self, trimmed_messages: List[BaseMessage]):
+    def build_prompt(self, trimmed_messages: List[BaseMessage]) -> Any:
         """Build one prompt with system, tools, and post-tool guidance."""
         chat_model = getattr(self._owner, "_chat_model", None)
         if chat_model and getattr(chat_model, "is_vision_model", False):

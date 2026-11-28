@@ -10,7 +10,7 @@ This mixin provides:
 """
 
 import os
-from typing import List
+from typing import Any, List
 
 from airunner_services.llm.config.provider_config import LLMProviderConfig
 from airunner_services.model_management.hardware_profiler import (
@@ -162,7 +162,7 @@ class PropertyMixin:
         return os.path.basename(os.path.normpath(model_path))
 
     @property
-    def llm(self):
+    def llm(self) -> Any:
         """Get the LLM for RAG system.
 
         This property is required by RAGMixin to initialize the RAG system.
