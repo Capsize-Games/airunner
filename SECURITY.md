@@ -16,6 +16,23 @@ https://github.com/Capsize-Games/airunner/security/advisories/new
 
 You can expect an initial response within 7 days. We will keep you updated on the status of your report and notify you of the outcome once the vulnerability has been addressed or declined.
 
+## Distrusted development CA (2026-11-28)
+
+A local development CA was once committed to this repository and later
+removed (commit `293f14b94`, July 2026). Its private key remains recoverable
+from public git history, so the CA must be treated as compromised:
+
+- Subject/issuer: `CN=localhost-dev-ca` (self-signed)
+- SHA-256 fingerprint: `73:6D:E9:CC:08:54:32:B8:A0:23:E3:5D:13:92:B7:18:28:A7:5D:42:FD:A9:1B:F6:06:47:23:8A:91:A4:E6:7F`
+- Validity: 2026-06-30 to 2027-06-30
+
+Do not trust this CA or any certificate it signed. If you installed it in a
+system or browser trust store (for example via mkcert during local
+development before July 2026), remove it and regenerate local certificates
+with `airunner-generate-cert`, which creates a fresh per-machine key that is
+never committed. No current release loads or trusts this CA; the history was
+deliberately not rewritten, so distrust (not deletion) is the remediation.
+
 ## Content Safety
 
 AI Runner includes a best-effort content-safety layer to reduce the risk of
