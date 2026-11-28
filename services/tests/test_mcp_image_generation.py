@@ -258,19 +258,23 @@ def test_remove_background_daemon_error(tmp_path: Path) -> None:
     assert caught.value.status_code == 500
 
 
-def test_server_registers_seven_tools(tmp_path: Path) -> None:
-    """Happy: the MCP server exposes the generation tool surface."""
+def test_server_registers_eleven_tools(tmp_path: Path) -> None:
+    """Happy: the MCP server exposes the image + video tool surface."""
     client = _client(_ok_handler, tmp_path)
     server = build_server(_config(tmp_path), client)
     tools = asyncio.run(server.list_tools())
     names = sorted(tool.name for tool in tools)
     assert names == [
         "cancel_generation",
+        "cancel_video",
         "fetch_generation_result",
         "generate_image",
         "generate_image_batch",
+        "generate_video",
         "get_generation_status",
+        "get_video_status",
         "list_image_models",
+        "list_video_models",
         "remove_background",
     ]
 
