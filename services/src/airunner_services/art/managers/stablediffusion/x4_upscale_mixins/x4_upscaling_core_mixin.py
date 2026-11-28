@@ -56,40 +56,23 @@ class X4UpscalingCoreMixin:
 
         # Normalize image and extract request
         source_image = self._ensure_image(source_image)
-        request = self.image_request
-
-        prompt = request.prompt
-        negative_prompt = request.negative_prompt
-        steps = max(1, request.steps or self.DEFAULT_NUM_STEPS)
-        guidance_scale = request.scale
-        noise_level = self.DEFAULT_NOISE_LEVEL
+        (
+            request,
+            prompt,
+            negative_prompt,
+            steps,
+            guidance_scale,
+            noise_level,
+        ) = self._upscale_request_params()
 
         # Initialize progress tracking
         self._last_progress_percent = -1
         self._emit_progress(0, 100)
 
         try:
-            # Ensure pipeline is loaded
-            self.load()
-
-            result = self._run_upscale(
-                source_image,
-                prompt=prompt,
-                negative_prompt=negative_prompt,
-                steps=steps,
-                guidance_scale=guidance_scale,
-                noise_level=noise_level,
-            )
-
-            # Finalize response (save, queue, notify)
-            return self._finalize_response(
-                result=result,
-                request=request,
-                prompt=prompt,
-                negative_prompt=negative_prompt,
-                steps=steps,
-                guidance_scale=guidance_scale,
-                noise_level=noise_level,
+            return self._execute_upscale(
+                source_image, request, prompt, negative_prompt,
+                steps, guidance_scale, noise_level,
             )
 
         except InterruptedException:
@@ -114,6 +97,44 @@ class X4UpscalingCoreMixin:
                 self._last_progress_percent = None
             except Exception:
                 pass
+
+    def _execute_upscale(self, source_image, request, prompt, negative_prompt, steps, guidance_scale, noise_level):
+        """Load, run, and finalize one upscale request."""
+        self.load()
+        result = self._run_upscale(
+            source_image,
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            steps=steps,
+            guidance_scale=guidance_scale,
+            noise_level=noise_level,
+        )
+        return self._finalize_response(
+            result=result,
+            request=request,
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            steps=steps,
+            guidance_scale=guidance_scale,
+            noise_level=noise_level,
+        )
+
+    def _upscale_request_params(self):
+        """Extract upscale parameters from the active image request."""
+        request = self.image_request
+        prompt = request.prompt
+        negative_prompt = request.negative_prompt
+        steps = max(1, request.steps or self.DEFAULT_NUM_STEPS)
+        guidance_scale = request.scale
+        noise_level = self.DEFAULT_NOISE_LEVEL
+        return (
+            request,
+            prompt,
+            negative_prompt,
+            steps,
+            guidance_scale,
+            noise_level,
+        )
 
     def _run_upscale(
         self,
