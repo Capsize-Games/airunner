@@ -43,17 +43,9 @@ class ZImagePretrainedLoaderHelper:
                 "quantization"
             )
         selected_bits = quant_bits if use_quant else None
-        plan = getattr(self._owner, "_zimage_memory_plan", None)
-        if (
-            not isinstance(plan, ZImageMemoryPlan)
-            or plan.quantization_bits != selected_bits
-        ):
-            plan = self.build_memory_plan(
-                model_dir,
-                use_quantization=use_quant,
-                quantization_bits=selected_bits,
-            )
-            self._owner._zimage_memory_plan = plan
+        plan = self._get_or_build_memory_plan(
+            model_dir, use_quant, selected_bits
+        )
         self._check_live_capacity(
             "transformer",
             plan.gpu_weight_budget_gib + plan.gpu_activation_reserve_gib,
@@ -76,6 +68,46 @@ class ZImagePretrainedLoaderHelper:
             model_dir / "scheduler"
         )
         self._owner.logger.info("Assembling ZImagePipeline from components...")
+        self._assemble_loaded_pipeline(
+            pipeline_class,
+            transformer,
+            vae,
+            text_encoder,
+            tokenizer,
+            scheduler,
+            use_quant,
+            quant_bits,
+            model_dtype,
+        )
+
+    def _get_or_build_memory_plan(self, model_dir, use_quant, selected_bits):
+        """Return the cached memory plan or build one for this selection."""
+        plan = getattr(self._owner, "_zimage_memory_plan", None)
+        if (
+            not isinstance(plan, ZImageMemoryPlan)
+            or plan.quantization_bits != selected_bits
+        ):
+            plan = self.build_memory_plan(
+                model_dir,
+                use_quantization=use_quant,
+                quantization_bits=selected_bits,
+            )
+            self._owner._zimage_memory_plan = plan
+        return plan
+
+    def _assemble_loaded_pipeline(
+        self,
+        pipeline_class,
+        transformer,
+        vae,
+        text_encoder,
+        tokenizer,
+        scheduler,
+        use_quant,
+        quant_bits,
+        model_dtype,
+    ) -> None:
+        """Assemble loaded components into the runtime pipeline."""
         try:
             self._owner._pipe = self.assemble_pipeline(
                 pipeline_class,
