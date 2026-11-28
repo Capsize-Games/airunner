@@ -5,7 +5,8 @@ results: local-only, bounded, and fail-closed on timeout/error/ambiguity.
 Matcher denials are preserved.
 
 The S07 evaluator selection
-(``release-planning/linux-v1/safety-evaluation.md``) is a DRAFT: the text
+(``services/tests/fixtures/linux-v1/safety-evaluation.md``, verbatim extract of
+``release-planning/linux-v1/safety-evaluation.md``) is a DRAFT: the text
 slot has no approved evaluator and the §4 thresholds are unapproved. These
 tests cover adapter plumbing with fake doubles only -- allowed, blocked,
 unavailable, timeout, and bounded worker count -- not evaluator efficacy.

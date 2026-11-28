@@ -1,6 +1,7 @@
 """P11: dependency/model license inventory and source manifest.
 
-Proves release-planning/linux-v1/licenses.md exists, tracks every
+Proves services/tests/fixtures/linux-v1/licenses.md (verbatim extract of
+release-planning/linux-v1/licenses.md) exists, tracks every
 bootstrap model and bundle sidecar, pins the P02 constraint lock by
 hash, stages the legal files, states the no-blanket-permission
 guardrail, and keeps unresolved provenance as explicit PENDING or

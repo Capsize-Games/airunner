@@ -9,7 +9,14 @@ from pathlib import Path
 from scripts.verify_warning_source_reviews import verify_warning_source_reviews
 
 ROOT = Path(__file__).resolve().parents[2]
-EVIDENCE = ROOT / "release-planning/linux-v1/pyinstaller-warning-dispositions-attempt4.json"
+EVIDENCE = (
+    ROOT
+    / "services"
+    / "tests"
+    / "fixtures"
+    / "linux-v1"
+    / "pyinstaller-warning-dispositions-attempt4.json"
+)
 SPEC = ROOT / "packaging/linux/services-bundle-spec.toml"
 
 

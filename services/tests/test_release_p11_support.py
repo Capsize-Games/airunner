@@ -18,7 +18,9 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-LICENSES_MD = REPO_ROOT / "release-planning" / "linux-v1" / "licenses.md"
+LICENSES_MD = (
+    REPO_ROOT / "services" / "tests" / "fixtures" / "linux-v1" / "licenses.md"
+)
 SPEC_PATH = REPO_ROOT / "packaging" / "linux" / "services-bundle-spec.toml"
 CONSTRAINTS_PATH = (
     REPO_ROOT

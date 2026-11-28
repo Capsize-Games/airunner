@@ -21,7 +21,9 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SPEC_PATH = REPO_ROOT / "packaging" / "linux" / "services-bundle-spec.toml"
-MATRIX_PATH = REPO_ROOT / "release-planning" / "linux-v1" / "feature-matrix.md"
+MATRIX_PATH = (
+    REPO_ROOT / "services" / "tests" / "fixtures" / "linux-v1" / "feature-matrix.md"
+)
 SERVICES_SETUP = REPO_ROOT / "services" / "setup.py"
 SERVICES_SRC = REPO_ROOT / "services" / "src" / "airunner_services"
 SCRIPTS_DIR = REPO_ROOT / "scripts"

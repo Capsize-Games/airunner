@@ -9,7 +9,8 @@ llm/companion/) satisfies its own acceptance criteria:
   isinstance() (the contracts are @runtime_checkable, not just
   statically typed).
 - The worked "one turn, tool call, persistence, background follow-up"
-  example from release-planning/linux-v1/companion-contracts.md
+  example from services/tests/fixtures/linux-v1/companion-contracts.md
+  (verbatim extract of release-planning/linux-v1/companion-contracts.md)
   actually composes and runs end to end against fakes.
 
 No GUI/model/network/database access — every dependency here is a
@@ -199,7 +200,7 @@ def test_fake_inference_client_satisfies_protocol() -> None:
     assert isinstance(_FakeInferenceClient(), CompanionInferenceClient)
 
 
-# --- The worked example from companion-contracts.md, end to end ---
+# --- The worked example from fixtures/linux-v1/companion-contracts.md, end to end ---
 
 
 def test_worked_example_one_turn_tool_call_persistence_background_job() -> None:
