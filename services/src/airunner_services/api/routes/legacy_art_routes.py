@@ -115,6 +115,7 @@ def _setup_signal_handlers(
     images: list[Any] = []
 
     def on_image_generated(data: dict) -> None:
+        """Collect one generated image and finish when enough arrive."""
         image = data.get("image")
         if image is not None:
             images.append(image)
@@ -122,6 +123,7 @@ def _setup_signal_handlers(
             done.set()
 
     def on_error(data: dict) -> None:
+        """Record one art error and finish the request."""
         error_holder["error"] = str(
             data.get("message") or "Unknown error"
         )
