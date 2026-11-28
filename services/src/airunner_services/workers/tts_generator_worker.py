@@ -194,6 +194,7 @@ class TTSGeneratorWorker(Worker):
 
 	@property
 	def tts_enabled(self) -> bool:
+		"""Return whether TTS playback is enabled."""
 		return (
 			self.application_settings and self.application_settings.tts_enabled
 		) or AIRUNNER_TTS_ON
@@ -360,6 +361,7 @@ class TTSGeneratorWorker(Worker):
 		return ModelStatus.UNLOADED
 
 	def on_llm_text_streamed_signal(self, data):
+		"""Buffer streamed LLM text and queue completed replies for TTS."""
 		response = data.get("response", None)
 		if data.get("_skip_worker_manager_tts"):
 			return
@@ -452,6 +454,7 @@ class TTSGeneratorWorker(Worker):
 		TTSGeneratorWorker._reset_llm_stream_state(self)
 
 	def on_interrupt_process_signal(self, data: dict = None):
+		"""Interrupt playback and clear pending TTS work."""
 		client = self._daemon_client()
 		request_id = self._active_request_id
 		if client is not None and request_id is not None:
@@ -477,6 +480,7 @@ class TTSGeneratorWorker(Worker):
 			self.tts.interrupt_process_signal()
 
 	def on_unblock_tts_generator_signal(self, data: Optional[Dict]):
+		"""Unblock TTS generation and run any unblock callback."""
 		if self.tts_enabled:
 			self.logger.debug("Unblocking TTS generation...")
 			self.do_interrupt = False
@@ -489,14 +493,17 @@ class TTSGeneratorWorker(Worker):
 				callback()
 
 	def on_enable_tts_signal(self, data: dict = None):
+		"""Handle a request to enable and load TTS."""
 		self.logger.debug("ON ENABLE TTS SIGNAL")
 		self._failed_model = None
 		self._load_tts()
 
 	def on_disable_tts_signal(self, data: dict = None):
+		"""Handle a request to disable and unload TTS."""
 		self._unload_tts()
 
 	def start_worker_thread(self):
+		"""Start the worker thread and load TTS when enabled."""
 		if self.tts_enabled:
 			self._load_tts()
 
@@ -520,6 +527,7 @@ class TTSGeneratorWorker(Worker):
 		self._load_tts()
 
 	def on_application_settings_changed_signal(self, data):
+		"""Reload speaker embeddings when reference settings change."""
 		setting_name = data.get("setting_name", "") if data else ""
 		column_name = data.get("column_name", "") if data else ""
 		value = data.get("val") if data else None
@@ -574,6 +582,7 @@ class TTSGeneratorWorker(Worker):
 		self.logger.debug(f"Instantiated new TTS model manager: {self.tts}")
 
 	def on_add_to_queue_signal(self, data):
+		"""Queue one TTS request from an external signal."""
 		self.add_to_queue(
 			{
 				"message": str(data.get("message", "")),
@@ -591,11 +600,13 @@ class TTSGeneratorWorker(Worker):
 		return isinstance(message_type, str) and bool(message_type.strip())
 
 	def add_to_queue(self, message):
+		"""Queue one message unless playback is interrupted."""
 		if self.do_interrupt and not self._is_control_queue_message(message):
 			return
 		super().add_to_queue(message)
 
 	def get_item_from_queue(self):
+		"""Return the next queued message unless playback is interrupted."""
 		message = super().get_item_from_queue()
 		if message is None:
 			return None
@@ -604,6 +615,7 @@ class TTSGeneratorWorker(Worker):
 		return message
 
 	def handle_message(self, data):
+		"""Dispatch one queued TTS message or control signal."""
 		message_type = data.get("_message_type") if data else None
 		if message_type == "interrupt":
 			self.on_interrupt_process_signal(data.get("data"))
@@ -645,6 +657,7 @@ class TTSGeneratorWorker(Worker):
 		text = timestamp_pattern.sub(r"\1 \2", text)
 
 		def word_count(s):
+			"""Return the number of words in one text chunk."""
 			return len(s.split())
 
 		word_threshold = (
@@ -747,9 +760,11 @@ class TTSGeneratorWorker(Worker):
 			self._report_tts_load_error(error)
 
 	def load(self):
+		"""Load the TTS model manager."""
 		self._load_tts()
 
 	def unload(self):
+		"""Unload the TTS model manager."""
 		self._unload_tts()
 
 	def _unload_tts(self):
