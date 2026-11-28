@@ -187,6 +187,66 @@ class X4UpscalingCoreMixin:
             "tile_batch_size": self.DEFAULT_TILE_BATCH_SIZE,
         }
 
+    def _save_finalize_artifacts(self, result):
+        """Save result and preview (best-effort).
+
+        Returns:
+            The saved path or None if saving failed.
+        """
+        saved_path = None
+        try:
+            saved_path = self._save_result_to_disk(result)
+        except Exception:
+            saved_path = None
+        try:
+            self._save_preview_image(result)
+        except Exception:
+            pass
+        return saved_path
+
+    def _build_and_notify_finalize_response(
+        self,
+        result,
+        prompt,
+        negative_prompt,
+        steps,
+        guidance_scale,
+        noise_level,
+        saved_path,
+    ):
+        """Build the ImageResponse and notify observers (best-effort)."""
+        from airunner_services.art.managers.stablediffusion.image_response import (
+            ImageResponse,
+        )
+
+        data = self._build_response_data(
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            steps=steps,
+            guidance_scale=guidance_scale,
+            saved_path=saved_path,
+            noise_level=noise_level,
+        )
+        response = ImageResponse(
+            images=[result],
+            data=data,
+            active_rect=getattr(self, "active_rect", None),
+            is_outpaint=False,
+        )
+        try:
+            self._queue_export([result], data)
+        except Exception:
+            pass
+        try:
+            self._emit_completed(saved_path, steps)
+        except Exception:
+            pass
+        try:
+            self._send_to_canvas(response)
+        except Exception:
+            pass
+        return response
+
     def _finalize_response(
         self,
         result,
@@ -202,59 +262,17 @@ class X4UpscalingCoreMixin:
         Saves preview/result, queues export, builds response metadata,
         emits completion, and sends image to canvas if available.
         """
-
-        from airunner_services.art.managers.stablediffusion.image_response import (
-            ImageResponse,
-        )
-
-        # Save result and preview (best-effort)
-        saved_path = None
+        saved_path = self._save_finalize_artifacts(result)
         try:
-            saved_path = self._save_result_to_disk(result)
-        except Exception:
-            saved_path = None
-
-        try:
-            self._save_preview_image(result)
-        except Exception:
-            pass
-
-        # Build response data and ImageResponse
-        try:
-            data = self._build_response_data(
-                prompt=prompt,
-                negative_prompt=negative_prompt,
-                steps=steps,
-                guidance_scale=guidance_scale,
-                saved_path=saved_path,
-                noise_level=noise_level,
+            return self._build_and_notify_finalize_response(
+                result,
+                prompt,
+                negative_prompt,
+                steps,
+                guidance_scale,
+                noise_level,
+                saved_path,
             )
-
-            response = ImageResponse(
-                images=[result],
-                data=data,
-                nsfw_content_detected=False,
-                active_rect=getattr(self, "active_rect", None),
-                is_outpaint=False,
-            )
-
-            # Queue export and notify
-            try:
-                self._queue_export([result], data)
-            except Exception:
-                pass
-
-            try:
-                self._emit_completed(saved_path, steps)
-            except Exception:
-                pass
-
-            try:
-                self._send_to_canvas(response)
-            except Exception:
-                pass
-
-            return response
         except Exception as exc:  # pragma: no cover - integration path
             self.logger.exception(
                 "Failed to finalize upscale response: %s", exc
