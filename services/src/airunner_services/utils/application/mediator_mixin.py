@@ -42,6 +42,7 @@ class MediatorMixin:
 
     @signal_handlers.setter
     def signal_handlers(self, value: dict[object, Callable]) -> None:
+        """Replace the handlers registered for this instance."""
         self._signal_handlers = value
 
     def register_signals(self) -> None:
