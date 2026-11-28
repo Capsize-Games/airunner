@@ -178,10 +178,11 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
 
     @language.setter
     def language(self, value: AvailableLanguage):
+        """Replace the selected TTS language."""
         self._language = value
 
     @property
-    def device(self):
+    def device(self) -> str:
         """
         Return the appropriate device based on CUDA availability.
         """
@@ -231,6 +232,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
 
     @property
     def speaker_id(self) -> str:
+        """Return the OpenVoice speaker identifier for the language."""
         # ['EN-US', 'EN-BR', 'EN_INDIA', 'EN-AU', 'EN-Default']
         if self.language is AvailableLanguage.EN:
             return "EN-Default"
@@ -238,6 +240,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
 
     @property
     def source_se(self) -> torch.Tensor:
+        """Return the lazily loaded source speaker embedding."""
         if self._source_se is None:
             speaker_key = self.speaker_key
             if speaker_key == "en-us":
