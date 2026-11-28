@@ -1,5 +1,5 @@
 class OpenVoiceError(Exception):
-    pass
+    """Raised when OpenVoice synthesis fails."""
 
 
 class FileMissing(OpenVoiceError):
