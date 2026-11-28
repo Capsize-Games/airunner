@@ -14,6 +14,7 @@ def runtime_activity_locked(method: F) -> F:
 
     @wraps(method)
     def guarded(self: Any, *args: Any, **kwargs: Any) -> Any:
+        """Run the wrapped method under the owner's activity lock."""
         lock = getattr(self, "runtime_activity_lock", None)
         guard = lock if lock is not None else nullcontext()
         with guard:
