@@ -26,7 +26,7 @@ _EXPECTED_RAG_REQUIREMENTS = [
     "libzim==3.7.0+capsize.2",
     "langchain-huggingface==1.2.2",
     "langchain-text-splitters==1.1.2",
-    "EbookLib==0.19",
+    "EbookLib==0.20",
     "mobi==0.4.1",
     "pypdf>=6.21.4",
 ]
