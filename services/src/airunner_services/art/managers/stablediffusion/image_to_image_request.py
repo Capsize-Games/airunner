@@ -10,6 +10,8 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 @dataclass
 class ImageToImageRequest:
+    """Input image, prompt, and strength for one image-to-image request."""
+
     input_image: Any
     prompt: str
     strength: float = 0.5
