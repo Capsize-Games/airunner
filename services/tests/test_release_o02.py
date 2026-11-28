@@ -66,6 +66,23 @@ def online(monkeypatch):
     monkeypatch.setattr(common_settings, "AIRUNNER_OFFLINE_MODE", False)
 
 
+@pytest.fixture(autouse=True)
+def isolated_settings(tmp_path, monkeypatch):
+    """Keep policy defaults hermetic: never read the live settings file.
+
+    The privacy-default assertions below check shipped defaults, so a
+    machine that opted into a service (e.g. Open-Meteo) must not flip
+    them. Mirrors the file's isolated_token/test_db pattern.
+    """
+    from airunner_services.config import local_settings_store
+
+    monkeypatch.setattr(
+        local_settings_store,
+        "_settings_path",
+        lambda: tmp_path / "config" / "settings.ini",
+    )
+
+
 # --- policy.is_service_allowed(): offline overrides every service key ---
 
 
