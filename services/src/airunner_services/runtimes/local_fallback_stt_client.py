@@ -124,23 +124,55 @@ class LocalFallbackSTTClient(_SignalRuntimeClient):
         registers an identical handler and each call can consume the
         other's response.
         """
-        from airunner_common.contract_enums import SignalCode
-
         invocation = STTInvocationRequest.model_validate(request.payload)
+        audio_bytes, failure = self._validate_audio_payload(
+            request.request_id, invocation
+        )
+        if failure is not None:
+            return failure
+
+        transcription, failure = self._await_transcription(
+            request, audio_bytes
+        )
+        if failure is not None:
+            return failure
+
+        payload = self._transcription_payload(transcription, invocation.language)
+        return ResponseEnvelope(
+            request_id=request.request_id,
+            status=EnvelopeStatus.SUCCEEDED,
+            payload=payload,
+        )
+
+    def _validate_audio_payload(self, request_id, invocation):
+        """Decode and size-check one audio payload.
+
+        Returns:
+            The audio bytes, or a failure envelope when invalid.
+        """
         try:
             audio_bytes = base64.b64decode(invocation.audio_b64, validate=True)
         except Exception:
-            return self._failure_response(
-                request.request_id,
+            return None, self._failure_response(
+                request_id,
                 "stt_invalid_audio",
                 "Invalid base64 audio payload",
             )
         if len(audio_bytes) > MAX_LOCAL_FALLBACK_AUDIO_BYTES:
-            return self._failure_response(
-                request.request_id,
+            return None, self._failure_response(
+                request_id,
                 "stt_invalid_audio",
                 "Audio payload exceeds the size budget",
             )
+        return audio_bytes, None
+
+    def _await_transcription(self, request, audio_bytes):
+        """Emit one transcription request and wait for the response.
+
+        Returns:
+            The transcription, or a failure envelope on timeout/error.
+        """
+        from airunner_common.contract_enums import SignalCode
 
         transcription_queue: Queue[Any] = Queue()
 
@@ -167,7 +199,7 @@ class LocalFallbackSTTClient(_SignalRuntimeClient):
                         timeout=self._timeout_seconds
                     )
                 except Empty:
-                    return self._failure_response(
+                    return None, self._failure_response(
                         request.request_id,
                         "stt_timeout",
                         "Timed out waiting for STT response",
@@ -178,7 +210,7 @@ class LocalFallbackSTTClient(_SignalRuntimeClient):
                 # runtime) surfaces here as a raised error; report it as a
                 # failed envelope like the art fallback does (issue #2243)
                 # instead of letting the route turn it into a bare 500.
-                return self._failure_response(
+                return None, self._failure_response(
                     request.request_id,
                     "stt_invoke_failed",
                     str(exc),
@@ -189,13 +221,7 @@ class LocalFallbackSTTClient(_SignalRuntimeClient):
                     SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL,
                     on_transcription,
                 )
-
-        payload = self._transcription_payload(transcription, invocation.language)
-        return ResponseEnvelope(
-            request_id=request.request_id,
-            status=EnvelopeStatus.SUCCEEDED,
-            payload=payload,
-        )
+        return transcription, None
 
     @staticmethod
     def _transcription_payload(
