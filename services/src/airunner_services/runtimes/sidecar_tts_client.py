@@ -336,22 +336,8 @@ class SidecarTTSClient(RuntimeClient):
 						TTS_BACKEND_UNAVAILABLE_CODE,
 						OPENVOICE_DEFERRED_DETAILS,
 					)
-				self._ensure_launcher(settings)
-				launcher = self._require_launcher()
-				launcher.start()
-				self._track_request(request.request_id)
-				audio_bytes = self._request(
-					"POST",
-					f"{launcher.api_base_url}/synthesize",
-					json_payload={
-						"text": invocation.text,
-						"voice": invocation.voice,
-						"speed": invocation.speed,
-						"model": invocation.model,
-						"model_type": invocation.metadata.get("model_type"),
-						"request_id": request.request_id,
-					},
-					expect_json=False,
+				audio_bytes = self._request_synthesis(
+					request, invocation, settings
 				)
 			except RuntimeError as exc:
 				return self._runtime_error_response(
@@ -375,6 +361,26 @@ class SidecarTTSClient(RuntimeClient):
 				"audio_b64": base64.b64encode(audio_bytes).decode("ascii"),
 			},
 			metadata=self._metadata(),
+		)
+
+	def _request_synthesis(self, request: Any, invocation: TTSInvocationRequest, settings: TTSDaemonRuntimeSettings) -> bytes:
+		"""Start the launcher and request audio bytes from the sidecar."""
+		self._ensure_launcher(settings)
+		launcher = self._require_launcher()
+		launcher.start()
+		self._track_request(request.request_id)
+		return self._request(
+			"POST",
+			f"{launcher.api_base_url}/synthesize",
+			json_payload={
+				"text": invocation.text,
+				"voice": invocation.voice,
+				"speed": invocation.speed,
+				"model": invocation.model,
+				"model_type": invocation.metadata.get("model_type"),
+				"request_id": request.request_id,
+			},
+			expect_json=False,
 		)
 
 	def _settings_for_invocation(
