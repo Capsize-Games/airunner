@@ -106,6 +106,7 @@ def _resolve_lifecycle_service(app_instance: Any) -> Optional[Any]:
 
 
 def is_loopback_host(host: str) -> bool:
+    """Return whether one host value denotes a loopback address."""
     if not host:
         return False
 
@@ -442,6 +443,7 @@ def _api_key_auth_middleware_factory(
     """Return the API-key/loopback HTTP middleware for one app instance."""
 
     async def api_key_auth_middleware(request: Request, call_next):
+        """Enforce API-key or loopback auth for one HTTP request."""
         path = request.url.path
 
         # Always allow health checks without auth.
@@ -602,6 +604,7 @@ def create_app(
     # Global exception handler
     @app.exception_handler(Exception)
     async def global_exception_handler(request, exc):
+        """Return a 500 with a correlation id for one unhandled exception."""
         correlation_id = uuid.uuid4().hex[:12]
         logger.error(
             "Unhandled exception %s: %s",
