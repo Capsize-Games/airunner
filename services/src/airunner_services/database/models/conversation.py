@@ -95,7 +95,7 @@ class Conversation(BaseModel):
 		return "\n".join([str(sentence) for sentence in summary])
 
 	@classmethod
-	def delete(cls, pk=None, **kwargs):
+	def delete(cls, pk: Optional[int] = None, **kwargs):
 		"""Delete one conversation and its related summaries."""
 		Summary.objects.delete(conversation_id=pk)
 		cls.objects.delete(pk, **kwargs)
@@ -105,7 +105,7 @@ class Conversation(BaseModel):
 		cls,
 		chatbot: Optional[Chatbot] = None,
 		user: Optional[User] = None,
-	):
+	) -> Optional["Conversation"]:
 		"""Create one new conversation using current or fallback actors."""
 		prev_chatbot_id = None
 		prev_user_id = None
@@ -224,7 +224,7 @@ class Conversation(BaseModel):
 		return None
 
 	@classmethod
-	def make_current(cls, conversation_id):
+	def make_current(cls, conversation_id: int) -> None:
 		"""Mark one conversation current and clear the flag on others."""
 		for conversation in Conversation.objects.filter_by(current=True) or []:
 			Conversation.objects.update(conversation.id, current=False)
