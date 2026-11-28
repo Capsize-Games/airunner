@@ -247,81 +247,16 @@ class ToolRegistry:
             # Only load defaults if specifically requested or the registry is empty.
             # This allows tests to clear the registry and run in isolation without
             # unexpectedly importing the default tools.
-            should_load = False
-            if required_name and required_name not in cls._tools:
-                should_load = True
-            if required_category and (
-                required_category not in cls._categories
-                or not cls._categories[required_category]
+            if not cls._should_load_default_tools(
+                required_name, required_category
             ):
-                should_load = True
-            # Fallback: if no context provided, load only if registry is completely empty
-            if (
-                required_name is None
-                and required_category is None
-                and not cls._tools
-            ):
-                should_load = True
-
-            if not should_load:
                 return
 
             # Import the tools package to ensure submodules are available
-            try:
-                importlib.import_module("airunner_services.llm.tools")
-            except Exception as exc:
-                # Log failure to import the tools package for easier debugging
-                logger.exception(
-                    "Failed to import airunner_services.llm.tools package: %s",
-                    exc,
-                )
-                # If we cannot import the package, stop here
+            if not cls._import_tools_package():
                 return
 
-            # List of tool modules admitted into the package. Reload each
-            # explicitly to ensure decorators run and the ToolRegistry is
-            # populated even after a prior clear(). This is 'best effort'
-            # and should not raise for any module import errors.
-            modules_to_reload = [
-                "airunner_services.llm.tools.image_tools",
-                "airunner_services.llm.tools.system_tools",
-                "airunner_services.llm.tools.conversation_tools",
-                "airunner_services.llm.tools.math_tools",
-                "airunner_services.llm.tools.reasoning_tools",
-                "airunner_services.tools.web_tools",
-                "airunner_services.llm.tools.rag_tools",
-                "airunner_services.llm.tools.knowledge_tools",
-                "airunner_services.llm.tools.user_data_tools",
-                "airunner_services.llm.tools.mood_tools",
-                "airunner_services.llm.tools.generation_tools",
-                "airunner_services.llm.tools.author_tools",
-                "airunner_services.llm.tools.research_validation_tools",
-                "airunner_services.llm.tools.research_rag_tools",
-                "airunner_services.llm.tools.qa_tools",
-                # Advanced tool use features
-                "airunner_services.llm.tools.tool_search_tool",
-                # Workflow management tools
-                "airunner_services.llm.agents.workflow_tools",
-            ]
-            for module_name in modules_to_reload:
-                try:
-                    logger.debug(
-                        "Importing/reloading tool module: %s", module_name
-                    )
-                    mod = importlib.import_module(module_name)
-                    importlib.reload(mod)
-                    logger.debug(
-                        "Successfully imported/reloaded: %s", module_name
-                    )
-                except Exception as exc:
-                    # Best effort - don't fail if specific tool module isn't
-                    # present or throws during import, but log the exception
-                    logger.exception(
-                        "Failed to import/reload tool module %s: %s",
-                        module_name,
-                        exc,
-                    )
-                    continue
+            cls._reload_builtin_tool_modules()
 
             # Load explicitly enabled runtime extensions after built-ins so
             # overrides win.
@@ -338,6 +273,91 @@ class ToolRegistry:
         except Exception:
             # Guard against any unexpected exception while ensuring defaults
             pass
+
+    @classmethod
+    def _should_load_default_tools(
+        cls,
+        required_name: Optional[str] = None,
+        required_category: Optional[ToolCategory] = None,
+    ) -> bool:
+        """Decide whether the default tools need (re)loading."""
+        should_load = False
+        if required_name and required_name not in cls._tools:
+            should_load = True
+        if required_category and (
+            required_category not in cls._categories
+            or not cls._categories[required_category]
+        ):
+            should_load = True
+        # Fallback: if no context provided, load only if registry is completely empty
+        if (
+            required_name is None
+            and required_category is None
+            and not cls._tools
+        ):
+            should_load = True
+        return should_load
+
+    @classmethod
+    def _import_tools_package(cls) -> bool:
+        """Import the tools package, reporting failure for easier debugging."""
+        try:
+            importlib.import_module("airunner_services.llm.tools")
+            return True
+        except Exception as exc:
+            logger.exception(
+                "Failed to import airunner_services.llm.tools package: %s",
+                exc,
+            )
+            return False
+
+    @classmethod
+    def _reload_builtin_tool_modules(cls) -> None:
+        """Reload each admitted tool module (best effort, never raises)."""
+        # List of tool modules admitted into the package. Reload each
+        # explicitly to ensure decorators run and the ToolRegistry is
+        # populated even after a prior clear(). This is 'best effort'
+        # and should not raise for any module import errors.
+        modules_to_reload = [
+            "airunner_services.llm.tools.image_tools",
+            "airunner_services.llm.tools.system_tools",
+            "airunner_services.llm.tools.conversation_tools",
+            "airunner_services.llm.tools.math_tools",
+            "airunner_services.llm.tools.reasoning_tools",
+            "airunner_services.tools.web_tools",
+            "airunner_services.llm.tools.rag_tools",
+            "airunner_services.llm.tools.knowledge_tools",
+            "airunner_services.llm.tools.user_data_tools",
+            "airunner_services.llm.tools.mood_tools",
+            "airunner_services.llm.tools.generation_tools",
+            "airunner_services.llm.tools.author_tools",
+            "airunner_services.llm.tools.research_validation_tools",
+            "airunner_services.llm.tools.research_rag_tools",
+            "airunner_services.llm.tools.qa_tools",
+            # Advanced tool use features
+            "airunner_services.llm.tools.tool_search_tool",
+            # Workflow management tools
+            "airunner_services.llm.agents.workflow_tools",
+        ]
+        for module_name in modules_to_reload:
+            try:
+                logger.debug(
+                    "Importing/reloading tool module: %s", module_name
+                )
+                mod = importlib.import_module(module_name)
+                importlib.reload(mod)
+                logger.debug(
+                    "Successfully imported/reloaded: %s", module_name
+                )
+            except Exception as exc:
+                # Best effort - don't fail if specific tool module isn't
+                # present or throws during import, but log the exception
+                logger.exception(
+                    "Failed to import/reload tool module %s: %s",
+                    module_name,
+                    exc,
+                )
+                continue
 
 
 def tool(
