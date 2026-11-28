@@ -53,6 +53,7 @@ def _build_tracked_tool(
     timeout = normalize_timeout_ms(getattr(tool_record, "timeout_ms", None))
 
     def tracked_tool(*args: Any, **kwargs: Any) -> Any:
+        """Invoke one worker-backed tool record."""
         return _invoke_worker_tool(
             logger, tool_record, name, caps, timeout, args, kwargs)
 
@@ -131,7 +132,8 @@ class ToolManager(
             sig = None
 
         @wraps(tool_info.func)
-        def wrapped(*args, **kwargs):
+        def wrapped(*args, **kwargs) -> Any:
+            """Invoke one tool with injected API and request defaults."""
             try:
                 self.logger.debug(
                     f"[TOOL WRAPPER] Invoking tool: {tool_info.name} "
