@@ -183,6 +183,7 @@ def _decorate_tool(kwargs: dict[str, Any]) -> Callable[[Any], Any]:
     """Build the decorator applying name/description overrides."""
 
     def wrap(func: Any) -> _WorkerTool:
+        """Wrap one function as a worker tool with decorator overrides."""
         wrapped = _WorkerTool(func)
         if kwargs.get("name"):
             wrapped.name = str(kwargs["name"])
