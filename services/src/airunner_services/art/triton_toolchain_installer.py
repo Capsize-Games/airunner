@@ -169,7 +169,10 @@ def _validate_download_url(url: str) -> urllib.parse.ParseResult:
 class _PinnedNvidiaRedirectHandler(urllib.request.HTTPRedirectHandler):
     """Validate redirect targets before urllib connects to them."""
 
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
+    def redirect_request(
+        self, req: Any, fp: Any, code: Any, msg: Any, headers: Any, newurl: str
+    ) -> Any:
+        """Validate one redirect target before following it."""
         _validate_download_url(urllib.parse.urljoin(req.full_url, newurl))
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
@@ -409,6 +412,7 @@ def stage_external_toolchain(
     *,
     archive_cache: Path | None = None,
 ) -> dict[str, Any]:
+    """Stage one reviewed external toolchain and return one receipt."""
     from .triton_runtime import load_policy
 
     recipe = load_policy()
@@ -681,6 +685,7 @@ def install_private_toolchain(destination: Path | None = None) -> dict[str, Any]
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the toolchain staging command-line interface."""
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument(
