@@ -1179,24 +1179,8 @@ class SDWorker(Worker):
 		image_request: ImageRequest,
 		image_bytes: bytes,
 	) -> None:
-		try:
-			image = Image.open(io.BytesIO(image_bytes)).copy()
-		except Exception as exc:
-			self.logger.warning(
-				"Daemon art output withheld: result cannot be "
-				"verified (%s)",
-				type(exc).__name__,
-			)
-			self._withhold_daemon_art_result(image_request)
-			return
-		_outputs, _withheld, batch = check_images_mandatory([image])
-		if not batch.all_allowed:
-			self.logger.warning(
-				"Daemon art output withheld by mandatory image "
-				"check (reason=%s)",
-				",".join(batch.reasons),
-			)
-			self._withhold_daemon_art_result(image_request)
+		image = self._verify_daemon_art_image(image_bytes, image_request)
+		if image is None:
 			return
 		data = self._daemon_result_data(image_request)
 		export_callback = partial(
@@ -1230,6 +1214,29 @@ class SDWorker(Worker):
 			code=EngineResponseCode.IMAGE_GENERATED,
 			message=response,
 		)
+
+	def _verify_daemon_art_image(self, image_bytes: bytes, image_request: ImageRequest):
+		"""Verify one daemon image or withhold it and return None."""
+		try:
+			image = Image.open(io.BytesIO(image_bytes)).copy()
+		except Exception as exc:
+			self.logger.warning(
+				"Daemon art output withheld: result cannot be "
+				"verified (%s)",
+				type(exc).__name__,
+			)
+			self._withhold_daemon_art_result(image_request)
+			return None
+		_outputs, _withheld, batch = check_images_mandatory([image])
+		if not batch.all_allowed:
+			self.logger.warning(
+				"Daemon art output withheld by mandatory image "
+				"check (reason=%s)",
+				",".join(batch.reasons),
+			)
+			self._withhold_daemon_art_result(image_request)
+			return None
+		return image
 
 	def _withhold_daemon_art_result(
 		self,
