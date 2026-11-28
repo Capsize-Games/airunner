@@ -68,6 +68,7 @@ def load_bundled_trusted_keys() -> dict[str, bytes]:
         return {}
 
     def unique_pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        """Build one mapping, rejecting duplicate JSON keys."""
         values: dict[str, object] = {}
         for key, value in pairs:
             if key in values:
