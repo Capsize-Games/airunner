@@ -55,20 +55,7 @@ async def transcribe_audio(
         Transcribed text
     """
     try:
-        max_upload = int(
-            os.environ.get("AIRUNNER_STT_MAX_UPLOAD_BYTES", str(100 * 1024 * 1024))
-        )
-        chunks: list[bytes] = []
-        received = 0
-        while chunk := await audio.read(1024 * 1024):
-            received += len(chunk)
-            if received > max_upload:
-                raise HTTPException(
-                    status_code=413,
-                    detail="STT upload exceeds the maximum size",
-                )
-            chunks.append(chunk)
-        audio_data = b"".join(chunks)
+        audio_data = await _read_upload_data(audio)
         logger.info(
             "STT request received (filename_present=%s, size_bytes=%d)",
             bool(audio.filename),
@@ -153,6 +140,24 @@ async def list_models(req: Request) -> list[ModelInfo]:
         raise HTTPException(
             status_code=500, detail="Failed to list models"
         )
+
+
+async def _read_upload_data(audio: UploadFile) -> bytes:
+    """Read one uploaded file with the configured size cap."""
+    max_upload = int(
+        os.environ.get("AIRUNNER_STT_MAX_UPLOAD_BYTES", str(100 * 1024 * 1024))
+    )
+    chunks: list[bytes] = []
+    received = 0
+    while chunk := await audio.read(1024 * 1024):
+        received += len(chunk)
+        if received > max_upload:
+            raise HTTPException(
+                status_code=413,
+                detail="STT upload exceeds the maximum size",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 def _loaded_stt_model_ids(runtime_registry: Any) -> set[str]:
