@@ -465,6 +465,10 @@ jobs:
           python scripts/check_import_boundaries.py
           pytest scripts/tests/test_import_boundary_rules.py -o addopts='' -q
 
+      - name: Enforce dead-module gate on the services tree
+        run: |
+          python scripts/check_dead_modules.py
+
       - name: Build candidate wheels
         run: |
           mkdir -p dist
