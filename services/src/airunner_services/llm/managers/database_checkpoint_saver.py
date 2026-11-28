@@ -223,18 +223,9 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
                 )
                 sys.stdout.flush()
 
-            if thread_id and thread_id in self._checkpoint_state:
-                state = self._checkpoint_state[thread_id]
-                with open("/tmp/checkpoint_debug.log", "a") as f:
-                    f.write(
-                        f"[GET] ✅ FOUND in memory: {len(state['messages'])} messages\n"
-                    )
-                return CheckpointTuple(
-                    config=config,
-                    checkpoint=state["checkpoint"],
-                    metadata=state["metadata"],
-                    parent_config=None,
-                )
+            cached = self._cached_checkpoint(thread_id, config)
+            if cached is not None:
+                return cached
 
             # Fallback: Load from database (may not have ToolMessages)
             messages = self.message_history.messages
@@ -253,36 +244,56 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
                     f"[GET] ✅ Building checkpoint from DB: {len(messages)} messages\n"
                 )
 
-            checkpoint: Checkpoint = {
-                "v": 1,
-                "id": str(uuid.uuid4()),
-                "ts": "",
-                "channel_values": {
-                    "messages": messages,
-                },
-                "channel_versions": {},
-                "versions_seen": {},
-                "updated_channels": None,
-            }
-
-            metadata: CheckpointMetadata = {
-                "source": "update",
-                "step": len(messages),
-                "parents": {},
-            }
-
-            return CheckpointTuple(
-                config=config,
-                checkpoint=checkpoint,
-                metadata=metadata,
-                parent_config=None,
-            )
+            return self._build_db_checkpoint(config, messages)
 
         except Exception as e:
             self.logger.error(
                 f"Error retrieving checkpoint: {e}", exc_info=True
             )
             return None
+
+    def _cached_checkpoint(self, thread_id, config):
+        """Return the in-memory checkpoint tuple for one thread, if any."""
+        if thread_id and thread_id in self._checkpoint_state:
+            state = self._checkpoint_state[thread_id]
+            with open("/tmp/checkpoint_debug.log", "a") as f:
+                f.write(
+                    f"[GET] ✅ FOUND in memory: {len(state['messages'])} messages\n"
+                )
+            return CheckpointTuple(
+                config=config,
+                checkpoint=state["checkpoint"],
+                metadata=state["metadata"],
+                parent_config=None,
+            )
+        return None
+
+    def _build_db_checkpoint(self, config, messages):
+        """Build a fresh checkpoint tuple from DB message history."""
+        checkpoint: Checkpoint = {
+            "v": 1,
+            "id": str(uuid.uuid4()),
+            "ts": "",
+            "channel_values": {
+                "messages": messages,
+            },
+            "channel_versions": {},
+            "versions_seen": {},
+            "updated_channels": None,
+        }
+
+        metadata: CheckpointMetadata = {
+            "source": "update",
+            "step": len(messages),
+            "parents": {},
+        }
+
+        return CheckpointTuple(
+            config=config,
+            checkpoint=checkpoint,
+            metadata=metadata,
+            parent_config=None,
+        )
 
     def get(self, config: RunnableConfig) -> Optional[Checkpoint]:
         """Retrieve a checkpoint payload from the database.
