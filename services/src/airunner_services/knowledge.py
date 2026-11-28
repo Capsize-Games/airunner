@@ -6,7 +6,7 @@ import tempfile
 import threading
 from datetime import date
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from airunner_common.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
 from airunner_services.data.tenant import get_tenant_key
@@ -160,7 +160,16 @@ class KnowledgeBase:
     def _get_file_path(self, date_str: Optional[str] = None) -> Path:
         if date_str is None:
             return self._get_today_path()
-        return self.knowledge_dir / f"{date_str}.md"
+        # Confine every date-addressed access to the knowledge directory.
+        # Without strict validation a crafted date (``../../...``) escapes
+        # the store on read and, worse, on update/delete rewrites.
+        try:
+            parsed = date.fromisoformat(date_str) if isinstance(date_str, str) else None
+        except ValueError:
+            parsed = None
+        if parsed is None or parsed.isoformat() != date_str:
+            raise ValueError(f"invalid knowledge date: {date_str!r}")
+        return self.knowledge_dir / f"{parsed.isoformat()}.md"
 
     def _ensure_today_file(self) -> Path:
         path = self._get_today_path()
@@ -445,6 +454,12 @@ class KnowledgeBase:
         return [str(path.absolute()) for path in self.list_files()]
 
     def ensure_rag_indexed(self, agent=None) -> bool:
+        """Index knowledge files explicitly (never from a model tool call).
+
+        Indexing is request preparation or route/worker intake work. Search
+        paths below must not call this: a model tool call searches already
+        indexed content and never discovers or registers files.
+        """
         if self._rag_indexed:
             return True
 
@@ -506,11 +521,26 @@ class KnowledgeBase:
         query: str,
         k: int = 5,
         agent=None,
+        doc_ids: Optional[Sequence[str]] = None,
     ) -> List[str]:
+        """Search indexed knowledge, honoring an explicit per-request scope.
+
+        ``None`` keeps the standalone behavior: RAG search without a document
+        filter plus a keyword fallback over the markdown store. An explicit
+        tuple, including an empty tuple, is a request scope: only indexed
+        content for those documents is searched, no keyword fallback widens
+        the result, and nothing is indexed or registered as a side effect.
+        """
+        if doc_ids is not None and len(tuple(doc_ids)) == 0:
+            return []
         try:
             if agent and hasattr(agent, "search"):
-                self.ensure_rag_indexed(agent)
-                results = agent.search(query, k=k * 2)
+                if doc_ids is None:
+                    results = agent.search(query, k=k * 2)
+                else:
+                    results = agent.search(
+                        query, k=k * 2, doc_ids=list(doc_ids)
+                    )
                 knowledge_results = []
                 knowledge_dir_str = str(self.knowledge_dir)
                 for result in results:
@@ -526,10 +556,15 @@ class KnowledgeBase:
                 if knowledge_results:
                     return knowledge_results
 
+            if doc_ids is not None:
+                return []
+
             self.logger.debug("Using keyword search (no RAG agent)")
             return [item["line"] for item in self.search(query, max_results=k)]
         except Exception as exc:
             self.logger.error("RAG search failed: %s", exc)
+            if doc_ids is not None:
+                return []
             return [item["line"] for item in self.search(query, max_results=k)]
 
 

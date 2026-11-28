@@ -11,12 +11,50 @@ with one file per day (YYYY-MM-DD.md format).
 
 from typing import Annotated, Any
 
+from langchain_core.runnables import RunnableConfig
+
 from airunner_services.llm.core.tool_registry import tool, ToolCategory
 from airunner_common.contract_enums import SignalCode
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+
+
+def _request_document_scope(config: RunnableConfig) -> tuple[str, ...] | None:
+    """Return the explicit per-request document scope, if any.
+
+    ``None`` keeps standalone compatibility. An explicit tuple, including an
+    empty one, restricts the request to those document IDs.
+    """
+    configurable = (config or {}).get("configurable", {})
+    scope = configurable.get("rag_document_scope")
+    if scope is None:
+        return None
+    return tuple(scope)
+
+
+def _scoped_write_identity_error(config: RunnableConfig) -> str | None:
+    """Reject scoped writes that carry no chatbot ownership identity."""
+    configurable = (config or {}).get("configurable", {})
+    if (
+        configurable.get("rag_document_scope") is not None
+        and configurable.get("chatbot_id") is None
+    ):
+        return (
+            "this request has a scoped document set "
+            "but no chatbot ownership identity"
+        )
+    return None
+
+
+def _no_knowledge_message(query: str) -> str:
+    """Return the stable no-result reply for knowledge recall."""
+    return (
+        f"No knowledge found for: '{query}'.\n\n"
+        "**ACTION REQUIRED:** You MUST now use search_news or search_web to find this information. "
+        "Do NOT tell the user to search elsewhere - use the tools available to you."
+    )
 
 
 @tool(
@@ -50,6 +88,7 @@ def record_knowledge(
         ),
     ] = "Notes",
     api: Any = None,
+    config: RunnableConfig = None,
 ) -> str:
     """Record a fact to the knowledge base.
 
@@ -63,6 +102,12 @@ def record_knowledge(
 
     """
     try:
+        identity_error = _scoped_write_identity_error(config)
+        if identity_error is not None:
+            return f"Failed to record fact: {identity_error}."
+        if not isinstance(fact, str) or not fact.strip():
+            return "Failed to record fact: fact must not be empty."
+
         from airunner_services.knowledge import get_knowledge_base
 
         kb = get_knowledge_base()
@@ -110,6 +155,7 @@ def recall_knowledge(
     query: Annotated[str, "What you're trying to remember or find"],
     max_results: Annotated[int, "Maximum facts to return"] = 5,
     api: Any = None,
+    config: RunnableConfig = None,
 ) -> str:
     """Search the knowledge base for relevant facts.
 
@@ -123,25 +169,32 @@ def recall_knowledge(
 
     """
     try:
+        scope = _request_document_scope(config)
+        if scope is not None and len(scope) == 0:
+            # An explicitly empty scope stays empty: return before any
+            # search, index, or database work.
+            return _no_knowledge_message(query)
+
         from airunner_services.knowledge import get_knowledge_base
 
         kb = get_knowledge_base()
-        
-        # Try RAG search first - api is the agent with RAGMixin
+
+        # Try RAG search first - api is the agent with RAGMixin.
+        # A scoped request only searches already-indexed content for its
+        # document IDs; indexing is explicit and never triggered here.
         agent = api if api and hasattr(api, 'search') else None
-        results = kb.search_rag(query, k=max_results, agent=agent)
-        
-        if not results:
-            # Fallback to keyword search
+        results = kb.search_rag(
+            query, k=max_results, agent=agent, doc_ids=scope
+        )
+
+        if not results and scope is None:
+            # Standalone fallback to keyword search. Scoped requests must
+            # not widen past their document set.
             keyword_results = kb.search(query, max_results=max_results)
             results = [r['line'] for r in keyword_results]
-        
+
         if not results:
-            return (
-                f"No knowledge found for: '{query}'.\n\n"
-                "**ACTION REQUIRED:** You MUST now use search_news or search_web to find this information. "
-                "Do NOT tell the user to search elsewhere - use the tools available to you."
-            )
+            return _no_knowledge_message(query)
 
         output = f"Found {len(results)} relevant fact(s):\n\n"
         for i, fact in enumerate(results, 1):
@@ -248,6 +301,7 @@ def update_knowledge(
     ] = None,
     is_regex: Annotated[bool, "Treat find_text as regex pattern"] = False,
     api: Any = None,
+    config: RunnableConfig = None,
 ) -> str:
     """Update a fact by find and replace.
 
@@ -260,6 +314,13 @@ def update_knowledge(
 
     """
     try:
+        identity_error = _scoped_write_identity_error(config)
+        if identity_error is not None:
+            return f"Failed to update knowledge: {identity_error}."
+        if not isinstance(find_text, str) or not find_text:
+            # An empty pattern matches everywhere; reject before touching files.
+            return "Failed to update knowledge: find_text must not be empty."
+
         from airunner_services.knowledge import get_knowledge_base
 
         kb = get_knowledge_base()
@@ -306,6 +367,7 @@ def delete_knowledge(
     ] = None,
     is_regex: Annotated[bool, "Treat text as regex pattern"] = False,
     api: Any = None,
+    config: RunnableConfig = None,
 ) -> str:
     """Delete facts containing the specified text.
 
@@ -317,6 +379,13 @@ def delete_knowledge(
 
     """
     try:
+        identity_error = _scoped_write_identity_error(config)
+        if identity_error is not None:
+            return f"Failed to delete knowledge: {identity_error}."
+        if not isinstance(text, str) or not text:
+            # An empty pattern matches every line; reject before touching files.
+            return "Failed to delete knowledge: text must not be empty."
+
         from airunner_services.knowledge import get_knowledge_base
 
         kb = get_knowledge_base()
