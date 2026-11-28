@@ -2,7 +2,7 @@
 
 import re
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 
 
 ANGLE_THINK_PATTERN = r"<think>(.*?)</think>"
@@ -99,7 +99,7 @@ def parse_thinking_response(
 	)
 
 
-def parse_thinking_from_tokens(output_ids: list, tokenizer) -> Tuple[str, str]:
+def parse_thinking_from_tokens(output_ids: list, tokenizer: Any) -> Tuple[str, str]:
 	"""Parse thinking content from token IDs using the close-tag token."""
 	try:
 		reversed_ids = output_ids[::-1]

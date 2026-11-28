@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from airunner_services.database.bootstrap.llm_file_bootstrap_data import (
     LLM_FILE_BOOTSTRAP_DATA,
 )
@@ -27,7 +29,7 @@ def get_required_files_for_model(
     model_id: str,
     version: str | None = None,
     pipeline_action: str | None = None,
-):
+) -> Any:
     """Return required files for the requested model entry."""
     if model_type not in UNIFIED_MODEL_FILES:
         return None

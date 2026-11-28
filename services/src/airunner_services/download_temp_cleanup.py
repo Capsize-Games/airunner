@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import shutil
 import time
+from typing import Any
 
 
 DEFAULT_STALE_DOWNLOAD_AGE_SECONDS = 24 * 60 * 60
@@ -33,7 +34,7 @@ def _latest_mtime(path: Path) -> float:
 def cleanup_stale_download_dir(
     temp_dir: str | Path,
     max_age_seconds: int = DEFAULT_STALE_DOWNLOAD_AGE_SECONDS,
-    logger=None,
+    logger: Any = None,
 ) -> bool:
     """Delete a stale .downloading directory if it has not changed recently."""
     path = Path(temp_dir)
@@ -68,7 +69,7 @@ def cleanup_stale_download_dir(
 def cleanup_stale_download_dirs(
     root_dir: str | Path,
     max_age_seconds: int = DEFAULT_STALE_DOWNLOAD_AGE_SECONDS,
-    logger=None,
+    logger: Any = None,
 ) -> list[Path]:
     """Remove stale .downloading directories under a root path."""
     root_path = Path(root_dir)

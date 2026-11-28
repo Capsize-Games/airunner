@@ -50,7 +50,7 @@ class APIServerThread(threading.Thread):
         self.server: uvicorn.Server | None = None
         self._stop_event = threading.Event()
 
-    def run(self):
+    def run(self) -> None:
         """Start uvicorn and serve requests."""
         try:
             api_key = (os.environ.get("AIRUNNER_API_KEY") or "").strip()

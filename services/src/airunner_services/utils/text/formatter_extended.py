@@ -1,4 +1,6 @@
 import re
+from typing import Any
+
 import markdown
 from markdown.extensions.codehilite import CodeHiliteExtension
 from markdown.extensions.fenced_code import FencedCodeExtension
@@ -178,7 +180,7 @@ class FormatterExtended:
         return html_content
 
     @staticmethod
-    def format_content(content_string) -> dict:
+    def format_content(content_string: Any) -> dict:
         """
         Analyzes the input string, determines its format, and returns a detailed content structure.
 

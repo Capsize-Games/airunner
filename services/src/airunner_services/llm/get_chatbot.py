@@ -1,6 +1,7 @@
 """Service-owned chatbot selection helper."""
 
 from types import SimpleNamespace
+from typing import Any
 
 from airunner_services.database.models.chatbot import Chatbot
 from airunner_services.utils.application.get_logger import get_logger
@@ -18,7 +19,7 @@ def _fallback_chatbot() -> SimpleNamespace:
     )
 
 
-def get_chatbot():
+def get_chatbot() -> Any:
     """Return the current chatbot or create one default chatbot."""
     eager_load = ["target_files", "target_directories"]
     try:
