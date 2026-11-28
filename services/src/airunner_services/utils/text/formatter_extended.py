@@ -104,6 +104,45 @@ class FormatterExtended:
         return False
 
     @staticmethod
+    def _highlight_code_block(match: re.Match[str]) -> str:
+        """Return highlighted HTML for one fenced code block."""
+        language = match.group(1) or "text"
+        code = match.group(2)
+        if language.lower() == "markdown":
+            from pygments.lexers.special import TextLexer
+
+            lexer = TextLexer(stripall=True)
+        else:
+            try:
+                lexer = get_lexer_by_name(language, stripall=True)
+            except pygments.util.ClassNotFound:
+                try:
+                    lexer = guess_lexer(code, stripall=True)
+                except pygments.util.ClassNotFound:
+                    from pygments.lexers.special import TextLexer
+
+                    lexer = TextLexer(stripall=True)
+        formatter = HtmlFormatter(
+            cssclass=f"codehilite lang-{language}",
+            linenos=False,
+            linenostart=1,
+            linenospecial=0,
+            lineseparator="\n",
+            hl_lines=[],
+            nowrap=False,
+            full=False,
+            noclasses=False,
+        )
+        highlighted_code = highlight(code, lexer, formatter)
+        if language.lower() == "markdown":
+            highlighted_code = re.sub(
+                r'(</span>)(<span class="[^\"]+">)',
+                r"\1<br>\2",
+                highlighted_code,
+            )
+        return highlighted_code
+
+    @staticmethod
     def render_markdown_to_html(markdown_string: str) -> str:
         """
         Converts a Markdown string to HTML with syntax highlighting for code blocks.
@@ -116,50 +155,12 @@ class FormatterExtended:
         def process_code_blocks(text: str) -> str:
             """Highlight every fenced code block in one document."""
             pattern = r"```\s*(\w+)?\s*\n(.*?)\n\s*```"
-
-            def replace_code_block(match: re.Match[str]) -> str:
-                """Return highlighted HTML for one fenced code block."""
-                language = match.group(1) or "text"
-                code = match.group(2)
-                if language.lower() == "markdown":
-                    from pygments.lexers.special import TextLexer
-
-                    lexer = TextLexer(stripall=True)
-                else:
-                    try:
-                        lexer = get_lexer_by_name(language, stripall=True)
-                    except pygments.util.ClassNotFound:
-                        try:
-                            lexer = guess_lexer(code, stripall=True)
-                        except pygments.util.ClassNotFound:
-                            from pygments.lexers.special import TextLexer
-
-                            lexer = TextLexer(stripall=True)
-                formatter = HtmlFormatter(
-                    cssclass=f"codehilite lang-{language}",
-                    linenos=False,  # Disable line numbers to avoid table layout issues
-                    linenostart=1,
-                    linenospecial=0,
-                    lineseparator="\n",  # Force newline between lines
-                    hl_lines=[],
-                    nowrap=False,
-                    full=False,
-                    noclasses=False,
-                )
-                highlighted_code = highlight(code, lexer, formatter)
-                # Patch: If language is 'markdown', forcibly replace <span> line separators with <br> to preserve newlines
-                if language.lower() == "markdown":
-                    import re
-
-                    # Replace any span-based line separators with <br> if present
-                    highlighted_code = re.sub(
-                        r'(</span>)(<span class="[^\"]+">)',
-                        r"\1<br>\2",
-                        highlighted_code,
-                    )
-                return highlighted_code
-
-            return re.sub(pattern, replace_code_block, text, flags=re.DOTALL)
+            return re.sub(
+                pattern,
+                MarkdownFormatter._highlight_code_block,
+                text,
+                flags=re.DOTALL,
+            )
 
         processed_markdown = process_code_blocks(markdown_string)
 
