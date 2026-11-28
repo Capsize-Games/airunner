@@ -231,31 +231,30 @@ class SidecarLLMClient(RuntimeClient):
 							return
 						yield delta
 				except Exception as exc:
-					if record.cancelled.is_set():
-						self._complete_request(request.request_id, record)
-						yield self._cancelled_delta(request.request_id)
-					else:
-						self._complete_request(request.request_id, record)
-						yield self._failure_delta(
-							request.request_id,
-							self._client_error_message(exc),
-							code=(
-								exc.code
-								if isinstance(exc, NativeBackendUnavailable)
-								else getattr(exc, "code", "llm_invoke_failed")
-							),
-						)
+					yield self._error_delta_for(
+						request.request_id, record, exc, with_code=True
+					)
 		except Exception as exc:
-			if record.cancelled.is_set():
-				self._complete_request(request.request_id, record)
-				yield self._cancelled_delta(request.request_id)
-			else:
-				self._complete_request(request.request_id, record)
-				yield self._failure_delta(
-					request.request_id, self._client_error_message(exc)
-				)
+			yield self._error_delta_for(request.request_id, record, exc)
 		finally:
 			self._release_request(request.request_id, record)
+
+	def _error_delta_for(self, request_id, record, exc, *, with_code=False):
+		"""Build the terminal delta for a stream error (cancel-aware)."""
+		if record.cancelled.is_set():
+			self._complete_request(request_id, record)
+			return self._cancelled_delta(request_id)
+		code = "llm_invoke_failed"
+		if with_code:
+			code = (
+				exc.code
+				if isinstance(exc, NativeBackendUnavailable)
+				else getattr(exc, "code", "llm_invoke_failed")
+			)
+		self._complete_request(request_id, record)
+		return self._failure_delta(
+			request_id, self._client_error_message(exc), code=code
+		)
 
 	def healthcheck(self) -> RuntimeHealth:
 		"""Return the health of the managed llama.cpp runtime."""
