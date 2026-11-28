@@ -712,12 +712,12 @@ def main(argv: list[str] | None = None) -> int:
         tarfile.TarError,
         urllib.error.URLError,
     ) as exc:
-        print(f"Private Triton toolchain staging failed: {exc}", file=sys.stderr)
+        print(f"Private Triton toolchain staging failed: {exc}", file=sys.stderr)  # intentional CLI output
         return 1
-    print("Private local-use Triton toolchain staged. Not redistributable.")
+    print("Private local-use Triton toolchain staged. Not redistributable.")  # intentional CLI output
     for name, value in receipt["environment"].items():
-        print(f"{name}={value}")
-    print(f"Receipt: {receipt['receipt_path']}")
+        print(f"{name}={value}")  # intentional CLI output
+    print(f"Receipt: {receipt['receipt_path']}")  # intentional CLI output
     return 0
 
 

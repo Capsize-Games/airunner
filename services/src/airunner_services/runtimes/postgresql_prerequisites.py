@@ -324,7 +324,7 @@ def main(argv: list[str] | None = None) -> int:
         verify_postgresql_os_runtime(args.bundle_root.resolve())
     except PostgreSQLPrerequisiteError as exc:
         parser.exit(1, f"PostgreSQL prerequisite check failed: {exc}\n")
-    print("Verified Ubuntu 24.04 amd64 PostgreSQL OS package prerequisites.")
+    print("Verified Ubuntu 24.04 amd64 PostgreSQL OS package prerequisites.")  # intentional CLI output
     return 0
 
 
