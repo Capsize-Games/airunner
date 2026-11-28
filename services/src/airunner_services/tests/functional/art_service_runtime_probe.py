@@ -262,6 +262,7 @@ def _batch_jobs(args) -> list[dict]:
 
 
 def main() -> int:
+    """Run the art service runtime probe and return an exit code."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-path", required=True)
     parser.add_argument("--version", required=True)
