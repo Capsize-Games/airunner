@@ -522,3 +522,32 @@ def test_config_unrecognized_bool_falls_back_to_default(
     assert _parse_bool("sometimes", False) is False
     assert _parse_bool("yes", False) is True
     assert _parse_bool("off", True) is False
+
+
+def test_payload_rejects_oversize_input_image_without_reading(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Hostile: sparse oversize img2img input fails on stat() without reading."""
+    oversize = tmp_path / "huge.png"
+    with oversize.open("wb") as fh:
+        fh.truncate(25 * 1024 * 1024 + 1)
+
+    def fail_read(self: Path) -> bytes:
+        raise AssertionError("read_bytes must not be called for oversize input")
+
+    monkeypatch.setattr(Path, "read_bytes", fail_read)
+    with pytest.raises(ValueError, match="exceeds maximum allowed size"):
+        build_generation_payload("ok", input_image_path=str(oversize))
+
+
+def test_payload_accepts_input_image_at_exact_cap(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Happy: an input image whose decoded size equals the cap is accepted."""
+    monkeypatch.setenv("AIRUNNER_ART_MAX_IMAGE_BYTES", str(len(_PNG)))
+    exact = tmp_path / "exact.png"
+    exact.write_bytes(_PNG)
+    payload = build_generation_payload("ok", input_image_path=str(exact))
+    assert payload["image_b64"] == base64.b64encode(_PNG).decode("ascii")
