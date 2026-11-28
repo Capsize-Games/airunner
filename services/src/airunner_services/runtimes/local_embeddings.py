@@ -80,6 +80,7 @@ class LocalEmbeddingClient:
 
     @property
     def identity(self) -> EmbeddingModelIdentity:
+        """Return the configured embedding model identity."""
         return self._identity
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
