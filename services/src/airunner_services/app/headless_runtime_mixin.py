@@ -420,42 +420,8 @@ class HeadlessRuntimeMixin:
                 data = json.load(handle)
 
             knowledge_base = get_knowledge_base()
-            migrated = 0
             facts = data if isinstance(data, list) else data.get("facts", [])
-            section_map = {
-                "identity": "Identity",
-                "personal": "Identity",
-                "work": "Work & Projects",
-                "project": "Work & Projects",
-                "hobby": "Interests & Hobbies",
-                "interest": "Interests & Hobbies",
-                "preference": "Preferences",
-                "health": "Health & Wellness",
-                "relationship": "Relationships",
-                "goal": "Goals",
-                "other": "Notes",
-                "notes": "Notes",
-            }
-
-            for fact_data in facts:
-                if isinstance(fact_data, str):
-                    fact_text = fact_data
-                    category = "Notes"
-                elif isinstance(fact_data, dict):
-                    fact_text = fact_data.get(
-                        "text",
-                        fact_data.get("content", ""),
-                    )
-                    category = fact_data.get("category", "Notes")
-                else:
-                    continue
-
-                if not fact_text:
-                    continue
-                section = section_map.get(category.lower(), "Notes")
-                knowledge_base.add_fact(fact_text, section=section)
-                migrated += 1
-
+            migrated = self._migrate_facts(knowledge_base, facts)
             self.logger.info(
                 "Knowledge migration successful: %s facts migrated to "
                 "markdown",
@@ -470,6 +436,42 @@ class HeadlessRuntimeMixin:
                 exc,
             )
             raise
+
+    def _migrate_facts(self, knowledge_base, facts) -> int:
+        """Migrate one parsed facts list and return the migrated count."""
+        section_map = {
+            "identity": "Identity",
+            "personal": "Identity",
+            "work": "Work & Projects",
+            "project": "Work & Projects",
+            "hobby": "Interests & Hobbies",
+            "interest": "Interests & Hobbies",
+            "preference": "Preferences",
+            "health": "Health & Wellness",
+            "relationship": "Relationships",
+            "goal": "Goals",
+            "other": "Notes",
+            "notes": "Notes",
+        }
+        migrated = 0
+        for fact_data in facts:
+            if isinstance(fact_data, str):
+                fact_text = fact_data
+                category = "Notes"
+            elif isinstance(fact_data, dict):
+                fact_text = fact_data.get(
+                    "text",
+                    fact_data.get("content", ""),
+                )
+                category = fact_data.get("category", "Notes")
+            else:
+                continue
+            if not fact_text:
+                continue
+            section = section_map.get(category.lower(), "Notes")
+            knowledge_base.add_fact(fact_text, section=section)
+            migrated += 1
+        return migrated
 
     def _mark_migration_complete(self):
         """Mark knowledge migration as complete in settings."""
