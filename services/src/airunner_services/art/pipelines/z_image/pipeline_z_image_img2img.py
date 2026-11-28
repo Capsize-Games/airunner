@@ -168,26 +168,7 @@ class ZImageImg2ImgPipeline(DiffusionPipeline, FromSingleFileMixin):
 
         if isinstance(prompt, str):
             prompt = [prompt]
-
-        # Apply chat template to prompts (official Z-Image format)
-        for i, prompt_item in enumerate(prompt):
-            messages = [
-                {"role": "user", "content": prompt_item},
-            ]
-            try:
-                prompt_item = self.tokenizer.apply_chat_template(
-                    messages,
-                    tokenize=False,
-                    add_generation_prompt=True,
-                    enable_thinking=True,
-                )
-            except TypeError:
-                prompt_item = self.tokenizer.apply_chat_template(
-                    messages,
-                    tokenize=False,
-                    add_generation_prompt=True,
-                )
-            prompt[i] = prompt_item
+        prompt = self._apply_chat_templates(prompt)
 
         all_prompt_embeds = []
         for p in prompt:
@@ -216,6 +197,29 @@ class ZImageImg2ImgPipeline(DiffusionPipeline, FromSingleFileMixin):
         all_prompt_embeds = [pe for pe in all_prompt_embeds for _ in range(num_images_per_prompt)]
 
         return all_prompt_embeds
+
+    def _apply_chat_templates(self, prompt: List[str]) -> List[str]:
+        """Apply the official chat template to one prompt list."""
+        templated = list(prompt)
+        for i, prompt_item in enumerate(templated):
+            messages = [
+                {"role": "user", "content": prompt_item},
+            ]
+            try:
+                prompt_item = self.tokenizer.apply_chat_template(
+                    messages,
+                    tokenize=False,
+                    add_generation_prompt=True,
+                    enable_thinking=True,
+                )
+            except TypeError:
+                prompt_item = self.tokenizer.apply_chat_template(
+                    messages,
+                    tokenize=False,
+                    add_generation_prompt=True,
+                )
+            templated[i] = prompt_item
+        return templated
 
     def check_inputs(
         self,
