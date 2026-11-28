@@ -62,60 +62,60 @@ class KiwixAPI:
             "opds": "https://specs.opds.io/opds-1.2",
             "dc": "http://purl.org/dc/terms/",
         }
-        entries: list[dict[str, str]] = []
-        for entry in root.findall("atom:entry", ns)[
-            : KiwixAPI.MAX_ENTRIES
-        ]:
-            zim = {
-                "id": entry.findtext("atom:id", default="", namespaces=ns),
-                "title": entry.findtext(
-                    "atom:title",
-                    default="",
-                    namespaces=ns,
-                ),
-                "summary": entry.findtext(
-                    "atom:summary",
-                    default="",
-                    namespaces=ns,
-                ),
-                "updated": entry.findtext(
-                    "atom:updated",
-                    default="",
-                    namespaces=ns,
-                ),
-                "name": entry.findtext(
-                    "atom:name",
-                    default="",
-                    namespaces=ns,
-                ),
-                "category": entry.findtext(
-                    "atom:category",
-                    default="",
-                    namespaces=ns,
-                ),
-            }
-            image_link = entry.find(
-                "atom:link[@rel='http://opds-spec.org/image/thumbnail']",
-                ns,
-            )
-            if image_link is not None and "href" in image_link.attrib:
-                zim["image_url"] = image_link.attrib["href"]
+        matched = root.findall("atom:entry", ns)[: KiwixAPI.MAX_ENTRIES]
+        return [KiwixAPI._parse_entry(entry, ns) for entry in matched]
 
-            zim_url = None
-            for link in entry.findall("atom:link", ns):
-                rel = link.attrib.get("rel", "")
-                href = link.attrib.get("href", "")
-                if (
-                    rel == "http://opds-spec.org/acquisition/open-access"
-                    and href.endswith(".meta4")
-                ):
-                    zim_url = href[:-6]
-                    break
-            if zim_url:
-                zim["url"] = zim_url
+    @staticmethod
+    def _parse_entry(entry: ET.Element, ns: dict) -> dict[str, str]:
+        """Parse one Atom entry into a Kiwix entry dictionary."""
+        zim = {
+            "id": entry.findtext("atom:id", default="", namespaces=ns),
+            "title": entry.findtext(
+                "atom:title",
+                default="",
+                namespaces=ns,
+            ),
+            "summary": entry.findtext(
+                "atom:summary",
+                default="",
+                namespaces=ns,
+            ),
+            "updated": entry.findtext(
+                "atom:updated",
+                default="",
+                namespaces=ns,
+            ),
+            "name": entry.findtext(
+                "atom:name",
+                default="",
+                namespaces=ns,
+            ),
+            "category": entry.findtext(
+                "atom:category",
+                default="",
+                namespaces=ns,
+            ),
+        }
+        image_link = entry.find(
+            "atom:link[@rel='http://opds-spec.org/image/thumbnail']",
+            ns,
+        )
+        if image_link is not None and "href" in image_link.attrib:
+            zim["image_url"] = image_link.attrib["href"]
 
-            entries.append(zim)
-        return entries
+        zim_url = None
+        for link in entry.findall("atom:link", ns):
+            rel = link.attrib.get("rel", "")
+            href = link.attrib.get("href", "")
+            if (
+                rel == "http://opds-spec.org/acquisition/open-access"
+                and href.endswith(".meta4")
+            ):
+                zim_url = href[:-6]
+                break
+        if zim_url:
+            zim["url"] = zim_url
+        return zim
 
 
 __all__ = ["KiwixAPI"]
