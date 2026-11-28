@@ -361,8 +361,8 @@ def _ollama_chat_request(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/api/chat")
-def ollama_chat(body: dict, req: Request):
+@router.post("/api/chat", response_model=None)
+def ollama_chat(body: dict, req: Request) -> StreamingResponse | dict[str, Any]:
     """Handle the Ollama /api/chat endpoint."""
     app = ensure_llm_model_loaded(req)
     messages = body.get("messages", [])
@@ -621,8 +621,8 @@ def _ollama_generate_request(data: dict[str, Any]) -> LLMRequest:
     return llm_request
 
 
-@router.post("/api/generate")
-def ollama_generate(body: dict, req: Request):
+@router.post("/api/generate", response_model=None)
+def ollama_generate(body: dict, req: Request) -> StreamingResponse | dict[str, Any]:
     """Handle the Ollama /api/generate endpoint."""
     app = ensure_llm_model_loaded(req)
     prompt = body.get("prompt", "")
@@ -794,8 +794,8 @@ async def ollama_embeddings(body: dict[str, Any], req: Request) -> dict[str, Any
     return await handle_ollama_embedding_async(body, req, legacy=True)
 
 
-@router.post("/api/pull")
-async def ollama_pull(body: dict[str, Any], req: Request):
+@router.post("/api/pull", response_model=None)
+async def ollama_pull(body: dict[str, Any], req: Request) -> StreamingResponse | dict[str, str]:
     """Pull one supported catalog model through the shared download service."""
     model_name = body.get("model") or body.get("name")
     if not isinstance(model_name, str) or not model_name.strip():

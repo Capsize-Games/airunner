@@ -118,7 +118,7 @@ async def delete_documents_via_worker(document_ids: list[int]) -> dict[str, Any]
 
 
 @router.post("/rag/index")
-async def start_rag_index(request: RagIndexRequest):
+async def start_rag_index(request: RagIndexRequest) -> dict[str, Any]:
     """Trigger service-owned document indexing through the signal mediator."""
     if request.file_paths is None:
         await _dispatch_index_job(SignalCode.RAG_INDEX_ALL_DOCUMENTS, {})
@@ -134,7 +134,7 @@ async def start_rag_index(request: RagIndexRequest):
 
 
 @router.post("/rag/reindex")
-async def start_rag_reindex(request: RagIndexRequest):
+async def start_rag_reindex(request: RagIndexRequest) -> dict[str, Any]:
     """Explicitly rebuild selected persisted indexes with staged replacement."""
     file_paths = request.file_paths or []
     file_paths = [str(path).strip() for path in file_paths if str(path).strip()]
@@ -148,7 +148,7 @@ async def start_rag_reindex(request: RagIndexRequest):
 
 
 @router.post("/rag/index/cancel")
-async def cancel_rag_index():
+async def cancel_rag_index() -> dict[str, str]:
     """Request cancellation for the active service-owned indexing flow."""
     SignalMediator().emit_signal(SignalCode.RAG_INDEX_CANCEL, {})
     return {"status": "accepted"}

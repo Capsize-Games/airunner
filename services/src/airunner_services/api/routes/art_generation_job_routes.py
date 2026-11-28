@@ -3,7 +3,7 @@
 import asyncio
 import io
 import os
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
@@ -127,7 +127,7 @@ def indexed_png_response(result: dict, index: int) -> Response:
 
 
 @router.get("/status/{job_id}", response_model=JobStatusResponse)
-async def get_job_status(job_id: str):
+async def get_job_status(job_id: str) -> JobStatusResponse:
     """Check generation job status and progress."""
     if _LOG_ART_STATUS_POLLS:
         logger.debug("Status check: %s", job_id)
@@ -136,7 +136,7 @@ async def get_job_status(job_id: str):
 
 
 @router.get("/result/{job_id}")
-async def get_result(job_id: str):
+async def get_result(job_id: str) -> Response:
     """Return one generated image as PNG bytes (the first batch image)."""
     logger.info("Result retrieval: %s", job_id)
     job = await require_job(job_id)
@@ -152,7 +152,7 @@ async def get_result(job_id: str):
 
 
 @router.get("/result/{job_id}/{index}")
-async def get_result_at_index(job_id: str, index: int):
+async def get_result_at_index(job_id: str, index: int) -> Response:
     """Return one batch image (by index) as PNG bytes.
 
     Added for release issue D03 so every checked image from a
@@ -175,7 +175,7 @@ async def get_result_at_index(job_id: str, index: int):
 
 
 @router.delete("/cancel/{job_id}")
-async def cancel_job(job_id: str, req: Request):
+async def cancel_job(job_id: str, req: Request) -> Dict[str, str]:
     """Cancel one generation job and its runtime request."""
     # Cancellation remains best-effort against the runtime because the tracker
     # state is the authoritative source for callers polling this route surface.
