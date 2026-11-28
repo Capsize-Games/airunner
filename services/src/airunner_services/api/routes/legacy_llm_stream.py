@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
+from typing import Any, Callable, Iterator
 
 from fastapi.responses import StreamingResponse
 
@@ -31,10 +32,13 @@ from .legacy_llm_stream_payloads import (
 logger = logging.getLogger(__name__)
 
 
-def stream_callback(observer: LegacyCompletionObserver, action, request_id: str):
+def stream_callback(
+    observer: LegacyCompletionObserver, action: Any, request_id: str
+) -> Callable[[dict], None]:
     """Return one request-owned callback that queues terminal events last."""
 
     def callback(data: dict) -> None:
+        """Publish one normalized response event to the observer."""
         response = data.get("response")
         if response is None:
             payload = tool_status_stream_payload(data) or thinking_stream_payload(data)
@@ -73,7 +77,7 @@ def stream_callback(observer: LegacyCompletionObserver, action, request_id: str)
 def stream_lines(
     observer: LegacyCompletionObserver,
     action_str: str,
-):
+) -> Iterator[bytes]:
     """Yield observer events and keepalives until one terminal frame."""
     keepalive_interval = 5.0
     last_yield = time.monotonic()
@@ -95,17 +99,18 @@ def stream_lines(
 
 
 def build_streaming_response(
-    app,
+    app: Any,
     body: LegacyLLMGenerateRequest,
     prompt: str,
-    action,
-    llm_request,
+    action: Any,
+    llm_request: Any,
     request_id: str,
 ) -> StreamingResponse:
     """Dispatch and return one bounded request-owned NDJSON stream."""
     action_str = getattr(action, "name", None) or str(action)
 
     def error_frame(reason: str) -> bytes:
+        """Return one NDJSON error frame for a stream failure."""
         if reason == "timeout":
             return ndjson_line(timeout_payload(action_str))
         if reason == "overflow":
