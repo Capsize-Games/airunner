@@ -137,38 +137,12 @@ class ToolFilteringMixin:
         if force_tool is None and direct_force_tool:
             force_tool = direct_force_tool
 
-        if direct_categories is not None:
-            selected_categories = direct_categories
-            self.logger.info(
-                "Auto mode: matched direct system tool route %s for prompt %r",
-                force_tool,
-                prompt[:100],
-            )
-        elif self._is_simple_greeting_prompt(prompt):
-            self.logger.info("Auto mode: greeting detected, disabling tools")
-            selected_categories = []
-        elif self._is_simple_no_tool_prompt(prompt):
-            self.logger.info(
-                "Auto mode: simple conversational prompt detected, "
-                "disabling tools"
-            )
-            selected_categories = []
-        elif self._is_constrained_reply_prompt(prompt):
-            self.logger.info(
-                "Auto mode: constrained reply prompt detected, "
-                "disabling tools"
-            )
-            selected_categories = []
-        elif self._has_search_trigger_prompt(prompt):
-            self.logger.info(
-                "Auto mode: search intent detected, forcing search category"
-            )
-            selected_categories = ["search"]
-        else:
-            selected_categories = self._classify_prompt_for_tools(
-                prompt,
-                allow_thinking=allow_thinking,
-            )
+        selected_categories = self._route_categories(
+            prompt,
+            direct_categories,
+            force_tool,
+            allow_thinking,
+        )
 
         details = (
             "Selected: "
@@ -184,6 +158,46 @@ class ToolFilteringMixin:
             request_id,
         )
         return selected_categories, force_tool
+
+    def _route_categories(
+        self,
+        prompt,
+        direct_categories,
+        force_tool,
+        allow_thinking,
+    ) -> list:
+        """Resolve the tool categories for one prompt by priority order."""
+        if direct_categories is not None:
+            self.logger.info(
+                "Auto mode: matched direct system tool route %s for prompt %r",
+                force_tool,
+                prompt[:100],
+            )
+            return direct_categories
+        if self._is_simple_greeting_prompt(prompt):
+            self.logger.info("Auto mode: greeting detected, disabling tools")
+            return []
+        if self._is_simple_no_tool_prompt(prompt):
+            self.logger.info(
+                "Auto mode: simple conversational prompt detected, "
+                "disabling tools"
+            )
+            return []
+        if self._is_constrained_reply_prompt(prompt):
+            self.logger.info(
+                "Auto mode: constrained reply prompt detected, "
+                "disabling tools"
+            )
+            return []
+        if self._has_search_trigger_prompt(prompt):
+            self.logger.info(
+                "Auto mode: search intent detected, forcing search category"
+            )
+            return ["search"]
+        return self._classify_prompt_for_tools(
+            prompt,
+            allow_thinking=allow_thinking,
+        )
 
     def _emit_tool_selection_status(
         self,
