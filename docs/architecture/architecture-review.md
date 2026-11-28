@@ -1,5 +1,9 @@
 # AIRunner Architecture Review & Solution Design
 
+> Historical assessment (2026-08-16): assumes the PySide6 `src/` desktop
+> client removed on 2026-10-25. Current direction is the services-only
+> architecture in `release-planning/services/ARCHITECTURE.md`.
+
 Date: 2026-08-16
 Scope: post-C++-strip architecture assessment, simplification opportunities,
 gaps, and a prioritized set of solutions.
