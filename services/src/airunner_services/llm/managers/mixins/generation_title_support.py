@@ -19,7 +19,7 @@ TITLE_PASS_SYSTEM_PROMPT = (
 )
 
 
-def conversation_for_title_pass(owner) -> Optional[Conversation]:
+def conversation_for_title_pass(owner: Any) -> Optional[Conversation]:
     """Return one untitled conversation ready for the title pass."""
     workflow_manager = getattr(owner, "_workflow_manager", None)
     conversation_id = getattr(workflow_manager, "_conversation_id", None)
@@ -75,7 +75,7 @@ def sanitize_generated_title(raw_title: Any) -> str:
     return title[:80].strip()
 
 
-def maybe_generate_conversation_title(owner) -> None:
+def maybe_generate_conversation_title(owner: Any) -> None:
     """Persist one LLM-generated title after the first assistant reply."""
     conversation = conversation_for_title_pass(owner)
     if conversation is None or owner._chat_model is None:

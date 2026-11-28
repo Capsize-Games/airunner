@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional
 
 from airunner_common.contract_enums import ModelStatus, ModelType
 
-def invalid_model_path_response(owner) -> Optional[Dict[str, Any]]:
+def invalid_model_path_response(owner: Any) -> Optional[Dict[str, Any]]:
     """Return an error payload when the configured model path is invalid."""
     try:
         current_path = owner._current_model_path
@@ -56,7 +56,7 @@ def _reload_model_if_path_mismatch(
     owner.load()
 
 
-def ensure_workflow_manager_ready(owner) -> Optional[Dict[str, Any]]:
+def ensure_workflow_manager_ready(owner: Any) -> Optional[Dict[str, Any]]:
     """Return an error payload when generation cannot reach a workflow."""
     _try_load_workflow_manager(owner)
     if owner._workflow_manager:

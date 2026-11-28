@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import torch
 
@@ -38,11 +38,11 @@ from airunner_services.llm.managers.request_preparation import extract_request_i
 
 
 def run_generation_stream(
-    owner,
+    owner: Any,
     prompt: str,
     llm_request: Optional[Any],
-    complete_response,
-    sequence_counter,
+    complete_response: List[str],
+    sequence_counter: List[int],
     rag_document_scope: Optional[tuple[str, ...]] = None,
 ) -> Dict[str, Any]:
     """Run the generation stream and return the captured workflow result."""
@@ -248,7 +248,7 @@ def _stream_messages(owner, prompt: str, generation_kwargs: dict, images, rag_do
 
 
 def do_generate(
-    owner,
+    owner: Any,
     prompt: str,
     action: LLMActionType,
     system_prompt: Optional[str] = None,

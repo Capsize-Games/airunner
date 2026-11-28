@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 
-def get_current_mood(owner) -> Optional[dict]:
+def get_current_mood(owner: Any) -> Optional[dict]:
     """Return the current stored mood state when available."""
     try:
         if hasattr(owner, "_current_mood") and hasattr(owner, "_current_emoji"):
@@ -41,7 +41,7 @@ def format_mood_context(current_mood: Optional[dict]) -> str:
     return f"{mood_text}\n\n{behavior}"
 
 
-def get_mood_section(owner, force: bool = False) -> Optional[str]:
+def get_mood_section(owner: Any, force: bool = False) -> Optional[str]:
     """Return the mood section when mood prompting is enabled."""
     if not force and not _mood_is_enabled(owner):
         return None

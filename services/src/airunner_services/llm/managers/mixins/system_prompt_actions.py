@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from airunner_common.contract_enums import LLMActionType
 from airunner_services.llm.managers.mixins.system_prompt_action_text import (
@@ -24,7 +24,7 @@ from airunner_services.llm.managers.mixins.system_prompt_text import (
 
 
 def get_system_prompt_with_context(
-    owner,
+    owner: Any,
     action: LLMActionType,
     tool_categories: Optional[List] = None,
     force_tool: Optional[str] = None,
@@ -43,7 +43,7 @@ def get_system_prompt_with_context(
 
 
 def get_system_prompt_for_action(
-    owner,
+    owner: Any,
     action: LLMActionType,
     force_tool: Optional[str] = None,
 ) -> str:
