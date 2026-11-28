@@ -306,6 +306,31 @@ class RequestHandlingMixin:
         """Apply per-request tool filtering and system prompt overrides."""
         tools_filtered = False
         selected_categories: List[str] = []
+        system_prompt = self._request_system_prompt(llm_request)
+
+        prompt = data["request_data"]["prompt"]
+        action = data["request_data"].get("action")
+
+        client_bound = self._bind_client_tools(llm_request, system_prompt)
+        if client_bound is not None:
+            return client_bound
+
+        if llm_request:
+            selected_categories = self._apply_tool_selection(
+                llm_request, prompt, action
+            )
+            tools_filtered = True
+        else:
+            self.logger.info(
+                "[LLM MANAGER DEBUG] NOT APPLYING FILTER - tool_categories "
+                "is None"
+            )
+            self.logger.info("No tool filtering - using all tools")
+
+        return tools_filtered, selected_categories, system_prompt
+
+    def _request_system_prompt(self, llm_request):
+        """Extract and truncate the per-request system prompt override."""
         system_prompt = None
         if llm_request:
             self.logger.info(
@@ -326,54 +351,47 @@ class RequestHandlingMixin:
                     "Using custom system prompt from request: %s...",
                     system_prompt[:100],
                 )
+        return system_prompt
 
-        prompt = data["request_data"]["prompt"]
-        action = data["request_data"].get("action")
-
+    def _bind_client_tools(self, llm_request, system_prompt):
+        """Bind client-supplied tools, returning the early result if bound."""
         client_tools = getattr(llm_request, "client_tools", None) if (
             llm_request
         ) else None
-        if client_tools and self._workflow_manager:
-            self._workflow_manager.bind_client_tools(
-                client_tools,
-                tool_choice=getattr(llm_request, "client_tool_choice", None),
-            )
-            llm_request.tool_categories = []
-            llm_request.force_tool = None
-            return True, [], system_prompt
+        if not (client_tools and self._workflow_manager):
+            return None
+        self._workflow_manager.bind_client_tools(
+            client_tools,
+            tool_choice=getattr(llm_request, "client_tool_choice", None),
+        )
+        llm_request.tool_categories = []
+        llm_request.force_tool = None
+        return True, [], system_prompt
 
-        if llm_request:
-            selected_categories = getattr(llm_request, "tool_categories", None)
-            allow_thinking = getattr(llm_request, "enable_thinking", None)
-            if allow_thinking is None:
-                allow_thinking = True
-            plan = self._build_tool_selection_plan(
-                prompt=prompt,
-                tool_categories=selected_categories,
-                action=action,
-                force_tool=getattr(llm_request, "force_tool", None),
-                allow_thinking=bool(allow_thinking),
-                request_id=getattr(self, "_current_request_id", None),
-                auto_select=selected_categories is None,
-                raw_mode=getattr(llm_request, "raw_mode", False),
-            )
-            llm_request.tool_categories = plan.selected_categories
-            llm_request.force_tool = plan.force_tool
-            self.logger.info(
-                "[LLM MANAGER DEBUG] APPLYING TOOL PLAN with %s",
-                plan.selected_categories,
-            )
-            self._apply_tool_selection_plan(plan)
-            selected_categories = list(plan.selected_categories or [])
-            tools_filtered = True
-        else:
-            self.logger.info(
-                "[LLM MANAGER DEBUG] NOT APPLYING FILTER - tool_categories "
-                "is None"
-            )
-            self.logger.info("No tool filtering - using all tools")
-
-        return tools_filtered, selected_categories, system_prompt
+    def _apply_tool_selection(self, llm_request, prompt, action) -> list:
+        """Build and apply the tool selection plan, returning categories."""
+        selected_categories = getattr(llm_request, "tool_categories", None)
+        allow_thinking = getattr(llm_request, "enable_thinking", None)
+        if allow_thinking is None:
+            allow_thinking = True
+        plan = self._build_tool_selection_plan(
+            prompt=prompt,
+            tool_categories=selected_categories,
+            action=action,
+            force_tool=getattr(llm_request, "force_tool", None),
+            allow_thinking=bool(allow_thinking),
+            request_id=getattr(self, "_current_request_id", None),
+            auto_select=selected_categories is None,
+            raw_mode=getattr(llm_request, "raw_mode", False),
+        )
+        llm_request.tool_categories = plan.selected_categories
+        llm_request.force_tool = plan.force_tool
+        self.logger.info(
+            "[LLM MANAGER DEBUG] APPLYING TOOL PLAN with %s",
+            plan.selected_categories,
+        )
+        self._apply_tool_selection_plan(plan)
+        return list(plan.selected_categories or [])
     def _prepare_request_rag(
         self,
         data: Dict[str, Any],

@@ -27,6 +27,7 @@ from types import SimpleNamespace
 from typing import Any
 from unittest import mock
 
+import types
 import pytest
 
 from airunner_services.llm.adapters.chat_gguf_tool_parsing_common import (
@@ -753,6 +754,18 @@ def test_request_system_prompt_is_capped() -> None:
         _build_tool_selection_plan=lambda **_kw: plan,
         _apply_tool_selection_plan=lambda _plan: None,
     )
+    for helper_name in (
+        "_request_system_prompt",
+        "_bind_client_tools",
+        "_apply_tool_selection",
+    ):
+        setattr(
+            stub,
+            helper_name,
+            types.MethodType(
+                getattr(mixin_mod.RequestHandlingMixin, helper_name), stub
+            ),
+        )
     llm_request = SimpleNamespace(
         system_prompt="S" * (mixin_mod.MAX_SYSTEM_PROMPT_CHARS + 500),
         tool_categories=[],
