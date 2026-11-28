@@ -45,6 +45,7 @@ def calculate_shift(
     base_shift: float = 0.5,
     max_shift: float = 1.16,
 ):
+    """Calculate the flow-match shift for an image sequence length."""
     m = (max_shift - base_shift) / (max_seq_len - base_seq_len)
     b = base_shift - m * base_seq_len
     mu = image_seq_len * m + b
@@ -260,6 +261,7 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
         prompt_embeds=None,
         max_sequence_length=None,
     ):
+        """Validate pipeline prompt and size inputs before generation."""
         if height % (self.vae_scale_factor * 2):
             raise ValueError(
                 f"`height` must be divisible by {self.vae_scale_factor * 2} but is {height}."
@@ -303,6 +305,7 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
         generator,
         latents=None,
     ):
+        """Create or validate initial latents for the requested image size."""
         # VAE applies 8x compression on images, and we need to account for packing
         height = 2 * (int(height) // (self.vae_scale_factor * 2))
         width = 2 * (int(width) // (self.vae_scale_factor * 2))
@@ -320,14 +323,17 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
 
     @property
     def guidance_scale(self):
+        """Return the current guidance scale."""
         return self._guidance_scale
 
     @property
     def num_timesteps(self):
+        """Return the number of inference timesteps for this run."""
         return self._num_timesteps
 
     @property
     def interrupt(self):
+        """Return whether generation should be interrupted."""
         return self._interrupt
 
     @torch.no_grad()
