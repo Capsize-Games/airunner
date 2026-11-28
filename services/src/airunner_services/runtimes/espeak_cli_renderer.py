@@ -152,22 +152,7 @@ class EspeakCliRenderer:
         self, argv: list[str], input_bytes: bytes, output_limit: int
     ) -> bytes:
         """Run one fixed-executable process, killing it on deadline or output cap."""
-        try:
-            with tempfile.TemporaryFile(mode="w+b") as stdin_file:
-                stdin_file.write(input_bytes)
-                stdin_file.seek(0)
-                process = self._popen(
-                    argv,
-                    stdin=stdin_file,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.DEVNULL,
-                    shell=False,
-                    close_fds=True,
-                    cwd="/",
-                    env={"PATH": "/usr/bin:/bin", "LANG": "C.UTF-8"},
-                )
-        except OSError as exc:
-            raise EspeakRenderError("tts_backend_unavailable") from exc
+        process = self._spawn_render_process(argv, input_bytes)
 
         chunks: list[bytes] = []
         total_bytes = 0
@@ -195,25 +180,9 @@ class EspeakCliRenderer:
         reader = threading.Thread(target=collect_stdout, daemon=True)
         reader.start()
         try:
-            try:
-                process.wait(timeout=PROCESS_TIMEOUT_SECONDS)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait()
-                reader.join(timeout=1.0)
-                raise EspeakRenderError("tts_timeout")
-            reader.join(timeout=1.0)
-            if reader.is_alive():
-                process.kill()
-                process.wait()
-                raise EspeakRenderError("tts_render_failed")
-            if overflow.is_set():
-                raise EspeakRenderError("tts_render_failed")
-            if read_error:
-                raise EspeakRenderError("tts_render_failed") from read_error[0]
-            if process.returncode != 0:
-                raise EspeakRenderError("tts_render_failed")
-            return b"".join(chunks)
+            return self._await_render_process(
+                process, reader, chunks, overflow, read_error
+            )
         finally:
             if process.poll() is None:
                 process.kill()
@@ -223,6 +192,48 @@ class EspeakCliRenderer:
                 stdin_stream.close()
             if process.stdout:
                 process.stdout.close()
+
+    def _spawn_render_process(self, argv: list[str], input_bytes: bytes):
+        """Spawn the render process with stdin/tempfile and a clean env."""
+        try:
+            with tempfile.TemporaryFile(mode="w+b") as stdin_file:
+                stdin_file.write(input_bytes)
+                stdin_file.seek(0)
+                return self._popen(
+                    argv,
+                    stdin=stdin_file,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    shell=False,
+                    close_fds=True,
+                    cwd="/",
+                    env={"PATH": "/usr/bin:/bin", "LANG": "C.UTF-8"},
+                )
+        except OSError as exc:
+            raise EspeakRenderError("tts_backend_unavailable") from exc
+
+    @staticmethod
+    def _await_render_process(process, reader, chunks, overflow, read_error):
+        """Wait for process and reader, enforcing deadline and output checks."""
+        try:
+            process.wait(timeout=PROCESS_TIMEOUT_SECONDS)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+            reader.join(timeout=1.0)
+            raise EspeakRenderError("tts_timeout")
+        reader.join(timeout=1.0)
+        if reader.is_alive():
+            process.kill()
+            process.wait()
+            raise EspeakRenderError("tts_render_failed")
+        if overflow.is_set():
+            raise EspeakRenderError("tts_render_failed")
+        if read_error:
+            raise EspeakRenderError("tts_render_failed") from read_error[0]
+        if process.returncode != 0:
+            raise EspeakRenderError("tts_render_failed")
+        return b"".join(chunks)
 
     @staticmethod
     def _normalize_wav(output: bytes) -> bytes:
