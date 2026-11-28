@@ -88,22 +88,11 @@ class ModelLoadingMixin:
             )
         self.set_model_state(model_id, ModelState.LOADING, model_type)
         metadata = self.registry.get_model(model_id)
+        unregistered = self._unregistered_response(
+            model_id, model_type, require_registered, auto_swap
+        )
         if metadata is None:
-            if require_registered:
-                self.set_model_state(model_id, ModelState.UNLOADED)
-                return {
-                    "can_load": False,
-                    "reason": (
-                        f"Model {model_id!r} is not registered; "
-                        "resource preflight cannot be performed"
-                    ),
-                    "swapped_models": [],
-                }
-            return self._prepare_unregistered_model(
-                model_id,
-                model_type,
-                auto_swap,
-            )
+            return unregistered
         quantization = self._select_quantization(
             metadata.size_gb,
             preferred_quantization,
@@ -122,6 +111,32 @@ class ModelLoadingMixin:
                 metadata,
                 quantization,
             )
+        return self._prepared_success(
+            metadata, quantization, allocation, swapped_models
+        )
+
+    def _unregistered_response(
+        self, model_id, model_type, require_registered, auto_swap
+    ):
+        """Build the load response for one unknown model."""
+        if require_registered:
+            self.set_model_state(model_id, ModelState.UNLOADED)
+            return {
+                "can_load": False,
+                "reason": (
+                    f"Model {model_id!r} is not registered; "
+                    "resource preflight cannot be performed"
+                ),
+                "swapped_models": [],
+            }
+        return self._prepare_unregistered_model(
+            model_id,
+            model_type,
+            auto_swap,
+        )
+
+    def _prepared_success(self, metadata, quantization, allocation, swapped_models):
+        """Log and return the successful preparation summary."""
         self.logger.info(
             "Prepared %s: %s",
             metadata.name,
