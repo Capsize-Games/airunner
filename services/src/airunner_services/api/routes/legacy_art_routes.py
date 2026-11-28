@@ -58,6 +58,17 @@ def _resolve_legacy_art_params(body: LegacyArtRequest) -> dict:
         raise HTTPException(
             status_code=400, detail="cfg_scale_out_of_bounds"
         )
+    sampling = _resolve_legacy_sampling(body)
+    return {
+        "prompt": prompt,
+        "negative_prompt": body.negative_prompt or "",
+        "cfg_scale": float(cfg_scale),
+        **sampling,
+    }
+
+
+def _resolve_legacy_sampling(body: LegacyArtRequest) -> dict[str, Any]:
+    """Resolve bounds-checked sampling parameters from a legacy request."""
     want_random = (
         bool(body.random_seed)
         if body.random_seed is not None
@@ -87,12 +98,9 @@ def _resolve_legacy_art_params(body: LegacyArtRequest) -> dict:
             status_code=400, detail="resolution_out_of_bounds"
         )
     return {
-        "prompt": prompt,
-        "negative_prompt": body.negative_prompt or "",
         "width": width,
         "height": height,
         "steps": steps,
-        "cfg_scale": float(cfg_scale),
         "seed": seed,
         "num_images": int(num_images),
     }
