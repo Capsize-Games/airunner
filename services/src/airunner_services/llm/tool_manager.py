@@ -305,78 +305,81 @@ class ToolManager(
 
     def get_tools_for_action(self, action: Any) -> List[Callable]:
         """Return the tools appropriate for one action type."""
-        common_tools = []
-        for tool_name in ["store_user_data", "get_user_data", "update_mood"]:
-            tool = self._get_tool_by_name(tool_name)
-            if tool:
-                common_tools.append(tool)
+        common_tools = self._collect_named_tools(
+            ["store_user_data", "get_user_data", "update_mood"]
+        )
 
         if action == LLMActionType.CHAT:
-            additional_tools = []
-            for tool_name in ["clear_conversation", "toggle_tts"]:
-                tool = self._get_tool_by_name(tool_name)
-                if tool:
-                    additional_tools.append(tool)
-            return common_tools + additional_tools
+            return common_tools + self._collect_named_tools(
+                ["clear_conversation", "toggle_tts"]
+            )
 
         if action == LLMActionType.GENERATE_IMAGE:
-            additional_tools = []
-            for tool_name in ["generate_image", "clear_canvas", "open_image"]:
-                tool = self._get_tool_by_name(tool_name)
-                if tool:
-                    additional_tools.append(tool)
-            return common_tools + additional_tools
+            return common_tools + self._collect_named_tools(
+                ["generate_image", "clear_canvas", "open_image"]
+            )
 
         if action == LLMActionType.PERFORM_RAG_SEARCH:
-            additional_tools = []
-            try:
-                from airunner_services.llm.core.tool_registry import (
-                    ToolRegistry,
-                )
-
-                for tool_info in ToolRegistry.all().values():
-                    name_lower = (tool_info.name or "").lower()
-                    category_lower = str(
-                        getattr(tool_info, "category", "")
-                    ).lower()
-
-                    if (
-                        "search" in name_lower
-                        or "rag" in name_lower
-                        or "knowledge" in name_lower
-                        or "search" in category_lower
-                    ):
-                        wrapped = self._wrap_tool_with_dependencies(tool_info)
-                        wrapped.name = tool_info.name
-                        wrapped.description = tool_info.description
-                        wrapped.return_direct = tool_info.return_direct
-                        wrapped.category = getattr(
-                            tool_info,
-                            "category",
-                            None,
-                        )
-                        additional_tools.append(wrapped)
-            except Exception:
-                self.logger.debug(
-                    "ToolRegistry unavailable while filtering search tools; "
-                    "falling back to hardcoded names"
-                )
-
-            for tool_name in [
-                "rag_search",
-                "search_web",
-                "search_knowledge_base_documents",
-            ]:
-                tool = self._get_tool_by_name(tool_name)
-                if tool:
-                    additional_tools.append(tool)
-
+            additional_tools = self._collect_registry_search_tools()
+            additional_tools += self._collect_named_tools(
+                [
+                    "rag_search",
+                    "search_web",
+                    "search_knowledge_base_documents",
+                ]
+            )
             return common_tools + additional_tools
 
         if action == LLMActionType.APPLICATION_COMMAND:
             return self.get_all_tools()
 
         return common_tools
+
+    def _collect_named_tools(self, tool_names) -> List[Callable]:
+        """Resolve registry tools by name, skipping missing entries."""
+        tools = []
+        for tool_name in tool_names:
+            tool = self._get_tool_by_name(tool_name)
+            if tool:
+                tools.append(tool)
+        return tools
+
+    def _collect_registry_search_tools(self) -> List[Callable]:
+        """Collect wrapped search/knowledge tools from the registry."""
+        additional_tools = []
+        try:
+            from airunner_services.llm.core.tool_registry import (
+                ToolRegistry,
+            )
+
+            for tool_info in ToolRegistry.all().values():
+                name_lower = (tool_info.name or "").lower()
+                category_lower = str(
+                    getattr(tool_info, "category", "")
+                ).lower()
+
+                if (
+                    "search" in name_lower
+                    or "rag" in name_lower
+                    or "knowledge" in name_lower
+                    or "search" in category_lower
+                ):
+                    wrapped = self._wrap_tool_with_dependencies(tool_info)
+                    wrapped.name = tool_info.name
+                    wrapped.description = tool_info.description
+                    wrapped.return_direct = tool_info.return_direct
+                    wrapped.category = getattr(
+                        tool_info,
+                        "category",
+                        None,
+                    )
+                    additional_tools.append(wrapped)
+        except Exception:
+            self.logger.debug(
+                "ToolRegistry unavailable while filtering search tools; "
+                "falling back to hardcoded names"
+            )
+        return additional_tools
 
     def get_tools_by_categories(
         self,
