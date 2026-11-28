@@ -309,39 +309,44 @@ def search_news(
 			logger.warning("No news results returned")
 			return {"results": []}
 
-		formatted = f"Recent news articles for '{query}':\n\n"
-		for i, result in enumerate(results[:7], 1):
-			title = result.get("title", "N/A")
-			link = result.get("link", "#")
-			snippet = result.get("snippet", "")[:250]
-			source = result.get("source", "Unknown source")
-			date = result.get("date", "")
-
-			formatted += f"{i}. {title}\n"
-			formatted += f"   Source: {source}"
-			if date:
-				formatted += f" | Date: {date}"
-			formatted += f"\n   URL: {link}\n"
-			if snippet:
-				formatted += f"   {snippet}...\n"
-			formatted += "\n"
-
-		formatted += "\n" + "=" * 60 + "\n"
-		formatted += "📝 NEXT STEPS: You can:\n"
-		formatted += (
-			"- Use `scrape_website` on a URL to get full article content\n"
-		)
-		formatted += (
-			"- Use `search_news` again with a different query for more info\n"
-		)
-		formatted += "- Or respond directly if you have enough information\n"
-		formatted += "=" * 60 + "\n"
-
+		formatted = _format_news_results(query, results)
 		logger.info("Formatted %d news results", len(results[:7]))
 		return {"results": results, "summary": formatted}
 	except Exception as exc:
 		logger.error("News search error: %s", exc, exc_info=True)
 		return f"Error searching news: {str(exc)}"
+
+
+def _format_news_results(query: str, results: list) -> str:
+    """Render the numbered news summary with next-step guidance."""
+    formatted = f"Recent news articles for '{query}':\n\n"
+    for i, result in enumerate(results[:7], 1):
+        title = result.get("title", "N/A")
+        link = result.get("link", "#")
+        snippet = result.get("snippet", "")[:250]
+        source = result.get("source", "Unknown source")
+        date = result.get("date", "")
+
+        formatted += f"{i}. {title}\n"
+        formatted += f"   Source: {source}"
+        if date:
+            formatted += f" | Date: {date}"
+        formatted += f"\n   URL: {link}\n"
+        if snippet:
+            formatted += f"   {snippet}...\n"
+        formatted += "\n"
+
+    formatted += "\n" + "=" * 60 + "\n"
+    formatted += "📝 NEXT STEPS: You can:\n"
+    formatted += (
+        "- Use `scrape_website` on a URL to get full article content\n"
+    )
+    formatted += (
+        "- Use `search_news` again with a different query for more info\n"
+    )
+    formatted += "- Or respond directly if you have enough information\n"
+    formatted += "=" * 60 + "\n"
+    return formatted
 
 
 @tool(
