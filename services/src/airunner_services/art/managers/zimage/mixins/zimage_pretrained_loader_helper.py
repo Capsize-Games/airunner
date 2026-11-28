@@ -193,6 +193,19 @@ class ZImagePretrainedLoaderHelper:
     ) -> tuple[Any, Any, Any, Any]:
         """Load pretrained transformer, text encoder, tokenizer, and VAE."""
         quant_info = self._precision_label(use_quant, quant_bits, model_dtype)
+        transformer = self._load_transformer_stage(
+            model_dir, transformer_cfg, model_dtype, plan, quant_info
+        )
+        text_encoder, tokenizer = self._load_encoder_stage(
+            model_dir, text_encoder_cfg, model_dtype, plan, quant_info
+        )
+        vae = self._load_vae_stage(model_dir, model_dtype, plan, use_quant)
+        return transformer, text_encoder, tokenizer, vae
+
+    def _load_transformer_stage(
+        self, model_dir, transformer_cfg, model_dtype, plan, quant_info
+    ):
+        """Load the transformer with its capacity check and failure error."""
         transformer_path = model_dir / "transformer"
         self._owner.logger.info(
             "Loading transformer from %s (%s)",
@@ -207,6 +220,12 @@ class ZImagePretrainedLoaderHelper:
         )
         if transformer is None:
             raise RuntimeError("Failed to load transformer")
+        return transformer
+
+    def _load_encoder_stage(
+        self, model_dir, text_encoder_cfg, model_dtype, plan, quant_info
+    ):
+        """Load the text encoder and tokenizer with capacity check."""
         self._check_live_capacity(
             "text encoder",
             plan.text_encoder_gpu_gib + plan.vae_gpu_gib
@@ -230,6 +249,10 @@ class ZImagePretrainedLoaderHelper:
         )
         if text_encoder is None:
             raise RuntimeError("Failed to load text encoder")
+        return text_encoder, tokenizer
+
+    def _load_vae_stage(self, model_dir, model_dtype, plan, use_quant):
+        """Load the VAE, verify it, and run the placement capacity check."""
         self._check_live_capacity(
             "VAE",
             plan.vae_gpu_gib + plan.gpu_activation_reserve_gib,
@@ -250,7 +273,7 @@ class ZImagePretrainedLoaderHelper:
             + plan.gpu_activation_reserve_gib,
             plan.cpu_workspace_gib,
         )
-        return transformer, text_encoder, tokenizer, vae
+        return vae
 
     def build_memory_plan(
         self,
