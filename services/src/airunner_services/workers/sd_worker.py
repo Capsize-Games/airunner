@@ -6,7 +6,7 @@ import os
 import threading
 import time
 from functools import partial
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 import torch
 from PIL import Image
@@ -133,7 +133,7 @@ class SDWorker(Worker):
 		self._version = value
 
 	@property
-	def model_manager(self):
+	def model_manager(self) -> Any:
 		"""Return the active model manager for the current version."""
 		with self._model_manager_lock:
 			if self._model_manager is None:
@@ -150,13 +150,13 @@ class SDWorker(Worker):
 			return self._model_manager
 
 	@model_manager.setter
-	def model_manager(self, value):
+	def model_manager(self, value: Any) -> None:
 		"""Store the active model manager."""
 		with self._model_manager_lock:
 			self._model_manager = value
 
 	@property
-	def zimage(self):
+	def zimage(self) -> ZImageModelManager:
 		"""Return the lazily created Z-Image model manager."""
 		if self._zimage is None:
 			self._zimage = ZImageModelManager()
@@ -164,7 +164,7 @@ class SDWorker(Worker):
 		return self._zimage
 
 	@property
-	def x4_upscaler(self):
+	def x4_upscaler(self) -> X4UpscaleManager:
 		"""Return the lazily created x4 upscaler manager."""
 		if self._x4_upscaler is None:
 			self._x4_upscaler = X4UpscaleManager()
@@ -578,15 +578,15 @@ class SDWorker(Worker):
 			self.model_manager.sd_load_tokenizer(data)
 
 	@staticmethod
-	def on_sd_cancel_signal(_data=None):
+	def on_sd_cancel_signal(_data: Any = None) -> None:
 		"""Log an SD cancel signal."""
 		logger.info("on_sd_cancel_signal")
 
-	def on_start_auto_image_generation_signal(self, _data=None):
+	def on_start_auto_image_generation_signal(self, _data: Any = None) -> None:
 		"""Handle a request to start automatic image generation."""
 		pass
 
-	def on_stop_auto_image_generation_signal(self, _data=None):
+	def on_stop_auto_image_generation_signal(self, _data: Any = None) -> None:
 		"""Handle a request to stop automatic image generation."""
 		pass
 
@@ -609,7 +609,7 @@ class SDWorker(Worker):
 			}
 		)
 
-	def add_to_queue(self, message) -> None:
+	def add_to_queue(self, message: Any) -> None:
 		"""Keep the latest-item policy while acknowledging displaced API work."""
 		displaced = []
 		with self._queue_lock:
@@ -678,7 +678,7 @@ class SDWorker(Worker):
 		self._pending_daemon_unload_after_cancel = False
 		self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL, {})
 
-	def on_interrupt_image_generation_signal(self, _data=None):
+	def on_interrupt_image_generation_signal(self, _data: Any = None) -> None:
 		"""Interrupt the active image generation request."""
 		request_id = (
 			_data.get("request_id")
@@ -727,7 +727,7 @@ class SDWorker(Worker):
 		if self.model_manager:
 			self.model_manager._load_scheduler(scheduler_name)
 
-	def on_model_status_changed_signal(self, message: Dict):
+	def on_model_status_changed_signal(self, message: Dict) -> None:
 		"""Handle a model status change for the SD model."""
 		if message.get("model") != ModelType.SD:
 			return
@@ -737,7 +737,7 @@ class SDWorker(Worker):
 			self.on_unload_art_signal()
 		self.__requested_action = ModelAction.NONE
 
-	def start_worker_thread(self):
+	def start_worker_thread(self) -> None:
 		"""Start the worker thread and load the model when enabled."""
 		if self._art_auto_unload_enabled:
 			self._start_art_inactivity_timer()
@@ -770,7 +770,7 @@ class SDWorker(Worker):
 			self._art_inactivity_timer.stop()
 		super().stop()
 
-	def handle_message(self, message: Optional[Dict] = None):
+	def handle_message(self, message: Optional[Dict] = None) -> None:
 		"""Dispatch one queued art action message."""
 		if message is None:
 			return
@@ -925,7 +925,7 @@ class SDWorker(Worker):
 		worker_call_finished = False
 		callback_result = None
 
-		def deliver_callback(result):
+		def deliver_callback(result: Any) -> None:
 			"""Deliver one result to the original request callback."""
 			if callable(original_callback):
 				try:
@@ -937,7 +937,7 @@ class SDWorker(Worker):
 						type(exc).__name__,
 					)
 
-		def complete_once(result):
+		def complete_once(result: Any) -> None:
 			"""Record one terminal result for the request callback."""
 			nonlocal callback_called, callback_result
 			with callback_lock:
@@ -949,7 +949,7 @@ class SDWorker(Worker):
 			if deliver_now:
 				deliver_callback(result)
 
-		def finish_worker_call(fallback_result=None):
+		def finish_worker_call(fallback_result: Any = None) -> None:
 			"""Finish the worker call and deliver the terminal result."""
 			nonlocal callback_called, callback_result, worker_call_finished
 			with callback_lock:
@@ -1369,11 +1369,11 @@ class SDWorker(Worker):
 					)
 					self._apply_scheduler_change(pending)
 
-	def handle_error(self, error_message):
+	def handle_error(self, error_message: str) -> None:
 		"""Log one SD worker error."""
 		self.logger.error(f"SDWorker Error: {error_message}")
 
-	def send_missing_model_alert(self, message):
+	def send_missing_model_alert(self, message: str) -> None:
 		"""Emit signals for a missing required model."""
 		self.emit_signal(
 			SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL,
