@@ -190,22 +190,7 @@ class ComponentLoaderMixin:
                     "Tool manager not loaded, workflow will have no tools"
                 )
 
-            # Determine whether to pass tools based on function calling support
-            tools_to_use = None
-            if self.supports_function_calling and self.tools:
-                tools_to_use = self.tools
-                self.logger.info(
-                    f"Model supports function calling - passing {len(self.tools)} tools"
-                )
-            else:
-                if not self.supports_function_calling:
-                    self.logger.info(
-                        "Model does not support function calling - no tools will be passed"
-                    )
-                else:
-                    self.logger.info(
-                        "No tools available - workflow will run without tools"
-                    )
+            tools_to_use = self._workflow_tools()
 
             # Runtime import to avoid circular dependency
             from airunner_services.llm.workflow_manager import (
@@ -213,7 +198,6 @@ class ComponentLoaderMixin:
             )
 
             # The conversation ID will be set explicitly when needed
-            workflow_event_sink = self._build_workflow_event_sink()
             self._workflow_manager = WorkflowManager(
                 system_prompt=self.system_prompt,
                 chat_model=self._chat_model,
@@ -226,7 +210,7 @@ class ComponentLoaderMixin:
                     else None
                 ),
                 chatbot=self.chatbot if hasattr(self, "chatbot") else None,
-                event_sink=workflow_event_sink,
+                event_sink=self._build_workflow_event_sink(),
             )
             self.logger.info(
                 "Workflow manager loaded (conversation ID will be set on first use)"
@@ -236,6 +220,23 @@ class ComponentLoaderMixin:
                 f"Error loading workflow manager: {e}", exc_info=True
             )
             self._workflow_manager = None
+
+    def _workflow_tools(self):
+        """Return tools for one workflow run based on function calling."""
+        if self.supports_function_calling and self.tools:
+            self.logger.info(
+                f"Model supports function calling - passing {len(self.tools)} tools"
+            )
+            return self.tools
+        if not self.supports_function_calling:
+            self.logger.info(
+                "Model does not support function calling - no tools will be passed"
+            )
+        else:
+            self.logger.info(
+                "No tools available - workflow will run without tools"
+            )
+        return None
 
     def _unload_chat_model(self) -> None:
         """Unload the chat model from memory.
