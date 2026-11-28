@@ -62,6 +62,10 @@ class ResearchExpertAgent(ExpertAgent):
             priority=8,
         )
 
+        self._register_analysis_capabilities()
+
+    def _register_analysis_capabilities(self) -> None:
+        """Register analysis and fact-checking capabilities."""
         self.register_capability(
             name="analysis",
             description="Analyze and synthesize information",
