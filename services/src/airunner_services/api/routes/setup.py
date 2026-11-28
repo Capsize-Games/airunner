@@ -166,6 +166,27 @@ async def _queue_setup_downloads(download_service, jobs: list, payload: SetupIns
             }, queued
 
 
+async def _install_base_data(resolved_base: str):
+    """Create directories and install NLTK data, yielding updates."""
+    yield _emit({"status": "installing", "message": "Creating directories...", "progress": 0})
+    try:
+        created = _create_directories(resolved_base)
+    except OSError:
+        logger.exception("Setup directory creation failed")
+        yield _emit({"status": "failed", "message": "Directory creation failed"})
+        return
+    yield _emit({"status": "installing", "message": f"Created {len(created)} directories", "progress": 2})
+
+    yield _emit({"status": "installing", "message": "Installing NLTK data...", "progress": 5})
+    try:
+        nltk_installed = await _install_nltk_data(resolved_base)
+    except Exception:
+        logger.exception("Setup data installation failed")
+        yield _emit({"status": "failed", "message": "Data installation failed"})
+        return
+    yield _emit({"status": "installing", "message": f"NLTK installed: {nltk_installed}", "progress": 8})
+
+
 @router.post("/install")
 async def setup_install(
     payload: SetupInstallRequest,
@@ -184,25 +205,10 @@ async def setup_install(
         raise HTTPException(503, "download_service_unavailable")
 
     async def _stream():
-        # Phase 1: Create directories
-        yield _emit({"status": "installing", "message": "Creating directories...", "progress": 0})
-        try:
-            created = _create_directories(resolved_base)
-        except OSError:
-            logger.exception("Setup directory creation failed")
-            yield _emit({"status": "failed", "message": "Directory creation failed"})
-            return
-        yield _emit({"status": "installing", "message": f"Created {len(created)} directories", "progress": 2})
-
-        # Phase 2: Install NLTK data
-        yield _emit({"status": "installing", "message": "Installing NLTK data...", "progress": 5})
-        try:
-            nltk_installed = await _install_nltk_data(resolved_base)
-        except Exception:
-            logger.exception("Setup data installation failed")
-            yield _emit({"status": "failed", "message": "Data installation failed"})
-            return
-        yield _emit({"status": "installing", "message": f"NLTK installed: {nltk_installed}", "progress": 8})
+        async for update in _install_base_data(resolved_base):
+            yield update
+            if update["status"] == "failed":
+                return
 
         # Phase 3: Queue downloads
         total_jobs = len(jobs)
