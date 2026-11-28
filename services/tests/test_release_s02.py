@@ -173,9 +173,9 @@ def test_omitted_max_tokens_resolves_to_bounded_default(
     captured = {}
     original = llm_runtime.websocket_envelope
 
-    def _capture(payload):
+    def _capture(payload, request_id=None):
         captured.update(payload)
-        return original(payload)
+        return original(payload, request_id)
 
     monkeypatch.setattr(llm_stream_routes, "websocket_envelope", _capture)
 
