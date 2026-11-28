@@ -152,15 +152,7 @@ class LLMAPIService(
 		"""Forward one completed visible reply to headless TTS."""
 		request_id = getattr(response, "request_id", None)
 		message = getattr(response, "message", "") or ""
-		if not self._is_headless_tts_assistant_response(response):
-			return False
-		if request_id and not self._headless_tts_request_enabled.get(
-			request_id,
-			True,
-		):
-			if getattr(response, "is_end_of_message", False):
-				self._headless_tts_response_buffer.pop(request_id, None)
-				self._headless_tts_request_enabled.pop(request_id, None)
+		if not self._headless_tts_gate_allows(response, request_id):
 			return False
 
 		if request_id and message and not getattr(
@@ -176,6 +168,28 @@ class LLMAPIService(
 		if not request_id or not getattr(response, "is_end_of_message", False):
 			return False
 
+		full_message = self._resolve_full_message(response, request_id)
+		if not full_message:
+			return False
+
+		return self._dispatch_final_to_tts(response, request_id, full_message)
+
+	def _headless_tts_gate_allows(self, response, request_id) -> bool:
+		"""Return whether this response may proceed toward headless TTS."""
+		if not self._is_headless_tts_assistant_response(response):
+			return False
+		if request_id and not self._headless_tts_request_enabled.get(
+			request_id,
+			True,
+		):
+			if getattr(response, "is_end_of_message", False):
+				self._headless_tts_response_buffer.pop(request_id, None)
+				self._headless_tts_request_enabled.pop(request_id, None)
+			return False
+		return True
+
+	def _resolve_full_message(self, response, request_id):
+		"""Pop the buffered final message, or None when nothing is forwardable."""
 		full_message = (
 			getattr(response, "final_visible_message", None)
 			or self._headless_tts_response_buffer.pop(request_id, "")
@@ -183,8 +197,11 @@ class LLMAPIService(
 		self._headless_tts_response_buffer.pop(request_id, None)
 		self._headless_tts_request_enabled.pop(request_id, None)
 		if not full_message or getattr(response, "is_system_message", False):
-			return False
+			return None
+		return full_message
 
+	def _dispatch_final_to_tts(self, response, request_id, full_message) -> bool:
+		"""Forward one final message to the TTS worker, queue or handler first."""
 		worker = self._tts_stream_worker()
 		enqueue = getattr(worker, "add_to_queue", None)
 		if callable(enqueue):
