@@ -4,14 +4,53 @@ import os
 from typing import Any, Dict, List, Optional
 
 
+#: Local model ids served by the local runtime.
+_SUPPORTED_LOCAL_MODEL_IDS = (
+    "qwen3.5-9b",
+    "gpt-oss-20b",
+    "custom",
+)
+
+#: OpenRouter model ids.
+_OPENROUTER_MODELS = [
+    "anthropic/claude-3.5-sonnet",
+    "anthropic/claude-3-opus",
+    "openai/gpt-4-turbo",
+    "openai/gpt-4",
+    "openai/gpt-3.5-turbo",
+    "meta-llama/llama-3.1-70b-instruct",
+    "meta-llama/llama-3.1-8b-instruct",
+    "google/gemini-pro-1.5",
+    "mistralai/mistral-large",
+    "custom",
+]
+
+#: Ollama model ids.
+_OLLAMA_MODELS = [
+    "llama3.2",
+    "llama3.1",
+    "llama3",
+    "mistral",
+    "mixtral",
+    "phi3",
+    "qwen2.5",
+    "qwen3",
+    "qwen3:8b",
+    "qwen3:14b",
+    "qwen3:30b-a3b",
+    "qwen3:32b",
+    "qwen3-coder:30b-a3b",
+    "codellama",
+    "custom",
+]
+
+
 class LLMProviderConfig:
     """Available models for each LLM provider."""
 
-    _SUPPORTED_LOCAL_MODEL_IDS = (
-        "qwen3.5-9b",
-        "gpt-oss-20b",
-        "custom",
-    )
+    _SUPPORTED_LOCAL_MODEL_IDS = _SUPPORTED_LOCAL_MODEL_IDS
+    OPENROUTER_MODELS = _OPENROUTER_MODELS
+    OLLAMA_MODELS = _OLLAMA_MODELS
 
     LOCAL_MODELS = {
         "qwen2.5-7b": {
@@ -238,37 +277,6 @@ class LLMProviderConfig:
             "description": "Use custom model path (auto-detects tool calling mode)",
         },
     }
-
-    OPENROUTER_MODELS = [
-        "anthropic/claude-3.5-sonnet",
-        "anthropic/claude-3-opus",
-        "openai/gpt-4-turbo",
-        "openai/gpt-4",
-        "openai/gpt-3.5-turbo",
-        "meta-llama/llama-3.1-70b-instruct",
-        "meta-llama/llama-3.1-8b-instruct",
-        "google/gemini-pro-1.5",
-        "mistralai/mistral-large",
-        "custom",
-    ]
-
-    OLLAMA_MODELS = [
-        "llama3.2",
-        "llama3.1",
-        "llama3",
-        "mistral",
-        "mixtral",
-        "phi3",
-        "qwen2.5",
-        "qwen3",
-        "qwen3:8b",
-        "qwen3:14b",
-        "qwen3:30b-a3b",
-        "qwen3:32b",
-        "qwen3-coder:30b-a3b",
-        "codellama",
-        "custom",
-    ]
 
     @staticmethod
     def _normalize_identifier(identifier: str) -> str:
