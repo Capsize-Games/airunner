@@ -27,11 +27,8 @@ run_step "Starting services" "${DEV_DIR}/run_services.sh"
 # 2. Health check
 run_step "Testing services" "${DEV_DIR}/test_services.sh"
 
-# 3. Launch GUI
+# 3. Done (desktop GUI retired with src/ on 2026-10-25)
 echo ""
-echo -e "${GREEN}=== Launching GUI ===${NC}"
-echo "Services are running. GUI will auto-connect to daemon on port 8188."
-echo "Press Ctrl+C in the GUI to stop."
-echo ""
-
-exec "${DEV_DIR}/run_gui.sh"
+echo -e "${GREEN}=== Services are running ===${NC}"
+echo "Interact with the daemon on port 8188 (see deployment/systemd/README.md)."
+echo "Use ${DEV_DIR}/stop_services.sh to stop."
