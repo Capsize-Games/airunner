@@ -411,14 +411,16 @@ class RAGIndexManagementMixin:
             os.unlink(path)
 
     def _save_registry(self):
-        """Save the index registry to disk."""
-        try:
-            os.makedirs(self.doc_indexes_dir, exist_ok=True)
-            with open(self.registry_path, "w", encoding="utf-8") as f:
-                json.dump(self._index_registry, f, indent=2)
-            self.logger.debug("Registry saved successfully")
-        except Exception as e:
-            self.logger.error(f"Error saving registry: {e}")
+        """Save the index registry to disk.
+
+        The registry is staged to a sibling temporary file
+        (flushed and fsynced) and then atomically renamed over
+        its target, so a crash or kill between writes never
+        leaves a truncated registry behind. Failures propagate
+        to the caller instead of being logged and swallowed.
+        """
+        _write_json_atomically(self.registry_path, self._index_registry)
+        self.logger.debug("Registry saved successfully")
 
     def _registry_candidates(self) -> list[str]:
         paths = [self.registry_path]
@@ -558,14 +560,13 @@ class RAGIndexManagementMixin:
         """Save the unified index to disk (legacy).
 
         This method is kept for backward compatibility with old unified index.
+        Failures propagate to the caller instead of being logged
+        and swallowed.
         """
         if self._index:
-            try:
-                os.makedirs(self.storage_persist_dir, exist_ok=True)
-                self._index.persist(self.storage_persist_dir)
-                self.logger.info("Unified index saved to storage")
-            except Exception as e:
-                self.logger.error(f"Error saving index: {e}")
+            os.makedirs(self.storage_persist_dir, exist_ok=True)
+            self._index.persist(self.storage_persist_dir)
+            self.logger.info("Unified index saved to storage")
 
     def _load_index(self) -> Optional[DocumentVectorIndex]:
         """Load the unified index from disk (legacy).

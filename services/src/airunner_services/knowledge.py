@@ -1,6 +1,8 @@
 """Service-owned knowledge base helpers."""
 
+import os
 import re
+import tempfile
 import threading
 from datetime import date
 from pathlib import Path
@@ -89,6 +91,29 @@ def knowledge_source_identity(tenant: str, filename: str) -> str:
     return f"knowledge-file:{scope}:{Path(filename).stem}"
 
 
+def _write_text_atomically(path: Path, content: str) -> None:
+    """Write text via a staging file plus an atomic rename.
+
+    A crash or kill mid-write leaves the previous file intact
+    instead of a truncated one. IO failures propagate to the
+    caller instead of being swallowed.
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        encoding="utf-8",
+        dir=str(path.parent),
+        prefix=f".{path.name}.tmp-",
+        delete=False,
+    ) as stream:
+        stream.write(content)
+        stream.flush()
+        os.fsync(stream.fileno())
+        temporary = stream.name
+    os.replace(temporary, path)
+
+
 def _strip_bullet(line: str) -> str:
     """Return one fact line without its bullet marker."""
     stripped = line.strip()
@@ -141,7 +166,7 @@ class KnowledgeBase:
         path = self._get_today_path()
         if not path.exists():
             today = date.today().isoformat()
-            path.write_text(get_daily_template(today), encoding="utf-8")
+            _write_text_atomically(path, get_daily_template(today))
             self.logger.info("Created new knowledge file: %s", path)
         return path
 
@@ -231,7 +256,7 @@ class KnowledgeBase:
             else self._get_file_path(date_str)
         )
         if date_str is not None and not path.exists():
-            path.write_text(get_daily_template(date_str), encoding="utf-8")
+            _write_text_atomically(path, get_daily_template(date_str))
 
         content = path.read_text(encoding="utf-8")
         section_pattern = rf"^## {re.escape(section)}\s*$"
@@ -267,7 +292,7 @@ class KnowledgeBase:
             + "\n\n"
             + content[section_end:].lstrip()
         )
-        path.write_text(new_content, encoding="utf-8")
+        _write_text_atomically(path, new_content)
         self.logger.info(
             "Added fact to %s (%s)",
             section,
@@ -299,7 +324,7 @@ class KnowledgeBase:
                 new_content = content.replace(old_text, new_text)
 
             if count > 0:
-                path.write_text(new_content, encoding="utf-8")
+                _write_text_atomically(path, new_content)
                 total_count += count
                 self.logger.info("Updated %d in %s", count, path.name)
 
@@ -333,7 +358,7 @@ class KnowledgeBase:
 
             if deleted > 0:
                 new_content = re.sub(r"\n{3,}", "\n\n", "\n".join(new_lines))
-                path.write_text(new_content, encoding="utf-8")
+                _write_text_atomically(path, new_content)
                 total_count += deleted
                 self.logger.info("Deleted %d in %s", deleted, path.name)
 

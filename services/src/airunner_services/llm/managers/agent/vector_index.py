@@ -146,7 +146,13 @@ class DocumentVectorIndex:
         )
 
     def persist(self, persist_dir: str) -> None:
-        """Persist documents and embeddings to disk."""
+        """Persist documents and embeddings to disk.
+
+        Each file is staged to a sibling temporary file (flushed
+        and fsynced) and then atomically renamed over its target,
+        so a crash or kill between writes never leaves a truncated
+        file behind. Failures propagate to the caller.
+        """
         self._validate_alignment()
         if self.embedding_identity is None and os.path.exists(_identity_path(persist_dir)):
             raise EmbeddingIdentityMismatchError(
@@ -154,12 +160,16 @@ class DocumentVectorIndex:
             )
         os.makedirs(persist_dir, exist_ok=True)
         payload = [_document_to_payload(doc) for doc in self.documents]
-        with open(_documents_path(persist_dir), "w", encoding="utf-8") as file:
-            json.dump(payload, file, indent=2, ensure_ascii=False, default=str)
-        np.save(_embeddings_path(persist_dir), self.embeddings)
+        _write_text_file_atomically(
+            _documents_path(persist_dir),
+            json.dumps(payload, indent=2, ensure_ascii=False, default=str),
+        )
+        _write_npy_atomically(_embeddings_path(persist_dir), self.embeddings)
         if self.embedding_identity is not None:
-            with open(_identity_path(persist_dir), "w", encoding="utf-8") as file:
-                json.dump(self.embedding_identity, file, indent=2, sort_keys=True)
+            _write_text_file_atomically(
+                _identity_path(persist_dir),
+                json.dumps(self.embedding_identity, indent=2, sort_keys=True),
+            )
 
     def replace_persisted_atomically(self, persist_dir: str) -> Optional[str]:
         """Validate this complete E5 index, then replace an index directory.
@@ -351,6 +361,39 @@ def _as_matrix(embeddings: Optional[np.ndarray]) -> np.ndarray:
     if matrix.ndim == 1:
         return matrix.reshape(1, -1)
     return matrix
+
+
+def _write_text_file_atomically(path: str, content: str) -> None:
+    """Stage text in the target directory, then rename over it."""
+    directory = os.path.dirname(path) or "."
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        encoding="utf-8",
+        dir=directory,
+        prefix=f".{os.path.basename(path)}.tmp-",
+        delete=False,
+    ) as stream:
+        stream.write(content)
+        stream.flush()
+        os.fsync(stream.fileno())
+        temporary = stream.name
+    os.replace(temporary, path)
+
+
+def _write_npy_atomically(path: str, array: np.ndarray) -> None:
+    """Stage an .npy array in the target directory, then rename it."""
+    directory = os.path.dirname(path) or "."
+    with tempfile.NamedTemporaryFile(
+        mode="wb",
+        dir=directory,
+        prefix=f".{os.path.basename(path)}.tmp-",
+        delete=False,
+    ) as stream:
+        np.save(stream, array)
+        stream.flush()
+        os.fsync(stream.fileno())
+        temporary = stream.name
+    os.replace(temporary, path)
 
 
 def _document_to_payload(document: Document) -> dict[str, Any]:
