@@ -388,83 +388,88 @@ class StreamingMixin:
             current_user_message: The current incoming user message to include
         """
         try:
-            # Simple sentiment analysis based on keywords
-            hostile_words = [
-                "fuck",
-                "stupid",
-                "idiot",
-                "hate",
-                "angry",
-                "damn",
-            ]
-            positive_words = [
-                "thanks",
-                "great",
-                "good",
-                "nice",
-                "appreciate",
-                "helpful",
-                "love",
-            ]
-            confused_words = [
-                "confused",
-                "don't understand",
-                "what",
-                "huh",
-                "unclear",
-            ]
-
             # ONLY analyze the current incoming message for mood
             # (not entire history to avoid stale sentiment)
             text = current_user_message.lower() if current_user_message else ""
-
-            # Determine mood and emoji based on current message only
-            mood, emoji, mood_message = (
-                "neutral",
-                "😐",
-                "*maintaining a calm, neutral demeanor*",
-            )
-
-            # Check for sentiment keywords in priority order
-            if any(word in text for word in hostile_words):
-                mood, emoji = "frustrated", "😟"
-                mood_message = "*feeling a bit hurt by the hostility*"
-            elif any(word in text for word in positive_words):
-                mood, emoji = "happy", "😊"
-                mood_message = "*feeling appreciated and happy to help*"
-            elif any(word in text for word in confused_words):
-                mood, emoji = "confused", "🤔"
-                mood_message = (
-                    "*sensing some confusion, let me try to clarify*"
-                )
-
-            from airunner_services.llm_workflow_events import (
-                resolve_llm_workflow_event_sink,
-            )
-
-            resolve_llm_workflow_event_sink(self).emit_bot_mood(
-                {"mood": mood, "emoji": emoji}
-            )
-
-            # Store mood in instance for attaching to AI messages
-            self._current_mood = mood
-            self._current_emoji = emoji
-
-            # Regenerate system prompt with updated mood
-            if hasattr(self, "update_system_prompt") and hasattr(
-                self, "system_prompt"
-            ):
-                self.update_system_prompt(self.system_prompt)
-            else:
-                self.logger.warning(
-                    "Cannot update system prompt - missing attributes"
-                )
-
-            self.logger.info(
-                f"[AUTO MOOD] Updated to: {mood} {emoji} - {mood_message}"
-            )
+            mood, emoji, mood_message = self._classify_mood(text)
+            self._publish_mood_update(mood, emoji, mood_message)
 
         except Exception as e:
             self.logger.error(
                 f"Error in automatic mood update: {e}", exc_info=True
             )
+
+    @staticmethod
+    def _classify_mood(text: str):
+        """Classify mood from keywords, in hostile/positive/confused order."""
+        hostile_words = [
+            "fuck",
+            "stupid",
+            "idiot",
+            "hate",
+            "angry",
+            "damn",
+        ]
+        positive_words = [
+            "thanks",
+            "great",
+            "good",
+            "nice",
+            "appreciate",
+            "helpful",
+            "love",
+        ]
+        confused_words = [
+            "confused",
+            "don't understand",
+            "what",
+            "huh",
+            "unclear",
+        ]
+
+        mood, emoji, mood_message = (
+            "neutral",
+            "😐",
+            "*maintaining a calm, neutral demeanor*",
+        )
+
+        if any(word in text for word in hostile_words):
+            mood, emoji = "frustrated", "😟"
+            mood_message = "*feeling a bit hurt by the hostility*"
+        elif any(word in text for word in positive_words):
+            mood, emoji = "happy", "😊"
+            mood_message = "*feeling appreciated and happy to help*"
+        elif any(word in text for word in confused_words):
+            mood, emoji = "confused", "🤔"
+            mood_message = (
+                "*sensing some confusion, let me try to clarify*"
+            )
+        return mood, emoji, mood_message
+
+    def _publish_mood_update(self, mood, emoji, mood_message) -> None:
+        """Emit, store, and log one classified mood update."""
+        from airunner_services.llm_workflow_events import (
+            resolve_llm_workflow_event_sink,
+        )
+
+        resolve_llm_workflow_event_sink(self).emit_bot_mood(
+            {"mood": mood, "emoji": emoji}
+        )
+
+        # Store mood in instance for attaching to AI messages
+        self._current_mood = mood
+        self._current_emoji = emoji
+
+        # Regenerate system prompt with updated mood
+        if hasattr(self, "update_system_prompt") and hasattr(
+            self, "system_prompt"
+        ):
+            self.update_system_prompt(self.system_prompt)
+        else:
+            self.logger.warning(
+                "Cannot update system prompt - missing attributes"
+            )
+
+        self.logger.info(
+            f"[AUTO MOOD] Updated to: {mood} {emoji} - {mood_message}"
+        )
