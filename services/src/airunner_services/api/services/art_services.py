@@ -41,6 +41,7 @@ class ARTAPIService(APIServiceBase):
 
 	@canvas.setter
 	def canvas(self, value: CanvasAPIService) -> None:
+		"""Replace the cached canvas API service."""
 		self._canvas_service = value
 
 	@property
@@ -59,6 +60,7 @@ class ARTAPIService(APIServiceBase):
 		self,
 		value: ImageFilterAPIServices,
 	) -> None:
+		"""Replace the cached image-filter API service."""
 		self._image_filter_service = value
 
 	def update_batch_images(self, images: List[Image]) -> None:
