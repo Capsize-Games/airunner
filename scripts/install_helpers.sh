@@ -93,8 +93,8 @@ ensure_venv() {
 # other build here just forces a later reinstall (or a broken mix of a
 # wrong-CUDA or CPU torch under cu129-built bitsandbytes/torchcodec).
 AIRUNNER_TORCH_VERSION='2.13.0+cu129'
-AIRUNNER_TORCHVISION_VERSION='0.28.0+cu129'
-AIRUNNER_TORCHAUDIO_VERSION='2.11.0+cu129'
+AIRUNNER_TORCHVISION_VERSION='0.28.0+cu129.capsize.1'
+AIRUNNER_TORCHAUDIO_VERSION='2.11.0+cu129.capsize.1'
 AIRUNNER_TORCHCODEC_VERSION='0.9.1'
 AIRUNNER_TORCH_CUDA_INDEX='https://download.pytorch.org/whl/cu129'
 AIRUNNER_TORCH_CPU_INDEX='https://download.pytorch.org/whl/cpu'
