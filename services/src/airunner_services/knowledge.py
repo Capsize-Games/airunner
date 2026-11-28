@@ -180,17 +180,23 @@ class KnowledgeBase:
         return path
 
     def list_files(self) -> List[Path]:
+        """Return knowledge files newest-first by date stem."""
         files = list(self.knowledge_dir.glob("*.md"))
         files.sort(key=lambda path: path.stem, reverse=True)
         return files
 
     def read_file(self, date_str: Optional[str] = None) -> str:
+        """Return one knowledge file, or empty when missing.
+
+        A malformed date string raises ``ValueError``.
+        """
         path = self._get_file_path(date_str)
         if path.exists():
             return path.read_text(encoding="utf-8")
         return ""
 
     def read_all(self, max_files: int = 30) -> str:
+        """Return the newest knowledge files as one labeled document."""
         parts = []
         for path in self.list_files()[:max_files]:
             content = path.read_text(encoding="utf-8")
@@ -259,6 +265,7 @@ class KnowledgeBase:
         section: str = "Notes",
         date_str: Optional[str] = None,
     ) -> bool:
+        """Append one non-duplicate fact to a dated knowledge section."""
         path = (
             self._ensure_today_file()
             if date_str is None
@@ -317,6 +324,7 @@ class KnowledgeBase:
         date_str: Optional[str] = None,
         is_regex: bool = False,
     ) -> Tuple[bool, int]:
+        """Replace every occurrence of one fact; return ``(changed, count)``."""
         files = (
             [self._get_file_path(date_str)] if date_str else self.list_files()
         )
@@ -347,6 +355,7 @@ class KnowledgeBase:
         date_str: Optional[str] = None,
         is_regex: bool = False,
     ) -> Tuple[bool, int]:
+        """Delete every line matching one fact; return ``(changed, count)``."""
         files = (
             [self._get_file_path(date_str)] if date_str else self.list_files()
         )
@@ -378,6 +387,7 @@ class KnowledgeBase:
     def search(
         self, query: str, max_results: int = 10
     ) -> List[Dict[str, str]]:
+        """Search knowledge lines and return ranked matches with context."""
         query_words = query.lower().split()
         min_score = (
             max(2, len(query_words) // 2) if len(query_words) > 2 else 1
@@ -411,6 +421,7 @@ class KnowledgeBase:
         return results[:max_results]
 
     def get_context(self, max_chars: int = 3000) -> str:
+        """Return bounded, de-duplicated background facts for prompting."""
         facts = []
         for path in self.list_files()[:7]:
             content = path.read_text(encoding="utf-8")
@@ -451,6 +462,7 @@ class KnowledgeBase:
         return context
 
     def get_all_files_for_rag(self) -> List[str]:
+        """Return absolute paths for every knowledge file."""
         return [str(path.absolute()) for path in self.list_files()]
 
     def ensure_rag_indexed(self, agent=None) -> bool:
