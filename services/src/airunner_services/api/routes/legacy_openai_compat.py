@@ -303,6 +303,7 @@ def _openai_chat_stream(
     accumulated_response: List[str] = []
 
     def error_frame(reason: str) -> bytes:
+        """Return one SSE error payload for a stream failure."""
         message = "Request timeout" if reason == "timeout" else (
             "Response exceeded the configured output limit"
             if reason == "overflow"
@@ -317,6 +318,7 @@ def _openai_chat_stream(
     )
 
     def callback(data: dict[str, Any]) -> None:
+        """Publish one streaming OpenAI chat update."""
         response = data.get("response")
         if response is None:
             return
@@ -409,6 +411,7 @@ def _openai_chat_non_stream(
     )
 
     def callback(data: dict[str, Any]) -> None:
+        """Publish one non-streaming OpenAI chat update."""
         response = data.get("response")
         if response is None:
             return
