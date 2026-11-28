@@ -2,6 +2,7 @@ from airunner_common.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
 
 
 def parse_template(template: dict) -> str:
+    """Render the supported causal-LLM prompt template."""
     system_instructions = template["system_instructions"]
     model = template["model"]
     llm_category = template["llm_category"]
