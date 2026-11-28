@@ -87,8 +87,8 @@ def test_legal_sources_present_and_staged() -> None:
     for path in LEGAL_FILES:
         assert path.is_file(), path
     license_text = LEGAL_FILES[0].read_text(encoding="utf-8")
-    assert "GNU GENERAL PUBLIC LICENSE" in license_text
-    assert "Version 3" in license_text
+    assert "Apache License" in license_text
+    assert "Version 2.0" in license_text
     staged = staged_legal_sources(load_spec())
     for path in LEGAL_FILES:
         source = path.relative_to(REPO_ROOT).as_posix()

@@ -59,7 +59,7 @@ Historical pin set (previous release issue P02):
 - Historical constraint lock:
   package/constraints-linux-nvidia-cu129-historical-desktop.txt
 - Constraint lock sha256:
-- 97d03b6dedfcbd4b0fa58decfde6dfc15fe712f742a088f5e9d5cfc8446ac7d8
+- 1d4bfa7cffa840385f047c21f82ba7b7976ce5b567f581e013803db40d0ffa29
 - Constraint pins: 332 (historical)
 - Historical profile roots: `./services[desktop]`, `./native`
   (installed from the local tree, not pinned in the
