@@ -50,6 +50,63 @@ _MAX_TTS_SPEED = 4.0
 _SYNTHESIS_TIMEOUT_SECONDS = 120.0
 
 
+async def _validate_tts_request(ws: WebSocket, msg: Dict[str, Any]):
+    """Validate speed, text, and request shape; None after an error frame."""
+    raw_speed = msg.get("speed", 1.0)
+    try:
+        speed = float(raw_speed if raw_speed is not None else 1.0)
+    except (TypeError, ValueError):
+        await ws.send_json(
+            {"type": "error", "message": "invalid_speed"}
+        )
+        return None
+    if not (_MIN_TTS_SPEED <= speed <= _MAX_TTS_SPEED):
+        await ws.send_json(
+            {"type": "error", "message": "invalid_speed"}
+        )
+        return None
+    text = str(msg.get("text") or "")
+    if not text.strip():
+        await ws.send_json(
+            {"type": "error", "message": "text is required"}
+        )
+        return None
+    try:
+        return TTSRequest(
+            text=text,
+            voice=msg.get("voice"),
+            speed=speed,
+        )
+    except ValidationError:
+        await ws.send_json(
+            {"type": "error", "message": "invalid_request"}
+        )
+        return None
+
+
+async def _invoke_tts_runtime(ws, client, request, lock, timeout):
+    """Invoke one synthesis under the lock; None after an error frame."""
+    active = lock if lock is not None else asyncio.Lock()
+    try:
+        async with active:
+            return await asyncio.wait_for(
+                asyncio.to_thread(
+                    client.invoke, build_tts_envelope(request)
+                ),
+                timeout=timeout,
+            )
+    except asyncio.TimeoutError:
+        logger.warning("TTS synthesis timed out")
+        await ws.send_json(
+            {"type": "error", "message": "synthesis_timeout"}
+        )
+        return None
+    except Exception as exc:
+        logger.error("Error synthesizing speech: %s", exc)
+        await ws.send_json({"type": "error", "message": "synthesis_failed"})
+        return None
+
+
 async def _synthesize(
     ws: WebSocket,
     msg: Dict[str, Any],
@@ -63,56 +120,13 @@ async def _synthesize(
     connection, and one connection synthesizes at most one utterance
     at a time behind ``lock`` with a bounded wait (issue #2427).
     """
-    raw_speed = msg.get("speed", 1.0)
-    try:
-        speed = float(raw_speed if raw_speed is not None else 1.0)
-    except (TypeError, ValueError):
-        await ws.send_json(
-            {"type": "error", "message": "invalid_speed"}
-        )
-        return
-    if not (_MIN_TTS_SPEED <= speed <= _MAX_TTS_SPEED):
-        await ws.send_json(
-            {"type": "error", "message": "invalid_speed"}
-        )
-        return
-    text = str(msg.get("text") or "")
-    if not text.strip():
-        await ws.send_json(
-            {"type": "error", "message": "text is required"}
-        )
-        return
-    try:
-        request = TTSRequest(
-            text=text,
-            voice=msg.get("voice"),
-            speed=speed,
-        )
-    except ValidationError:
-        await ws.send_json(
-            {"type": "error", "message": "invalid_request"}
-        )
+    request = await _validate_tts_request(ws, msg)
+    if request is None:
         return
     logger.info("TTS ws request (%s)", summarize_text(request.text))
     client = resolve_tts_client(require_runtime_registry(ws))
-    active = lock if lock is not None else asyncio.Lock()
-    try:
-        async with active:
-            response = await asyncio.wait_for(
-                asyncio.to_thread(
-                    client.invoke, build_tts_envelope(request)
-                ),
-                timeout=timeout,
-            )
-    except asyncio.TimeoutError:
-        logger.warning("TTS synthesis timed out")
-        await ws.send_json(
-            {"type": "error", "message": "synthesis_timeout"}
-        )
-        return
-    except Exception as exc:
-        logger.error("Error synthesizing speech: %s", exc)
-        await ws.send_json({"type": "error", "message": "synthesis_failed"})
+    response = await _invoke_tts_runtime(ws, client, request, lock, timeout)
+    if response is None:
         return
     if response.status is not EnvelopeStatus.SUCCEEDED:
         if response.error:
