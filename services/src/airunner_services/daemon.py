@@ -649,7 +649,7 @@ def main(argv: list[str] | None = None):
             receipt = install_private_toolchain(args.triton_toolchain_dir)
         except (ImportError, OSError, ValueError) as exc:
             parser.exit(1, f"Triton toolchain installation failed: {exc}\n")
-        print(
+        print(  # intentional CLI output
             "Private Triton toolchain staged: "
             f"{receipt['environment']['TRITON_PTXAS_PATH']}"
         )
