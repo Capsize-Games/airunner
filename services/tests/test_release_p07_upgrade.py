@@ -11,6 +11,13 @@ import sqlite3
 import subprocess
 from pathlib import Path
 
+import pytest
+
+from airunner_services.downloads.update_install import (
+    UPGRADE_SCRIPT_ENV_VAR,
+    UpdateInstallError,
+    _upgrade_script_path,
+)
 from test_release_p07_support import _data_db
 from test_release_p07_support import _rows
 
@@ -137,3 +144,32 @@ def test_rollback_restores_previous_and_keeps_data(tmp_path: Path) -> None:
     )
     assert bad.returncode != 0
     assert _current(prefix) == "1.2.3"
+
+
+def test_upgrade_script_override_missing_file_fails_closed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A bogus installer override never becomes an executed command path."""
+    monkeypatch.setenv(
+        UPGRADE_SCRIPT_ENV_VAR, str(tmp_path / "no-such-upgrade.sh")
+    )
+    with pytest.raises(UpdateInstallError, match="does not point at a file"):
+        _upgrade_script_path()
+
+
+def test_upgrade_script_override_valid_file_is_honored(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A real-file override resolves to that file."""
+    script = tmp_path / "custom-upgrade.sh"
+    script.write_text("#!/bin/sh\nexit 0\n")
+    monkeypatch.setenv(UPGRADE_SCRIPT_ENV_VAR, str(script))
+    assert _upgrade_script_path() == script
+
+
+def test_upgrade_script_default_resolves_in_checkout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Without an override the packaged upgrade.sh is used."""
+    monkeypatch.delenv(UPGRADE_SCRIPT_ENV_VAR, raising=False)
+    assert _upgrade_script_path() == _UPGRADE_SH

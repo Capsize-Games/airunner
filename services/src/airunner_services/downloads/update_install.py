@@ -158,10 +158,20 @@ def _run_upgrade(bundle: Path, prefix: Path) -> None:
 
 
 def _upgrade_script_path() -> Path:
-    """Locate ``packaging/linux/upgrade.sh`` for this checkout."""
+    """Locate ``packaging/linux/upgrade.sh`` for this checkout.
+
+    An operator override via ``AIRUNNER_UPGRADE_SH`` must point at an
+    existing file; anything else fails closed instead of executing an
+    attacker-controlled command path in the verified-update installer.
+    """
     override = os.environ.get(UPGRADE_SCRIPT_ENV_VAR)
     if override:
-        return Path(override)
+        candidate = Path(override)
+        if not candidate.is_file():
+            raise UpdateInstallError(
+                f"{UPGRADE_SCRIPT_ENV_VAR} does not point at a file"
+            )
+        return candidate
     root = Path(__file__).resolve().parents[4]
     candidate = root / "packaging" / "linux" / "upgrade.sh"
     if not candidate.is_file():
