@@ -21,19 +21,22 @@ class SoundDeviceManager:
         self._initialized = False
 
     @property
-    def in_stream(self):
+    def in_stream(self) -> Optional[sd.InputStream]:
+        """Return the input stream, initializing it when needed."""
         if not self._in_stream:
             self.initialize_input_stream()
         return self._in_stream
 
     @property
-    def out_stream(self):
+    def out_stream(self) -> Optional[sd.OutputStream]:
+        """Return the output stream, initializing it when needed."""
         if not self._out_stream:
             self.initialize_output_stream()
         return self._out_stream
 
     @property
-    def initialized(self):
+    def initialized(self) -> bool:
+        """Return whether either audio stream has been initialized."""
         return self._initialized
 
     def get_devices(self) -> Dict:
