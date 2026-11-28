@@ -156,22 +156,8 @@ class LLMCrawlerController:
         metadata = page_data.get("metadata", {})
         url = page_data.get("url", "unknown")
 
-        # Truncate content for prompt (keep first 1000 chars)
-        content_preview = content[:1000] + (
-            "..." if len(content) > 1000 else ""
-        )
-
-        # Format links section
-        links_text = ""
-        for i, link in enumerate(links[:10], 1):  # Show max 10 links
-            links_text += f"\n{i}. {link['url']}\n"
-            links_text += f"   Anchor: {link['anchor_text']}\n"
-            links_text += f"   Context: {link['context'][:100]}...\n"
-
-        if len(links) > 10:
-            links_text += (
-                f"\n... and {len(links) - 10} more links (not shown)\n"
-            )
+        content_preview = self._content_preview(content)
+        links_text = self._format_links_section(links)
 
         prompt = f"""You are a research assistant conducting intelligent web crawling.
 
@@ -223,6 +209,26 @@ Remember: Respond with ONLY the JSON object, no additional text.
 """
 
         return prompt
+
+    @staticmethod
+    def _content_preview(content: str) -> str:
+        """Return the first 1000 chars with an ellipsis when truncated."""
+        return content[:1000] + ("..." if len(content) > 1000 else "")
+
+    @staticmethod
+    def _format_links_section(links: list) -> str:
+        """Render the numbered link list (max 10 shown) for the prompt."""
+        links_text = ""
+        for i, link in enumerate(links[:10], 1):  # Show max 10 links
+            links_text += f"\n{i}. {link['url']}\n"
+            links_text += f"   Anchor: {link['anchor_text']}\n"
+            links_text += f"   Context: {link['context'][:100]}...\n"
+
+        if len(links) > 10:
+            links_text += (
+                f"\n... and {len(links) - 10} more links (not shown)\n"
+            )
+        return links_text
 
     def _parse_llm_response(
         self, llm_response: str, page_data: Dict
