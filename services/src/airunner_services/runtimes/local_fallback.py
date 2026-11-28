@@ -1187,18 +1187,9 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         from airunner_common.contract_enums import ModelStatus, SignalCode
 
         component = self._art_component(request)
-        if component == "rmbg":
-            manager = self._rmbg_model_manager
-            if manager is not None:
-                manager.unload()
-            return ResponseEnvelope(
-                request_id=request.request_id,
-                status=EnvelopeStatus.SUCCEEDED,
-                payload={"accepted": True, "component": component},
-            )
-
-        if component == "safety_checker":
-            return self._unload_safety_checker_component(request.request_id)
+        component_response = self._unload_known_component(request, component)
+        if component_response is not None:
+            return component_response
 
         # Fast-path when nothing is loaded: emitting SD_UNLOAD_SIGNAL and
         # waiting 120s for an UNLOADED that never comes is what hung the
@@ -1227,6 +1218,21 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         return self._unload_art_model_via_signal(
             request.request_id, unload_timeout
         )
+
+    def _unload_known_component(self, request: RequestEnvelope, component: str) -> Optional[ResponseEnvelope]:
+        """Unload one known non-pipeline component or return None."""
+        if component == "rmbg":
+            manager = self._rmbg_model_manager
+            if manager is not None:
+                manager.unload()
+            return ResponseEnvelope(
+                request_id=request.request_id,
+                status=EnvelopeStatus.SUCCEEDED,
+                payload={"accepted": True, "component": component},
+            )
+        if component == "safety_checker":
+            return self._unload_safety_checker_component(request.request_id)
+        return None
 
     def _unload_art_model_via_signal(self, request_id: str, unload_timeout: float) -> ResponseEnvelope:
         """Wait for one art unload through the model status signal."""
