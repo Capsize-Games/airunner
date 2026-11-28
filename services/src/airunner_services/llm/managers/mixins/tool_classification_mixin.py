@@ -19,10 +19,42 @@ from airunner_services.llm_workflow_events import (
 )
 
 
+#: Reply-shape hints that indicate a constrained prompt.
+_CONSTRAINED_REPLY_HINTS: Tuple[str, ...] = (
+    "single digit",
+    "one digit",
+    "single character",
+    "one character",
+    "single letter",
+    "one letter",
+    "single word",
+    "one word",
+)
+
+#: Words that trigger search-tool routing.
+_SEARCH_TRIGGER_WORDS: Tuple[str, ...] = (
+    "search",
+    "look up",
+    "lookup",
+    "find",
+    "google",
+    "bing",
+    "duckduckgo",
+    "ddg",
+    "web",
+    "internet",
+    "news",
+    "latest",
+    "recent",
+)
+
+
 class ToolClassificationMixin:
     """Classify prompts into tool categories and direct tool routes."""
 
     ALWAYS_INCLUDE_CATEGORIES = {"knowledge"}
+    CONSTRAINED_REPLY_HINTS = _CONSTRAINED_REPLY_HINTS
+    SEARCH_TRIGGER_WORDS = _SEARCH_TRIGGER_WORDS
     SIMPLE_SYSTEM_TOOL_PATTERNS: Tuple[Tuple[str, str], ...] = (
         (r"\bwhat\s+time\s+is\s+it\b", "get_current_datetime"),
         (
@@ -73,32 +105,6 @@ class ToolClassificationMixin:
         r"(?:fun\s+fact|quote)\b.*$",
         r"^\s*(?:make\s+me\s+laugh|be\s+funny)[!.?,\s]*$",
     )
-    CONSTRAINED_REPLY_HINTS: Tuple[str, ...] = (
-        "single digit",
-        "one digit",
-        "single character",
-        "one character",
-        "single letter",
-        "one letter",
-        "single word",
-        "one word",
-    )
-    SEARCH_TRIGGER_WORDS: Tuple[str, ...] = (
-        "search",
-        "look up",
-        "lookup",
-        "find",
-        "google",
-        "bing",
-        "duckduckgo",
-        "ddg",
-        "web",
-        "internet",
-        "news",
-        "latest",
-        "recent",
-    )
-
     @classmethod
     def _detect_simple_tool_route(
         cls,
