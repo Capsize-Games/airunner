@@ -86,46 +86,12 @@ class MultiIndexRetriever:
 
         all_documents: list = []
         identity = _embedding_identity(self._rag_mixin.embedding)
+        self._search_unified_index(
+            query_vector, identity, doc_ids, all_documents
+        )
 
-        if hasattr(self._rag_mixin, "_index") and self._rag_mixin._index:
-            try:
-                if hasattr(self._rag_mixin, "logger"):
-                    self._rag_mixin.logger.debug(
-                        "Searching unified in-memory index"
-                    )
-
-                all_documents.extend(
-                    self._rag_mixin._index.similarity_search_by_vector(
-                        query_vector,
-                        self._similarity_top_k,
-                        doc_ids,
-                        expected_identity=identity,
-                    )
-                )
-
-                if hasattr(self._rag_mixin, "logger"):
-                    self._rag_mixin.logger.debug(
-                        "Searched unified in-memory index successfully"
-                    )
-
-            except Exception as e:
-                if hasattr(self._rag_mixin, "logger"):
-                    self._rag_mixin.logger.error(
-                        f"Error retrieving from unified index: {e}"
-                    )
-
-        active_doc_ids = self._rag_mixin._get_active_document_ids()
-        if doc_ids is not None:
-            allowed = set(doc_ids)
-            active_doc_ids = [doc_id for doc_id in active_doc_ids if doc_id in allowed]
-
-        if not active_doc_ids and doc_ids is not None:
-            return _top_documents(all_documents, self._similarity_top_k)
-        if not active_doc_ids:
-            if hasattr(self._rag_mixin, "logger"):
-                self._rag_mixin.logger.warning(
-                    "No active documents selected. Please activate documents in the Documents panel."
-                )
+        active_doc_ids = self._resolve_active_doc_ids(doc_ids)
+        if active_doc_ids is None:
             return _top_documents(all_documents, self._similarity_top_k)
 
         if hasattr(self._rag_mixin, "logger"):
@@ -164,6 +130,58 @@ class MultiIndexRetriever:
                     f"Error embedding query for retrieval: {exc}"
                 )
             return None
+
+    def _search_unified_index(self, query_vector, identity, doc_ids, all_documents):
+        """Extend all_documents from the unified in-memory index, if present."""
+        if not (hasattr(self._rag_mixin, "_index") and self._rag_mixin._index):
+            return
+        try:
+            if hasattr(self._rag_mixin, "logger"):
+                self._rag_mixin.logger.debug(
+                    "Searching unified in-memory index"
+                )
+
+            all_documents.extend(
+                self._rag_mixin._index.similarity_search_by_vector(
+                    query_vector,
+                    self._similarity_top_k,
+                    doc_ids,
+                    expected_identity=identity,
+                )
+            )
+
+            if hasattr(self._rag_mixin, "logger"):
+                self._rag_mixin.logger.debug(
+                    "Searched unified in-memory index successfully"
+                )
+
+        except Exception as e:
+            if hasattr(self._rag_mixin, "logger"):
+                self._rag_mixin.logger.error(
+                    f"Error retrieving from unified index: {e}"
+                )
+
+    def _resolve_active_doc_ids(self, doc_ids):
+        """Return the active doc ids to search, or None for an early return.
+
+        The caller returns the accumulated documents when this is None:
+        either an explicit scope filtered everything out, or no
+        documents are active at all.
+        """
+        active_doc_ids = self._rag_mixin._get_active_document_ids()
+        if doc_ids is not None:
+            allowed = set(doc_ids)
+            active_doc_ids = [doc_id for doc_id in active_doc_ids if doc_id in allowed]
+
+        if not active_doc_ids and doc_ids is not None:
+            return None
+        if not active_doc_ids:
+            if hasattr(self._rag_mixin, "logger"):
+                self._rag_mixin.logger.warning(
+                    "No active documents selected. Please activate documents in the Documents panel."
+                )
+            return None
+        return active_doc_ids
 
 
 def _top_documents(hits: list, limit: int) -> list[Document]:
