@@ -466,6 +466,7 @@ class AIRunnerDaemon:
         interval = health_config.get("heartbeat_interval", 30)
 
         def heartbeat_loop():
+            """Write the heartbeat timestamp until shutdown is requested."""
             while not self.shutdown_requested:
                 self._write_heartbeat(heartbeat_file)
                 time.sleep(interval)
