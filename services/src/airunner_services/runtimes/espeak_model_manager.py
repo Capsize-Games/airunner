@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import threading
 from abc import ABCMeta
-from typing import Optional
+from typing import Any, Optional
 
 import pyttsx3
 
@@ -165,7 +165,7 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
         """Return the current eSpeak runtime state."""
         return self._model_status.get(ModelType.TTS, ModelStatus.UNLOADED)
 
-    def generate(self, tts_request: TTSRequest):
+    def generate(self, tts_request: TTSRequest) -> None:
         """Generate speech for one request when the engine is ready.
 
         The pyttsx3 driver is not thread-safe, so generation is
@@ -190,7 +190,7 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
                 self.logger.error("Error during speech generation: %s", exc)
             return None
 
-    def load(self, target_model=None):
+    def load(self, target_model: Any = None) -> None:
         """Load and initialize the eSpeak engine."""
         del target_model
         if self.status in (ModelStatus.LOADING, ModelStatus.LOADED):
@@ -217,7 +217,7 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
             self._engine = None
             self.change_model_status(ModelType.TTS, ModelStatus.FAILED)
 
-    def unload(self):
+    def unload(self) -> None:
         """Unload the active eSpeak engine."""
         if self.status is ModelStatus.UNLOADED:
             return
@@ -225,7 +225,9 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
         self.change_model_status(ModelType.TTS, ModelStatus.UNLOADED)
         self._engine = None
 
-    def reload_speaker_embeddings(self, reference_speaker_path=None):
+    def reload_speaker_embeddings(
+        self, reference_speaker_path: Optional[str] = None
+    ) -> None:
         """No-op hook for API compatibility with OpenVoice."""
         del reference_speaker_path
 
