@@ -1,5 +1,12 @@
 # Versioning and compatibility policy
 
+> Historical snapshot (written 2026-09-17): the "Current state" section
+> below describes the pre-split tree (root `setup.py`, single-sourced
+> `VERSION` under `shared/`). The tree now versions `services` (6.1.11)
+> and `native` (6.1.4) independently with `airunner-common~=6.1.8` pins
+> (see `services/setup.py`, `native/setup.py`); there is no root
+> `setup.py`. Policy decisions below still apply unless superseded.
+
 Status: policy decision for the repo-split work tracked in
 [#2185](https://github.com/Capsize-Games/airunner/issues/2185). No
 code changes required by this document alone; it is the answer that
