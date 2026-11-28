@@ -1,5 +1,7 @@
 import base64
 import io
+from typing import Optional
+
 import PIL
 from PIL import Image
 
@@ -101,7 +103,14 @@ def _validate_or_none(binary_data: bytes):
     return None
 
 
-def convert_binary_to_image(binary_data) -> Image:  # type: ignore[override]
+def convert_binary_to_image(
+    binary_data: bytes | bytearray | str | memoryview | None,
+) -> Optional[Image.Image]:  # type: ignore[override]
+    """Decode raw/PNG bytes, JPEG bytes, or legacy base64 into one image.
+
+    Legacy base64 bytes are accepted only for raw/PNG payloads. Return
+    ``None`` for invalid, oversized, or undecodable input.
+    """
     if binary_data is None:
         return None
 
