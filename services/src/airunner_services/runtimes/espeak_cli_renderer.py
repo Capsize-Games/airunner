@@ -231,6 +231,39 @@ class EspeakCliRenderer:
             raise EspeakRenderError("tts_render_failed")
         normalized = bytearray(output)
         struct.pack_into("<I", normalized, 4, len(normalized) - 8)
+        format_params, data_size = EspeakCliRenderer._scan_wav_chunks(
+            normalized
+        )
+        if format_params is None or data_size is None or data_size <= 0:
+            raise EspeakRenderError("tts_render_failed")
+        channels, sample_rate, sample_width = (
+            EspeakCliRenderer._validate_wav_format(
+                format_params, data_size
+            )
+        )
+        try:
+            with wave.open(io.BytesIO(normalized), "rb") as wav_file:
+                if (
+                    wav_file.getcomptype() != "NONE"
+                    or wav_file.getnchannels() != channels
+                    or wav_file.getsampwidth() != sample_width
+                    or wav_file.getframerate() != sample_rate
+                ):
+                    raise EspeakRenderError("tts_render_failed")
+                frames = wav_file.readframes(wav_file.getnframes())
+        except (wave.Error, EOFError) as exc:
+            raise EspeakRenderError("tts_render_failed") from exc
+        if len(frames) != data_size:
+            raise EspeakRenderError("tts_render_failed")
+        return bytes(normalized)
+
+    @staticmethod
+    def _scan_wav_chunks(normalized: bytearray):
+        """Walk RIFF chunks, repairing the data size and reading fmt/data.
+
+        Returns:
+            The parsed format params and the data chunk size.
+        """
         cursor = 12
         format_params = None
         data_size = None
@@ -255,8 +288,15 @@ class EspeakCliRenderer:
                 data_size = chunk_size
                 break
             cursor = payload_start + chunk_size + (chunk_size & 1)
-        if format_params is None or data_size is None or data_size <= 0:
-            raise EspeakRenderError("tts_render_failed")
+        return format_params, data_size
+
+    @staticmethod
+    def _validate_wav_format(format_params, data_size: int) -> tuple:
+        """Validate fmt parameters against the data size.
+
+        Returns:
+            The channel count, sample rate, and sample width.
+        """
         (
             audio_format,
             channels,
@@ -276,18 +316,4 @@ class EspeakCliRenderer:
             or data_size % block_align != 0
         ):
             raise EspeakRenderError("tts_render_failed")
-        try:
-            with wave.open(io.BytesIO(normalized), "rb") as wav_file:
-                if (
-                    wav_file.getcomptype() != "NONE"
-                    or wav_file.getnchannels() != channels
-                    or wav_file.getsampwidth() != sample_width
-                    or wav_file.getframerate() != sample_rate
-                ):
-                    raise EspeakRenderError("tts_render_failed")
-                frames = wav_file.readframes(wav_file.getnframes())
-        except (wave.Error, EOFError) as exc:
-            raise EspeakRenderError("tts_render_failed") from exc
-        if len(frames) != data_size:
-            raise EspeakRenderError("tts_render_failed")
-        return bytes(normalized)
+        return channels, sample_rate, sample_width
