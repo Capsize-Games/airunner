@@ -219,33 +219,37 @@ def search_web(
 			logger.warning("Empty DuckDuckGo results list")
 			return {"results": []}
 
-		formatted = f"Web search results for '{query}':\n\n"
-		for i, result in enumerate(ddg_results[:5], 1):
-			title = result.get("title", "N/A")
-			link = result.get("link", "#")
-			snippet = result.get("snippet", "")[:200]
-			formatted += f"{i}. {title}\n"
-			formatted += f"   URL: {link}\n"
-			if snippet:
-				formatted += f"   {snippet}...\n"
-			formatted += "\n"
-
-		formatted += "\n" + "=" * 60 + "\n"
-		formatted += "📝 NEXT STEPS: You can:\n"
-		formatted += (
-			"- Use `scrape_website` on a URL to get full article content\n"
-		)
-		formatted += (
-			"- Use `search_web` again with a different query for more info\n"
-		)
-		formatted += "- Or respond directly if you have enough information\n"
-		formatted += "=" * 60 + "\n"
-
-		logger.info("Formatted %d search results", len(ddg_results[:5]))
+		formatted = _format_web_results(query, ddg_results)
 		return {"results": ddg_results, "summary": formatted}
 	except Exception as exc:
 		logger.error("Web search error: %s", exc, exc_info=True)
 		return f"Error searching web: {str(exc)}"
+
+
+def _format_web_results(query: str, results: List[Dict[str, str]]) -> str:
+	"""Format one web result list as a readable summary."""
+	formatted = f"Web search results for '{query}':\n\n"
+	for i, result in enumerate(results[:5], 1):
+		title = result.get("title", "N/A")
+		link = result.get("link", "#")
+		snippet = result.get("snippet", "")[:200]
+		formatted += f"{i}. {title}\n"
+		formatted += f"   URL: {link}\n"
+		if snippet:
+			formatted += f"   {snippet}...\n"
+		formatted += "\n"
+	formatted += "\n" + "=" * 60 + "\n"
+	formatted += "📝 NEXT STEPS: You can:\n"
+	formatted += (
+		"- Use `scrape_website` on a URL to get full article content\n"
+	)
+	formatted += (
+		"- Use `search_web` again with a different query for more info\n"
+	)
+	formatted += "- Or respond directly if you have enough information\n"
+	formatted += "=" * 60 + "\n"
+	logger.info("Formatted %d search results", len(results[:5]))
+	return formatted
 
 
 @tool(
