@@ -13,6 +13,13 @@ import io
 import os
 from typing import Any, Callable
 
+#: Max bytes one ``granted_read`` may return or one ``granted_write``
+#: may store. Reads use a bounded ``read(cap + 1)`` so an over-cap file
+#: costs at most one extra byte in memory; writes are measured after
+#: ``str`` -> ``bytes`` encoding and rejected before the file is opened,
+#: so a denied write leaves no partial file behind.
+GRANTED_IO_CAP_BYTES = 65536
+
 #: Last-mile mirror of the admission validator's denylists in
 #: ``database/models/llm_tool.py``. The worker is stdlib-only so it
 #: cannot import that module; the parity test in ``test_release_t02``
@@ -118,19 +125,28 @@ def resolve_grant_path(path: str, roots: tuple[str, ...]) -> str:
     raise CapabilityDenied("path is outside the granted roots")
 
 
-def make_granted_read(roots: tuple[str, ...]) -> Callable[[str], bytes]:
+def make_granted_read(
+    roots: tuple[str, ...], cap_bytes: int = GRANTED_IO_CAP_BYTES
+) -> Callable[[str], bytes]:
     """Build the ``granted_read`` helper scoped to ``roots``."""
 
     def granted_read(path: str) -> bytes:
         """Read bytes from one path inside the granted roots."""
         resolved = resolve_grant_path(path, roots)
         with open(resolved, "rb") as handle:
-            return handle.read()
+            data = handle.read(cap_bytes + 1)
+        if len(data) > cap_bytes:
+            raise CapabilityDenied(
+                f"granted_read exceeds {cap_bytes} bytes"
+            )
+        return data
 
     return granted_read
 
 
-def make_granted_write(roots: tuple[str, ...]) -> Callable[[str, Any], int]:
+def make_granted_write(
+    roots: tuple[str, ...], cap_bytes: int = GRANTED_IO_CAP_BYTES
+) -> Callable[[str, Any], int]:
     """Build the ``granted_write`` helper scoped to ``roots``."""
 
     def granted_write(path: str, data: Any) -> int:
@@ -140,6 +156,10 @@ def make_granted_write(roots: tuple[str, ...]) -> Callable[[str, Any], int]:
             data = data.encode("utf-8")
         if not isinstance(data, bytes):
             raise CapabilityDenied("granted_write needs bytes or str")
+        if len(data) > cap_bytes:
+            raise CapabilityDenied(
+                f"granted_write exceeds {cap_bytes} bytes"
+            )
         with open(resolved, "wb") as handle:
             return handle.write(data)
 
@@ -246,20 +266,40 @@ def _apply_one_limit(
     applied[name] = f"{pair[0]}/{pair[1]}"
 
 
-def apply_resource_limits(timeout_ms: int) -> dict[str, str]:
-    """Apply Linux rlimits best-effort; return what stuck."""
+def apply_resource_limits(
+    timeout_ms: int,
+    *,
+    address_space_bytes: int = 512 * 1024 * 1024,
+    max_processes: int | None = 0,
+) -> dict[str, str]:
+    """Apply Linux rlimits best-effort; return what stuck.
+
+    Defaults preserve the custom-tool worker confinement (512 MiB
+    address space, no child processes). Callers whose legitimate
+    workload needs more room pass wider knobs; ``max_processes=None``
+    leaves the process count alone (the math worker does this: its
+    validated code has no spawn primitive, while BLAS thread pools
+    need room). Every knob that is set stays a real enforced ceiling.
+    """
     applied: dict[str, str] = {}
     try:
         import resource as resource_mod
     except ImportError:
         return applied
     cpu = max(1, int(timeout_ms // 1000) + 5)
-    cap = 512 * 1024 * 1024
+    cap = max(1, int(address_space_bytes))
     limits = {
         "RLIMIT_AS": (cap, cap),
         "RLIMIT_CPU": (cpu, cpu),
-        "RLIMIT_NPROC": (0, 0),
+        # Backstop for granted_write: regular-file growth past the
+        # byte cap fails instead of landing on disk. Pipes (the
+        # framed stdout reply) are not subject to RLIMIT_FSIZE, so a
+        # bounded oversized response still reaches the parent.
+        "RLIMIT_FSIZE": (GRANTED_IO_CAP_BYTES, GRANTED_IO_CAP_BYTES),
     }
+    if max_processes is not None:
+        nproc = max(0, int(max_processes))
+        limits["RLIMIT_NPROC"] = (nproc, nproc)
     for name, pair in limits.items():
         _apply_one_limit(resource_mod, name, pair, applied)
     return applied
@@ -268,6 +308,7 @@ def apply_resource_limits(timeout_ms: int) -> dict[str, str]:
 __all__ = [
     "CappedWriter",
     "CapabilityDenied",
+    "GRANTED_IO_CAP_BYTES",
     "apply_resource_limits",
     "build_namespace",
     "find_tool",

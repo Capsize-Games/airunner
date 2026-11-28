@@ -175,6 +175,105 @@ def test_confine_denylist_covers_new_bypasses() -> None:
         assert name in confine._GUARD_DENIED_CALLS
 
 
+def test_granted_read_enforces_byte_cap(tmp_path: Any) -> None:
+    confine = pytest.importorskip(
+        "airunner_services.llm.core.tool_worker_confine"
+    )
+    cap = confine.GRANTED_IO_CAP_BYTES
+    assert cap == 65536
+    reader = confine.make_granted_read((str(tmp_path),))
+    exact = tmp_path / "exact.bin"
+    exact.write_bytes(b"x" * cap)
+    assert reader(str(exact)) == b"x" * cap
+    small = tmp_path / "small.bin"
+    small.write_bytes(b"abc")
+    assert reader(str(small)) == b"abc"
+    big = tmp_path / "big.bin"
+    big.write_bytes(b"x" * (cap + 1))
+    with pytest.raises(confine.CapabilityDenied):
+        reader(str(big))
+    huge = tmp_path / "huge.bin"
+    huge.write_bytes(b"x" * (cap * 2))
+    with pytest.raises(confine.CapabilityDenied):
+        reader(str(huge))
+    outside = tmp_path.parent / "outside.bin"
+    outside.write_bytes(b"abc")
+    try:
+        with pytest.raises(confine.CapabilityDenied):
+            reader(str(outside))
+    finally:
+        outside.unlink()
+
+
+def test_granted_write_enforces_byte_cap(tmp_path: Any) -> None:
+    confine = pytest.importorskip(
+        "airunner_services.llm.core.tool_worker_confine"
+    )
+    cap = confine.GRANTED_IO_CAP_BYTES
+    writer = confine.make_granted_write((str(tmp_path),))
+    ok_target = tmp_path / "ok.bin"
+    assert writer(str(ok_target), b"abc") == 3
+    assert ok_target.read_bytes() == b"abc"
+    exact_target = tmp_path / "exact.bin"
+    assert writer(str(exact_target), b"y" * cap) == cap
+    assert exact_target.read_bytes() == b"y" * cap
+    denied_target = tmp_path / "denied.bin"
+    with pytest.raises(confine.CapabilityDenied):
+        writer(str(denied_target), b"y" * (cap + 1))
+    assert not denied_target.exists()
+    str_target = tmp_path / "denied_str.bin"
+    with pytest.raises(confine.CapabilityDenied):
+        writer(str(str_target), "z" * (cap + 1))
+    assert not str_target.exists()
+    with pytest.raises(confine.CapabilityDenied):
+        writer(str(tmp_path / "bad.bin"), 123)
+    with pytest.raises(confine.CapabilityDenied):
+        writer("/definitely-outside-grant-roots-w3.bin", b"abc")
+
+
+def test_worker_resource_limits_include_fsize() -> None:
+    """RLIMIT_FSIZE sticks in a fresh child; the test process is untouched."""
+    import json
+    import subprocess
+    import sys
+
+    confine = pytest.importorskip(
+        "airunner_services.llm.core.tool_worker_confine"
+    )
+    probe = (
+        "import importlib.util, json, sys;"
+        f"spec = importlib.util.spec_from_file_location("
+        f"'w3_fsize_probe', {str(confine.__file__)!r});"
+        "mod = importlib.util.module_from_spec(spec);"
+        "spec.loader.exec_module(mod);"
+        "applied = mod.apply_resource_limits(1000);"
+        "import resource;"
+        "print(json.dumps({"
+        "'applied': applied.get('RLIMIT_FSIZE'),"
+        "'stuck': list(resource.getrlimit(resource.RLIMIT_FSIZE)),"
+        "'cap': mod.GRANTED_IO_CAP_BYTES,"
+        "}))"
+    )
+    try:
+        import resource as resource_mod
+    except ImportError:
+        pytest.skip("needs the resource module")
+    if getattr(resource_mod, "RLIMIT_FSIZE", None) is None:
+        pytest.skip("platform has no RLIMIT_FSIZE")
+    out = subprocess.run(
+        [sys.executable, "-c", probe],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert out.returncode == 0, out.stderr
+    result = json.loads(out.stdout)
+    cap = confine.GRANTED_IO_CAP_BYTES
+    assert result["applied"] == f"{cap}/{cap}"
+    assert result["stuck"] == [cap, cap]
+    assert result["cap"] == cap
+
+
 def test_safe_builtins_drop_format_and_hasattr() -> None:
     assert "format" not in SAFE_BUILTINS
     assert "hasattr" not in SAFE_BUILTINS

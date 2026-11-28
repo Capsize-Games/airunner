@@ -214,6 +214,55 @@ def test_grant_round_trips_bytes(tmp_path: Path) -> None:
     assert out.status == "capability_denied"
 
 
+def test_grant_io_caps_fail_closed_in_worker(tmp_path: Path) -> None:
+    """Over-cap granted reads/writes are denied; under-cap pass."""
+    confine = _load_sibling("tool_worker_confine")
+    cap = confine.GRANTED_IO_CAP_BYTES
+    big = tmp_path / "big.bin"
+    big.write_bytes(b"x" * (cap + 1))
+    caps = _RUN.Capabilities(fs_roots=(str(tmp_path),))
+    read_code = (
+        "@tool\ndef probe(path: str) -> int:\n"
+        "    return len(granted_read(path))\n"
+    )
+    out = _RUN.run_custom_tool(
+        tool_name="probe",
+        code=read_code,
+        kwargs={"path": str(big)},
+        capabilities=caps,
+    )
+    assert out.status == "capability_denied"
+    sink_code = (
+        "@tool\ndef sink(path: str, size: int) -> str:\n"
+        "    granted_write(path, b'y' * size)\n"
+        "    return 'wrote'\n"
+    )
+    denied_target = tmp_path / "denied.bin"
+    out = _RUN.run_custom_tool(
+        tool_name="sink",
+        code=sink_code,
+        kwargs={"path": str(denied_target), "size": cap + 1},
+        capabilities=caps,
+    )
+    assert out.status == "capability_denied"
+    assert not denied_target.exists()
+    bridge_code = (
+        "@tool\ndef bridge(path: str, size: int) -> int:\n"
+        "    granted_write(path, b'z' * size)\n"
+        "    return len(granted_read(path))\n"
+    )
+    ok_target = tmp_path / "ok.bin"
+    out = _RUN.run_custom_tool(
+        tool_name="bridge",
+        code=bridge_code,
+        kwargs={"path": str(ok_target), "size": 1024},
+        capabilities=caps,
+    )
+    assert out.status == "ok"
+    assert out.value == 1024
+    assert ok_target.read_bytes() == b"z" * 1024
+
+
 def test_offline_blocks_network_grant(monkeypatch: Any) -> None:
     """A network grant while offline is blocked before any spawn."""
     pytest.importorskip("airunner_services.url_safety")

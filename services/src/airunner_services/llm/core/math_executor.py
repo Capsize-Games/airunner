@@ -15,17 +15,30 @@ builtins set and states plainly that restricted builtins alone are
 not a security boundary. The same caveat applies here. See #2142
 (T01) and #2145 (T02) for the actual isolation-boundary design; this
 module is deliberately not changed by that move beyond its location.
+
+Confinement (issue #2491): executing here never means ``exec`` in
+this process. After the parent-side AST validation below passes, the
+code runs in ``math_worker.py``, a fresh interpreter that applies
+resource limits (address space, CPU) and is killed on
+the wall-clock timeout, so even a tight C-level loop cannot hang or
+exhaust the service. No process-count limit is set: validated math
+code has no spawn primitive, while BLAS thread pools need room.
+Session namespaces are rebuilt in the child by
+replaying previously accepted snippets; only JSON-safe values cross
+back, never pickles.
 """
 
 import ast
+import json
+import os
 import re
-import io
-import contextlib
+import subprocess
+import sys
 import threading
 import contextvars
 import math
 from fractions import Fraction
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, List, Optional, Tuple
 
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
@@ -122,6 +135,10 @@ class SafePythonExecutor:
     #: snapshotted before each run and restored afterwards.
     _PROTECTED_KEYS = ("__builtins__", "math", "Fraction")
 
+    #: Cap on replayed session history per named session.
+    _MAX_HISTORY_ENTRIES = 50
+    _MAX_HISTORY_CHARS = 200000
+
     def __init__(self, timeout_seconds: int = 5):
         """Initialize executor.
 
@@ -134,7 +151,13 @@ class SafePythonExecutor:
             timeout = 5
         self.timeout = timeout if timeout > 0 else 5
         self._namespaces: Dict[str, Dict[str, Any]] = {}
+        self._history: Dict[str, List[str]] = {}
         self._namespace_lock = threading.Lock()
+        #: PID of the worker spawned by the most recent execute() that
+        #: reached spawn (None when validation rejected the code or
+        #: the spawn itself failed). Introspection aid proving the
+        #: code ran off-process.
+        self.last_worker_pid: Optional[int] = None
 
     def _create_safe_builtins(self) -> Dict[str, Any]:
         """Create the limited set of safe builtins for execution."""
@@ -218,7 +241,7 @@ class SafePythonExecutor:
             return namespace
 
     def reset(self, session_id: Optional[str] = None) -> None:
-        """Reset stored namespaces.
+        """Reset stored namespaces and replay histories.
 
         Args:
             session_id: Optional session identifier to reset. If None, clears all.
@@ -227,8 +250,10 @@ class SafePythonExecutor:
         with self._namespace_lock:
             if session_id is None:
                 self._namespaces.clear()
+                self._history.clear()
             else:
                 self._namespaces.pop(session_id, None)
+                self._history.pop(session_id, None)
 
     def extract_code(self, text: str) -> Optional[str]:
         """Extract Python code from markdown code blocks.
@@ -314,67 +339,153 @@ class SafePythonExecutor:
             return False, "\n".join(errors)
         return True, ""
 
-    def _snapshot_session(self, session_id: str) -> Dict[str, Any]:
-        """Return a per-run copy of one session namespace.
+    @staticmethod
+    def _worker_path() -> str:
+        """Return the path of the confined worker script."""
+        here = os.path.dirname(os.path.abspath(__file__))
+        return os.path.join(here, "math_worker.py")
 
-        Executing against a copy (instead of the live session dict)
-        keeps user code from mutating the stored namespace mid-run;
-        only sanitized bindings are merged back afterwards.
-        """
-        namespace = self._ensure_namespace(session_id)
+    def _replay_history(self, session_id: str) -> List[str]:
+        """Return the accepted snippets to replay for one session."""
+        if session_id == "global":
+            return []
         with self._namespace_lock:
-            return dict(namespace)
+            return list(self._history.get(session_id, []))
 
-    def _merge_back(
-        self, session_id: str, run_namespace: Dict[str, Any]
+    def _record_success(
+        self, session_id: str, code: str, bindings: Any
     ) -> None:
-        """Merge one run's bindings into its session, minus pollution.
+        """Append one accepted snippet and merge its safe bindings.
 
-        Protected keys (``__builtins__``, ``math``, ``Fraction``) are
-        never overwritten and injected dunder names are dropped, so a
-        previous run cannot poison later runs in the same session.
+        ``bindings`` crosses the worker boundary, so it is untrusted:
+        protected keys and dunder names are dropped even though the
+        worker already filters them.
         """
+        if session_id == "global":
+            return
+        if not isinstance(bindings, dict):
+            bindings = {}
         with self._namespace_lock:
             stored = self._namespaces.get(session_id)
             if stored is None:
                 stored = self._create_base_namespace()
                 self._namespaces[session_id] = stored
-            for key, value in run_namespace.items():
+            for key, value in bindings.items():
+                if not isinstance(key, str):
+                    continue
                 if key in self._PROTECTED_KEYS:
                     continue
                 if key.startswith("__") and key.endswith("__"):
                     continue
                 stored[key] = value
+            history = self._history.setdefault(session_id, [])
+            history.append(code)
+            overflow = len(history) - self._MAX_HISTORY_ENTRIES
+            if overflow > 0:
+                del history[:overflow]
+            while (
+                sum(len(item) for item in history)
+                > self._MAX_HISTORY_CHARS
+            ):
+                history.pop(0)
 
-    def _run_compiled(
-        self,
-        compiled: Any,
-        session_id: str,
-        stdout_capture: io.StringIO,
-        outcome: Dict[str, Any],
-    ) -> None:
-        """Execute one compiled unit; records result or error."""
+    def _run_in_worker(
+        self, history: List[str], code: str
+    ) -> Tuple[bool, Any, Any]:
+        """Spawn the confined worker and collect its single reply."""
+        request = {
+            "history": history,
+            "code": code,
+            "timeout_ms": self.timeout * 1000,
+        }
         try:
-            run_namespace = self._snapshot_session(session_id)
-            with contextlib.redirect_stdout(stdout_capture):
-                exec(compiled, run_namespace)
-            self._merge_back(session_id, run_namespace)
-            outcome["result"] = self._extract_result(
-                run_namespace, stdout_capture, None
+            payload = json.dumps(request).encode("utf-8")
+        except (TypeError, ValueError) as exc:
+            error_msg = f"Execution error: cannot encode request: {exc}"
+            logger.warning(error_msg)
+            return False, error_msg, None
+        try:
+            proc = subprocess.Popen(
+                [sys.executable, self._worker_path()],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                close_fds=True,
             )
-        except Exception as exc:
-            outcome["error"] = f"Execution error: {exc}"
+        except OSError as exc:
+            error_msg = f"Execution error: math worker spawn failed: {exc}"
+            logger.warning(error_msg)
+            return False, error_msg, None
+        self.last_worker_pid = proc.pid
+        try:
+            stdout, stderr = proc.communicate(
+                payload, timeout=self.timeout
+            )
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            try:
+                proc.wait(timeout=5)
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+            error_msg = (
+                f"Execution timed out after {self.timeout} seconds"
+            )
+            logger.warning(error_msg)
+            return False, error_msg, None
+        if proc.returncode != 0:
+            tail = stderr.decode("utf-8", "replace")[-500:]
+            error_msg = (
+                "Execution error: math worker exited with status "
+                f"{proc.returncode}: {tail}"
+            )
+            logger.warning(error_msg)
+            return False, error_msg, None
+        if stderr:
+            logger.debug(
+                "math worker stderr: %s",
+                stderr.decode("utf-8", "replace")[:2000],
+            )
+        try:
+            response = json.loads(stdout.decode("utf-8"))
+        except (UnicodeDecodeError, ValueError) as exc:
+            error_msg = (
+                f"Execution error: math worker returned an "
+                f"invalid response: {exc}"
+            )
+            logger.warning(error_msg)
+            return False, error_msg, None
+        if not isinstance(response, dict) or not response.get("ok"):
+            detail = (
+                response.get("error")
+                if isinstance(response, dict)
+                else None
+            )
+            error_msg = (
+                str(detail)
+                if detail
+                else "Execution error: unknown worker failure"
+            )
+            logger.warning(error_msg)
+            return False, error_msg, None
+        if response.get("pid") != self.last_worker_pid:
+            logger.debug(
+                "math worker pid mismatch (expected %s, reported %s)",
+                self.last_worker_pid,
+                response.get("pid"),
+            )
+        return True, response.get("result"), response
 
     def execute(self, code: str) -> Tuple[bool, Any, str]:
-        """Execute Python code and capture output.
+        """Execute Python code in a confined worker and capture output.
 
-        The code is compiled once and executed with ``exec`` only:
-        there is no ``eval`` sink for a trailing expression. Callers
+        The code is compiled once and executed with ``exec`` only, in
+        the worker process: there is no ``eval`` sink for a trailing
+        expression and this process never execs the code. Callers
         (``sympy_compute``/``numpy_compute``/``python_compute``) must
         store the final value in a ``result`` (or ``answer``) variable
-        or print it. Execution runs on a worker thread bounded by
-        ``self.timeout`` seconds (best-effort: an expired run reports
-        a timeout instead of hanging the caller).
+        or print it. The worker applies resource limits and the parent
+        kills it on ``self.timeout`` seconds, so an expired run
+        reports a timeout instead of hanging the caller.
 
         Args:
             code: Python code to execute
@@ -382,65 +493,47 @@ class SafePythonExecutor:
         Returns:
             (success, result, error_message)
         """
-        # Validate code first
+        # Validate code first (no worker is spawned for unsafe code).
         is_safe, error_msg = self.validate_code(code)
         if not is_safe:
             logger.warning("Unsafe code rejected: %s", error_msg)
             return False, None, error_msg
 
         try:
-            compiled = compile(code, "<math_executor>", "exec")
+            compile(code, "<math_executor>", "exec")
         except (SyntaxError, ValueError) as exc:
             error_msg = f"Syntax error: {exc}"
             logger.warning("Code rejected: %s", error_msg)
             return False, None, error_msg
 
         session_id = get_executor_session() or "global"
-        stdout_capture = io.StringIO()
-        outcome: Dict[str, Any] = {}
-        worker = threading.Thread(
-            target=self._run_compiled,
-            args=(compiled, session_id, stdout_capture, outcome),
-            daemon=True,
-        )
-        worker.start()
-        worker.join(self.timeout)
-        if worker.is_alive():
+        history = self._replay_history(session_id)
+        if (
+            len(history) >= self._MAX_HISTORY_ENTRIES
+            or sum(len(item) for item in history)
+            > self._MAX_HISTORY_CHARS
+        ):
             error_msg = (
-                f"Execution timed out after {self.timeout} seconds"
+                "Execution error: session history limit exceeded; "
+                "reset the session to continue"
             )
             logger.warning(error_msg)
             return False, None, error_msg
 
-        if "error" in outcome:
-            logger.warning(outcome["error"])
-            return False, None, outcome["error"]
-        return True, outcome.get("result"), ""
-
-    def _extract_result(
-        self,
-        namespace: Dict,
-        stdout_capture: io.StringIO,
-        last_expr: Any = None,
-    ) -> Any:
-        """Extract result from namespace, last expression, or stdout."""
-        # Priority 1: Explicit result or answer variable
-        result = namespace.get("result") or namespace.get("answer")
-
-        # Priority 2: Last expression value (like Python REPL)
-        if result is None and last_expr is not None:
-            result = last_expr
-
-        # Priority 3: Try to get last printed value
-        if result is None:
-            output = stdout_capture.getvalue().strip()
-            if output:
-                result = self._parse_output_as_number(output)
-
-        return result
+        ok, result, response = self._run_in_worker(history, code)
+        if not ok:
+            assert isinstance(result, str) or result is None
+            return False, None, result  # type: ignore[return-value]
+        assert isinstance(response, dict)
+        self._record_success(session_id, code, response.get("bindings"))
+        return True, result, ""
 
     def _parse_output_as_number(self, output: str) -> Any:
-        """Try to parse output string as a number."""
+        """Try to parse output string as a number.
+
+        Kept for backward compatibility; the confined worker performs
+        result extraction and carries its own copy.
+        """
         lines = output.split("\n")
         last_line = lines[-1].strip()
         try:
