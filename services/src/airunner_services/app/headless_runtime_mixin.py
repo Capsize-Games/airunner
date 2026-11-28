@@ -348,38 +348,40 @@ class HeadlessRuntimeMixin:
                 exc_info=True,
             )
 
+    def _ensure_migration_settings(self, session):
+        """Ensure settings exist and migration is still needed."""
+        settings = (
+            session.query(ApplicationSettings)
+            .filter_by(id=1)
+            .with_for_update()
+            .first()
+        )
+        if not settings:
+            self.logger.info("Creating default application settings")
+            settings = ApplicationSettings(
+                id=1,
+                knowledge_migrated=False,
+            )
+            session.add(settings)
+            session.commit()
+            settings = (
+                session.query(ApplicationSettings)
+                .filter_by(id=1)
+                .with_for_update()
+                .first()
+            )
+        if settings.knowledge_migrated:
+            self.logger.debug("Knowledge migration already completed")
+            return None
+        return settings
+
     def _run_knowledge_migration_if_needed(self):
         """Run one-time migration from JSON to markdown if needed."""
         try:
             with session_scope() as session:
-                settings = (
-                    session.query(ApplicationSettings)
-                    .filter_by(id=1)
-                    .with_for_update()
-                    .first()
-                )
-
-                if not settings:
-                    self.logger.info("Creating default application settings")
-                    settings = ApplicationSettings(
-                        id=1,
-                        knowledge_migrated=False,
-                    )
-                    session.add(settings)
-                    session.commit()
-                    settings = (
-                        session.query(ApplicationSettings)
-                        .filter_by(id=1)
-                        .with_for_update()
-                        .first()
-                    )
-
-                if settings.knowledge_migrated:
-                    self.logger.debug(
-                        "Knowledge migration already completed"
-                    )
+                settings = self._ensure_migration_settings(session)
+                if settings is None:
                     return
-
                 knowledge_dir = Path(AIRUNNER_USER_DATA_PATH) / "knowledge"
                 json_path = knowledge_dir / "user_facts.json"
                 if not json_path.exists():
@@ -389,7 +391,6 @@ class HeadlessRuntimeMixin:
                     settings.knowledge_migrated = True
                     session.commit()
                     return
-
                 self.logger.info(
                     "Running one-time knowledge migration from JSON to "
                     "markdown..."
