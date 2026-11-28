@@ -191,57 +191,67 @@ class ModelAvailabilityMixin:
 
     def _try_convert_safetensors_to_gguf(self: "LLMModelManager") -> bool:
         """Convert local safetensors to GGUF when no GGUF download exists."""
+        model_path = self.model_path
+        if self._safetensor_files(model_path):
+            return self._convert_safetensors_branch(model_path)
+        return self._download_safetensors_branch(model_path)
+
+    @staticmethod
+    def _safetensor_files(model_path) -> list:
+        """List local .safetensors files, empty when the path is absent."""
+        if not os.path.exists(model_path):
+            return []
+        return [
+            file_name
+            for file_name in os.listdir(model_path)
+            if file_name.endswith(".safetensors")
+        ]
+
+    def _convert_safetensors_branch(self, model_path) -> bool:
+        """Emit the convert or conversion-unavailable signal for one model."""
         from airunner_services.utils.model_optimizer import get_model_optimizer
 
-        model_path = self.model_path
-        safetensor_files = []
-        if os.path.exists(model_path):
-            safetensor_files = [
-                file_name
-                for file_name in os.listdir(model_path)
-                if file_name.endswith(".safetensors")
-            ]
-
-        if safetensor_files:
-            self.logger.info(
-                "No GGUF available for download. Converting safetensors to "
-                "GGUF..."
+        self.logger.info(
+            "No GGUF available for download. Converting safetensors to "
+            "GGUF..."
+        )
+        optimizer = get_model_optimizer()
+        if not optimizer.has_llama_cpp_convert():
+            self.logger.error(
+                "GGUF conversion requires llama.cpp tools. Install with: "
+                "pip install llama-cpp-python or clone llama.cpp from "
+                "https://github.com/ggerganov/llama.cpp"
             )
-            optimizer = get_model_optimizer()
-            if not optimizer.has_llama_cpp_convert():
-                self.logger.error(
-                    "GGUF conversion requires llama.cpp tools. Install with: "
-                    "pip install llama-cpp-python or clone llama.cpp from "
-                    "https://github.com/ggerganov/llama.cpp"
-                )
-                self.emit_signal(
-                    SignalCode.APPLICATION_SETTINGS_ERROR,
-                    {
-                        "error": "GGUF Conversion Not Available",
-                        "message": (
-                            "No pre-quantized GGUF model is available for "
-                            "this model, and automatic conversion requires "
-                            "llama.cpp tools.\n\nOptions:\n"
-                            "1. Install llama-cpp-python: pip install "
-                            "llama-cpp-python\n"
-                            "2. Clone llama.cpp and build convert tools\n"
-                            "3. Choose a different model with GGUF support\n"
-                            "4. Disable GGUF quantization in settings"
-                        ),
-                    },
-                )
-                return False
-
             self.emit_signal(
-                SignalCode.LLM_CONVERT_TO_GGUF_SIGNAL,
+                SignalCode.APPLICATION_SETTINGS_ERROR,
                 {
-                    "model_path": model_path,
-                    "model_name": self.model_name,
-                    "quantization": "Q4_K_M",
+                    "error": "GGUF Conversion Not Available",
+                    "message": (
+                        "No pre-quantized GGUF model is available for "
+                        "this model, and automatic conversion requires "
+                        "llama.cpp tools.\n\nOptions:\n"
+                        "1. Install llama-cpp-python: pip install "
+                        "llama-cpp-python\n"
+                        "2. Clone llama.cpp and build convert tools\n"
+                        "3. Choose a different model with GGUF support\n"
+                        "4. Disable GGUF quantization in settings"
+                    ),
                 },
             )
             return False
 
+        self.emit_signal(
+            SignalCode.LLM_CONVERT_TO_GGUF_SIGNAL,
+            {
+                "model_path": model_path,
+                "model_name": self.model_name,
+                "quantization": "Q4_K_M",
+            },
+        )
+        return False
+
+    def _download_safetensors_branch(self, model_path) -> bool:
+        """Emit the safetensors download signal when a repo id resolves."""
         self.logger.info(
             "No GGUF available and no safetensors found. Downloading "
             "safetensors first..."
