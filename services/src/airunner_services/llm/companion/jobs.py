@@ -381,7 +381,21 @@ class DurableCompanionScheduler:
                 JOB_FAILED,
                 f"no handler registered for {job_type.value}",
             )
-        context = JobContext(
+        context = self._build_job_context(snapshot, job_type)
+        try:
+            self._executor(lambda: handler(context))
+        except Exception as exc:
+            # Recorded on the row (truncated by the TEXT column, never
+            # re-raised): one failing job must not kill the pump, and
+            # the attempt cap bounds how often it can recur.
+            if snapshot.attempts >= snapshot.max_attempts:
+                return self._complete(owner, snapshot, JOB_FAILED, str(exc))
+            return self._complete(owner, snapshot, JOB_QUEUED, str(exc))
+        return self._complete(owner, snapshot, JOB_SUCCEEDED, None)
+
+    def _build_job_context(self, snapshot: _ClaimSnapshot, job_type: CompanionJobType) -> JobContext:
+        """Build one handler context from a claimed job snapshot."""
+        return JobContext(
             job_id=str(snapshot.job_id),
             job_type=job_type,
             chatbot_id=ChatbotId(snapshot.chatbot_id),
@@ -394,16 +408,6 @@ class DurableCompanionScheduler:
             attempt=snapshot.attempts,
             arbitrate=self._arbitrate,
         )
-        try:
-            self._executor(lambda: handler(context))
-        except Exception as exc:
-            # Recorded on the row (truncated by the TEXT column, never
-            # re-raised): one failing job must not kill the pump, and
-            # the attempt cap bounds how often it can recur.
-            if snapshot.attempts >= snapshot.max_attempts:
-                return self._complete(owner, snapshot, JOB_FAILED, str(exc))
-            return self._complete(owner, snapshot, JOB_QUEUED, str(exc))
-        return self._complete(owner, snapshot, JOB_SUCCEEDED, None)
 
     def _complete(
         self,
