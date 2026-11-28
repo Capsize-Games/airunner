@@ -98,6 +98,7 @@ class E5ModelIdentity:
     normalized_outputs: bool = E5_NORMALIZED_OUTPUTS
 
     def matches(self, other: object) -> bool:
+        """Return whether one value is the exact same E5 identity."""
         return isinstance(other, E5ModelIdentity) and self == other
 
     def to_embedding_model_identity(self) -> EmbeddingModelIdentity:
@@ -110,6 +111,7 @@ class E5ModelIdentity:
         )
 
     def to_dict(self) -> dict[str, object]:
+        """Return this identity as a JSON-serializable mapping."""
         return {
             "schema_version": 1,
             "model_id": self.model_id,
@@ -124,6 +126,7 @@ class E5ModelIdentity:
 
     @classmethod
     def from_dict(cls, value: Mapping[str, object]) -> "E5ModelIdentity":
+        """Validate and reconstruct one E5 identity mapping."""
         try:
             if type(value.get("schema_version")) is not int or value.get("schema_version") != 1:
                 raise ValueError("unsupported identity schema")
@@ -193,11 +196,13 @@ class VerifiedE5Embedder:
         self.model_name = getattr(embedder, "model_name", E5_LARGE_MODEL_ID)
 
     def embed_query(self, text: str) -> list[float]:
+        """Embed one query with the E5 query prefix."""
         guard = self._activity_lock or nullcontext()
         with guard:
             return self._embedder.embed_query(_with_prefix(text, "query: "))
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """Embed documents with the E5 passage prefix."""
         guard = self._activity_lock or nullcontext()
         with guard:
             prefixed = [_with_prefix(text, "passage: ") for text in texts]
