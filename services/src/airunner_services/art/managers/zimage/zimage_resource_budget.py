@@ -67,10 +67,12 @@ def _read_weight_map(component_dir: Path) -> dict[str, str] | None:
     return None
 
 
-def _read_validated_safetensors_header(
-    shard: Path,
-) -> list[tuple[str, str, list[int], int]]:
-    """Parse and validate a bounded safetensors header and payload layout."""
+def _read_safetensors_header_json(shard: Path) -> tuple[dict, int]:
+    """Read and parse the header JSON object from one shard file.
+
+    Returns:
+        The parsed header dict and the payload byte count.
+    """
     shard_size = shard.stat().st_size
     with shard.open("rb") as stream:
         prefix = stream.read(8)
@@ -85,42 +87,47 @@ def _read_validated_safetensors_header(
     header = json.loads(encoded)
     if not isinstance(header, dict):
         raise ValueError(f"Invalid safetensors header object: {shard}")
-    payload_bytes = shard_size - 8 - header_size
-    tensors: list[tuple[str, str, list[int], int, int]] = []
-    for name, spec in header.items():
-        if name == "__metadata__":
-            continue
-        if not isinstance(name, str) or not isinstance(spec, dict):
-            raise ValueError(f"Invalid tensor header entry: {shard}:{name}")
-        dtype = spec.get("dtype")
-        shape = spec.get("shape")
-        offsets = spec.get("data_offsets")
-        if (
-            dtype not in _DTYPE_BYTES
-            or not isinstance(shape, list)
-            or not all(
-                isinstance(dim, int) and not isinstance(dim, bool) and dim >= 0
-                for dim in shape
-            )
-            or not isinstance(offsets, list)
-            or len(offsets) != 2
-            or not all(
-                isinstance(value, int) and not isinstance(value, bool)
-                for value in offsets
-            )
-        ):
-            raise ValueError(f"Invalid tensor header: {shard}:{name}")
-        tensor_bytes = math.prod(shape) * _DTYPE_BYTES[dtype]
-        start, end = offsets
-        if (
-            start < 0
-            or end < start
-            or end > payload_bytes
-            or end - start != tensor_bytes
-        ):
-            raise ValueError(f"Tensor byte-size mismatch: {shard}:{name}")
-        tensors.append((name, dtype, shape, start, end))
+    return header, shard_size - 8 - header_size
 
+
+def _validate_tensor_spec(
+    shard: Path, name: str, spec: object, payload_bytes: int
+) -> tuple[str, str, list[int], int, int]:
+    """Validate one tensor spec and return its normalized tuple."""
+    if not isinstance(name, str) or not isinstance(spec, dict):
+        raise ValueError(f"Invalid tensor header entry: {shard}:{name}")
+    dtype = spec.get("dtype")
+    shape = spec.get("shape")
+    offsets = spec.get("data_offsets")
+    if (
+        dtype not in _DTYPE_BYTES
+        or not isinstance(shape, list)
+        or not all(
+            isinstance(dim, int) and not isinstance(dim, bool) and dim >= 0
+            for dim in shape
+        )
+        or not isinstance(offsets, list)
+        or len(offsets) != 2
+        or not all(
+            isinstance(value, int) and not isinstance(value, bool)
+            for value in offsets
+        )
+    ):
+        raise ValueError(f"Invalid tensor header: {shard}:{name}")
+    tensor_bytes = math.prod(shape) * _DTYPE_BYTES[dtype]
+    start, end = offsets
+    if (
+        start < 0
+        or end < start
+        or end > payload_bytes
+        or end - start != tensor_bytes
+    ):
+        raise ValueError(f"Tensor byte-size mismatch: {shard}:{name}")
+    return (name, dtype, shape, start, end)
+
+
+def _validate_tensor_layout(shard: Path, tensors, payload_bytes: int) -> None:
+    """Verify tensors tile the payload without gaps or overlaps."""
     cursor = 0
     for _, _, _, start, end in sorted(tensors, key=lambda item: item[3]):
         if start != cursor:
@@ -128,7 +135,23 @@ def _read_validated_safetensors_header(
         cursor = end
     if cursor != payload_bytes:
         raise ValueError(f"Invalid safetensors payload size: {shard}")
-    return [(name, dtype, shape, end - start) for name, dtype, shape, start, end in tensors]
+
+
+def _read_validated_safetensors_header(
+    shard: Path,
+) -> list[tuple[str, str, list[int], int]]:
+    """Parse and validate a bounded safetensors header and payload layout."""
+    header, payload_bytes = _read_safetensors_header_json(shard)
+    tensors = [
+        _validate_tensor_spec(shard, name, spec, payload_bytes)
+        for name, spec in header.items()
+        if name != "__metadata__"
+    ]
+    _validate_tensor_layout(shard, tensors, payload_bytes)
+    return [
+        (name, dtype, shape, end - start)
+        for name, dtype, shape, start, end in tensors
+    ]
 
 
 @dataclass(frozen=True)
