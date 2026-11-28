@@ -137,18 +137,8 @@ class ModelRegistry:
 				preferred_download.get("repo_id", preferred_repo_id)
 			)
 			preferred_filename = preferred_download.get("gguf_filename")
-		min_vram_gb = float(
-			model_info.get("vram_4bit_gb")
-			or model_info.get("vram_8bit_gb")
-			or 4.0
-		)
-		recommended_vram_gb = float(
-			model_info.get("vram_8bit_gb")
-			or model_info.get("vram_4bit_gb")
-			or min_vram_gb
-		)
-		size_gb = (
-			min_vram_gb if runtime_format == "gguf" else recommended_vram_gb
+		min_vram_gb, recommended_vram_gb, size_gb = (
+			self._llm_vram_sizes(model_info, runtime_format)
 		)
 		return ModelMetadata(
 			name=str(model_info.get("name", model_id)),
@@ -171,6 +161,24 @@ class ModelRegistry:
 			runtime_backend=runtime_backend,
 			aliases=self._llm_aliases(model_info),
 		)
+
+	@staticmethod
+	def _llm_vram_sizes(model_info: dict[str, object], runtime_format: str) -> tuple[float, float, float]:
+		"""Compute min, recommended, and display VRAM sizes for one model."""
+		min_vram_gb = float(
+			model_info.get("vram_4bit_gb")
+			or model_info.get("vram_8bit_gb")
+			or 4.0
+		)
+		recommended_vram_gb = float(
+			model_info.get("vram_8bit_gb")
+			or model_info.get("vram_4bit_gb")
+			or min_vram_gb
+		)
+		size_gb = (
+			min_vram_gb if runtime_format == "gguf" else recommended_vram_gb
+		)
+		return min_vram_gb, recommended_vram_gb, size_gb
 
 	@staticmethod
 	def _llm_provider(model_id: str, repo_id: str) -> ModelProvider:
