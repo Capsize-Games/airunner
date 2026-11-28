@@ -9,7 +9,7 @@ import queue
 import threading
 import time
 from dataclasses import dataclass
-from typing import Callable
+from typing import Any, Callable
 
 from airunner_services.utils.application.signal_mediator import SignalMediator
 
@@ -60,7 +60,7 @@ def completion_deadline_seconds() -> float:
     return value
 
 
-def cancel_owned_llm_request(app, request_id: str) -> bool:
+def cancel_owned_llm_request(app: Any, request_id: str) -> bool:
     """Cancel only the matching active/queued local LLM worker request."""
     worker_manager = getattr(app, "_worker_manager", None)
     if worker_manager is None:

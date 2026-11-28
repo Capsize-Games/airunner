@@ -17,7 +17,8 @@ from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
+from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import HTTPConnection
 import uvicorn
 
@@ -397,7 +398,7 @@ def _tenant_middleware_factory(
 ):
     """Return the tenant-scoping HTTP middleware for one app instance."""
 
-    async def tenant_middleware(request: Request, call_next):
+    async def tenant_middleware(request: Request, call_next: RequestResponseEndpoint) -> Response:
         """Scope DB operations to the request's tenant/namespace.
 
         Airunner supports Postgres schema tenancy. We select the schema via a
@@ -442,7 +443,7 @@ def _api_key_auth_middleware_factory(
 ):
     """Return the API-key/loopback HTTP middleware for one app instance."""
 
-    async def api_key_auth_middleware(request: Request, call_next):
+    async def api_key_auth_middleware(request: Request, call_next: RequestResponseEndpoint) -> Response:
         """Enforce API-key or loopback auth for one HTTP request."""
         path = request.url.path
 
@@ -477,7 +478,7 @@ def _api_key_auth_middleware_factory(
     return api_key_auth_middleware
 
 
-async def docs_visibility_middleware(request: Request, call_next):
+async def docs_visibility_middleware(request: Request, call_next: RequestResponseEndpoint) -> Response:
     """Hide API docs outside debug mode and loopback clients.
 
     ``/docs``, ``/redoc``, and ``/openapi.json`` expand the attack
@@ -590,7 +591,7 @@ def create_app(
     _register_routers(app)
 
     @app.get("/")
-    async def root():
+    async def root() -> dict[str, str]:
         """Root endpoint."""
         return {"status": "ready", "service": "airunner"}
 
@@ -603,7 +604,7 @@ def create_app(
 
     # Global exception handler
     @app.exception_handler(Exception)
-    async def global_exception_handler(request, exc):
+    async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
         """Return a 500 with a correlation id for one unhandled exception."""
         correlation_id = uuid.uuid4().hex[:12]
         logger.error(
@@ -696,7 +697,7 @@ class APIServer:
             time.sleep(0.05)
         return False
 
-    def stop(self, timeout: float = 10.0):
+    def stop(self, timeout: float = 10.0) -> None:
         """Stop the API server and join the serving thread.
 
         A server that never finished binding is a silent no-op.
