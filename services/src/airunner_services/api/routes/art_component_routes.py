@@ -1,5 +1,7 @@
 """Component-control routes for art API endpoints."""
 
+from typing import Dict
+
 from fastapi import APIRouter, Request
 
 from airunner_services.runtimes.contracts import RuntimeAction
@@ -11,7 +13,7 @@ router = APIRouter()
 
 
 @router.delete("/unload")
-async def unload_art_model(req: Request):
+async def unload_art_model(req: Request) -> Dict[str, str]:
     """Unload the active art model while keeping the sidecar alive."""
     await invoke_art_control(req, action=RuntimeAction.UNLOAD_MODEL)
     return {"status": "unloaded"}
@@ -21,7 +23,7 @@ async def unload_art_model(req: Request):
     "/components/{component}/load",
     response_model=ArtComponentResponse,
 )
-async def load_art_component(component: str, req: Request):
+async def load_art_component(component: str, req: Request) -> ArtComponentResponse:
     """Load one explicit art component through the runtime contract."""
     await invoke_art_control(
         req,
@@ -35,7 +37,7 @@ async def load_art_component(component: str, req: Request):
     "/components/{component}/unload",
     response_model=ArtComponentResponse,
 )
-async def unload_art_component(component: str, req: Request):
+async def unload_art_component(component: str, req: Request) -> ArtComponentResponse:
     """Unload one explicit art component through the runtime contract."""
     await invoke_art_control(
         req,

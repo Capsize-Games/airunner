@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any, Dict, List
 
 from fastapi import APIRouter, HTTPException, Request
 
@@ -87,7 +87,7 @@ def persist_model_selection(model_id: str) -> str:
 
 
 @router.get("/models", response_model=List[ModelInfo])
-async def list_models(req: Request):
+async def list_models(req: Request) -> List[ModelInfo]:
     """List available local LLM models.
 
     ``loaded`` is READY-proven via the local-inference capability
@@ -124,7 +124,7 @@ async def list_models(req: Request):
 
 
 @router.post("/load")
-async def load_model(request: ModelLoadRequest, req: Request):
+async def load_model(request: ModelLoadRequest, req: Request) -> Dict[str, str]:
     """Persist the selected model and load it through the runtime boundary."""
     resolved_id = persist_model_selection(request.model_id)
     client = resolve_llm_client(require_runtime_registry(req))
@@ -133,7 +133,7 @@ async def load_model(request: ModelLoadRequest, req: Request):
 
 
 @router.post("/unload")
-async def unload_model(req: Request):
+async def unload_model(req: Request) -> Dict[str, str]:
     """Unload the active local LLM through the runtime boundary."""
     client = resolve_llm_client(require_runtime_registry(req))
     await run_runtime_action(client, RuntimeAction.UNLOAD_MODEL)

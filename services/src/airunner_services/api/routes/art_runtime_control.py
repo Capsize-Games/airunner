@@ -2,7 +2,7 @@
 
 import asyncio
 import secrets
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import HTTPException, Request
 
@@ -66,7 +66,7 @@ async def control_response(
     component: Optional[str],
     payload: Optional[dict],
     metadata: Optional[dict],
-):
+) -> Any:
     """Return the raw runtime response for one art control request."""
     client = resolve_art_client(require_runtime_registry(req))
     return await asyncio.to_thread(
@@ -79,7 +79,7 @@ async def control_response(
     )
 
 
-def require_successful_control(response: object):
+def require_successful_control(response: object) -> Any:
     """Return one control response or raise when the runtime failed."""
     if response_status_is(response, EnvelopeStatus.SUCCEEDED):
         return response
@@ -93,7 +93,7 @@ async def invoke_art_control(
     component: Optional[str] = None,
     payload: Optional[dict] = None,
     metadata: Optional[dict] = None,
-):
+) -> Any:
     """Invoke one non-job art runtime request."""
     if unload_required(action):
         await unload_llm_before_art(req, source=f"art_{action.value}")
