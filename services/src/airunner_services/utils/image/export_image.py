@@ -54,7 +54,8 @@ def get_next_image_sequence(folder: str, ext: str) -> int:
         return next_sequence
 
 
-def export_image(image: Image, file_path: AnyStr, metadata: Dict = None):
+def export_image(image: Image, file_path: AnyStr, metadata: Dict = None) -> None:
+    """Save one image to its final path, embedding PNG metadata."""
     # file_path is now the final destination, do not add a date folder here
     base, ext = os.path.splitext(file_path)
     current_path = file_path
@@ -70,6 +71,7 @@ def export_image(image: Image, file_path: AnyStr, metadata: Dict = None):
 def export_images(
     images: List[Any], file_path: AnyStr, metadata: List[Dict] = None
 ) -> None:
+    """Export one image or a sequence-numbered batch of images."""
     base, ext = os.path.splitext(file_path)
     today_folder = get_today_folder(os.path.dirname(base))
     if len(images) > 1:
