@@ -135,7 +135,7 @@ class RealBaseManager:
     # Query methods
     # ------------------------------------------------------------------
     def get(
-        self, pk, eager_load: Optional[List[str]] = None
+        self, pk: Optional[int], eager_load: Optional[List[str]] = None
     ) -> Optional[_T]:
         """Return one row by primary key, or None."""
         with session_scope() as session:
@@ -150,7 +150,7 @@ class RealBaseManager:
 
     def get_orm(
         self,
-        pk,
+        pk: Optional[int],
         eager_load: Optional[List[str]] = None,
     ) -> Optional[Any]:
         """Return one live ORM instance (attached) for updates."""
@@ -229,7 +229,7 @@ class RealBaseManager:
                 )
                 return None
 
-    def update(self, pk=None, **kwargs) -> bool:
+    def update(self, pk: Optional[int] = None, **kwargs) -> bool:
         """Update one record by id and return whether it succeeded."""
         record_id = kwargs.pop("pk", pk)
         if not kwargs or record_id is None:
@@ -419,7 +419,7 @@ class RealBaseManager:
                 )
                 return None
 
-    def delete(self, pk=None, **kwargs) -> bool:
+    def delete(self, pk: Optional[int] = None, **kwargs) -> bool:
         """Delete one row by primary key or by filter criteria."""
         with session_scope() as session:
             try:
@@ -513,7 +513,7 @@ class RealBaseManager:
     # ------------------------------------------------------------------
     # Instance-level operations (called by BaseModel.save/delete)
     # ------------------------------------------------------------------
-    def save(self, instance) -> bool:
+    def save(self, instance: _T) -> bool:
         """Persist an existing ORM instance."""
         with session_scope() as session:
             try:
@@ -525,7 +525,7 @@ class RealBaseManager:
                 self.logger.error("Error in save(): %s", exc)
                 return False
 
-    def delete_instance(self, instance) -> bool:
+    def delete_instance(self, instance: _T) -> bool:
         """Delete an ORM instance from the database."""
         with session_scope() as session:
             try:

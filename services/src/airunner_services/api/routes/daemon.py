@@ -42,7 +42,7 @@ router.include_router(geolocation_router)
 
 
 @router.get("/status", response_model=DaemonRuntimeStatusResponse)
-async def daemon_runtime_status(request: Request):
+async def daemon_runtime_status(request: Request) -> DaemonRuntimeStatusResponse:
     """Return combined lifecycle and runtime status for daemon clients."""
     lifecycle_service = getattr(request.app.state, "lifecycle_service", None)
     lifecycle = DaemonStatusResponse()
@@ -56,7 +56,7 @@ async def daemon_runtime_status(request: Request):
 
 
 @router.get("/runtimes", response_model=List[RuntimeSummaryResponse])
-async def list_runtimes(request: Request):
+async def list_runtimes(request: Request) -> List[RuntimeSummaryResponse]:
     """List daemon-visible runtimes and their current health summaries."""
     return collect_runtime_summaries(request)
 
@@ -67,7 +67,7 @@ async def get_runtime_status(
     request: Request,
     provider: str = "local",
     deployment_mode: str = "default",
-):
+) -> RuntimeSummaryResponse:
     """Return the health summary for one resolved runtime route."""
     runtime = parse_runtime_kind(runtime_name)
     client = resolve_runtime_client(
@@ -93,7 +93,7 @@ async def load_runtime(
     runtime_name: str,
     route_request: RuntimeRouteRequest,
     request: Request,
-):
+) -> ResponseEnvelope:
     """Load the configured model for a runtime through the daemon API.
 
     Unloads any already-loaded runtimes before starting the new model,
@@ -144,7 +144,7 @@ async def unload_runtime(
     runtime_name: str,
     route_request: RuntimeRouteRequest,
     request: Request,
-):
+) -> ResponseEnvelope:
     """Unload the configured model for a runtime through the daemon API."""
     runtime = parse_runtime_kind(runtime_name)
     client = resolve_runtime_client(
@@ -167,7 +167,7 @@ async def cancel_runtime(
     runtime_name: str,
     route_request: RuntimeRouteRequest,
     request: Request,
-):
+) -> ResponseEnvelope:
     """Cancel an active runtime request through the daemon API."""
     runtime = parse_runtime_kind(runtime_name)
     if runtime is RuntimeKind.LLM:

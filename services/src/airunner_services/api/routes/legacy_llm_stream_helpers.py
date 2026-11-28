@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import queue
 import time
+from typing import Any
 
 from airunner_services.utils.application.signal_mediator import SignalMediator
 
@@ -18,7 +19,7 @@ from .legacy_llm_stream_payloads import ndjson_line
 logger = logging.getLogger(__name__)
 
 
-def response_usage(response) -> dict | None:
+def response_usage(response: Any) -> dict | None:
     """Return token-usage metadata when the response exposes it."""
     try:
         prompt_tokens = getattr(response, "prompt_tokens", None)
@@ -51,7 +52,7 @@ def response_usage(response) -> dict | None:
         return None
 
 
-def action_name(action_value, fallback) -> str:
+def action_name(action_value: Any, fallback: Any) -> str:
     """Return one string action name for streamed legacy responses."""
     return str(
         getattr(action_value, "name", None)
@@ -59,7 +60,7 @@ def action_name(action_value, fallback) -> str:
     )
 
 
-def stream_payload(response, action) -> dict:
+def stream_payload(response: Any, action: Any) -> dict:
     """Build one streamed NDJSON payload from an LLM callback response."""
     action_value = getattr(response, "action", None) or action
     payload = {
@@ -115,7 +116,7 @@ def handle_non_response_event(
     q.put(ndjson_line(payload))
 
 
-def is_suppressed_system_message(response) -> bool:
+def is_suppressed_system_message(response: Any) -> bool:
     """Return True when a system message should be suppressed."""
     try:
         return bool(
@@ -127,8 +128,8 @@ def is_suppressed_system_message(response) -> bool:
 
 
 def publish_response_event(
-    response,
-    action,
+    response: Any,
+    action: Any,
     q: queue.Queue[bytes],
     last_callback_at: list[float],
     request_id: str,
@@ -154,7 +155,7 @@ def handle_stream_event(
     data: dict,
     q: queue.Queue[bytes],
     last_callback_at: list[float],
-    action,
+    action: Any,
     request_id: str,
 ) -> bool:
     """Process one stream callback event; return True if stream done."""
