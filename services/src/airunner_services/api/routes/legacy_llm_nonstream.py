@@ -26,6 +26,7 @@ def collect_callback(
     """Return the callback used for non-streaming legacy LLM requests."""
 
     def callback(data: dict) -> None:
+        """Publish one non-streaming legacy LLM response event."""
         response = data.get("response")
         if not response:
             return
