@@ -1245,37 +1245,7 @@ class SidecarLLMClient(RuntimeClient):
 				)
 				if binding_failure is not None:
 					raise _SidecarRequestError(binding_failure)
-			if self._managed_launcher:
-				selected_model = self._bound_model_selection
-				if (
-					selected_model is not None
-					and (record.profile or "default")
-					!= (self._settings.runtime_profile or "default")
-				):
-					selected_model = None
-				resolved = self._resolve_settings(
-					record.profile,
-					selected_model=selected_model,
-				)
-				with self._active_requests_lock:
-					other_backend_users = any(
-						other_id != request_id
-						and (other.backend_started or other.response is not None)
-						for other_id, other in self._active_requests.items()
-					)
-				if resolved != self._settings and other_backend_users:
-					raise _SidecarRequestError(
-						"The LLM runtime settings changed during an active request"
-					)
-				self._prepare_launcher(
-					record.profile,
-					selected_model=selected_model,
-				)
-				self._validate_selected_model(
-					self._settings,
-					selected_model,
-					record.profile,
-				)
+			selected_model = self._prepare_managed_launcher(record, request_id)
 			self._launcher.start()
 			if record.expected_binding is None and self._managed_launcher:
 				identity = self._backend_identity(
@@ -1285,6 +1255,42 @@ class SidecarLLMClient(RuntimeClient):
 			with self._active_requests_lock:
 				if self._active_requests.get(request_id) is record:
 					record.backend_started = True
+
+	def _prepare_managed_launcher(self, record, request_id: str):
+		"""Resolve launcher settings and validate the selected model."""
+		if not self._managed_launcher:
+			return None
+		selected_model = self._bound_model_selection
+		if (
+			selected_model is not None
+			and (record.profile or "default")
+			!= (self._settings.runtime_profile or "default")
+		):
+			selected_model = None
+		resolved = self._resolve_settings(
+			record.profile,
+			selected_model=selected_model,
+		)
+		with self._active_requests_lock:
+			other_backend_users = any(
+				other_id != request_id
+				and (other.backend_started or other.response is not None)
+				for other_id, other in self._active_requests.items()
+			)
+		if resolved != self._settings and other_backend_users:
+			raise _SidecarRequestError(
+				"The LLM runtime settings changed during an active request"
+			)
+		self._prepare_launcher(
+			record.profile,
+			selected_model=selected_model,
+		)
+		self._validate_selected_model(
+			self._settings,
+			selected_model,
+			record.profile,
+		)
+		return selected_model
 
 	def _attach_response(
 		self,
