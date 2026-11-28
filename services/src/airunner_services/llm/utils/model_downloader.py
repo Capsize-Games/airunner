@@ -359,7 +359,8 @@ class HuggingFaceDownloader:
         )
         for filename in files_to_download:
 
-            def file_progress(downloaded, total):
+            def file_progress(downloaded: int, total: int) -> None:
+                """Report progress for one model file."""
                 if progress_callback:
                     progress_callback(filename, downloaded, total)
 
@@ -413,7 +414,8 @@ class HuggingFaceDownloader:
 
         local_dir.mkdir(parents=True, exist_ok=True)
 
-        def file_progress(downloaded, total):
+        def file_progress(downloaded: int, total: int) -> None:
+            """Report progress for the GGUF file."""
             if progress_callback:
                 progress_callback(filename, downloaded, total)
 
