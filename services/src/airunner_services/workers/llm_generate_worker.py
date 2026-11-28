@@ -359,49 +359,7 @@ class LLMGenerateWorker(
 					continue
 
 				if isinstance(doc, dict) and "content" in doc:
-					file_type = doc.get("file_type", "")
-					content = doc.get("content")
-					if file_type.lower() in [".html", "html"]:
-						self.model_manager.load_file_into_rag(
-							content,
-							source_name=doc.get(
-								"source_name",
-								"web_content",
-							),
-						)
-					elif file_type.lower() in [
-						".epub",
-						"epub",
-						".mobi",
-						"mobi",
-						".pdf",
-						"pdf",
-					]:
-						content_bytes = (
-							content
-							if isinstance(content, (bytes, bytearray))
-							else str(content).encode("utf-8")
-						)
-						normalized_ext = str(file_type).lower()
-						if not normalized_ext.startswith("."):
-							normalized_ext = f".{normalized_ext}"
-						self.model_manager.load_bytes_into_rag(
-							content_bytes,
-							source_name=doc.get(
-								"source_name",
-								f"{normalized_ext.removeprefix('.')}"
-								"_upload",
-							),
-							file_ext=normalized_ext,
-						)
-					else:
-						self.model_manager.load_html_into_rag(
-							str(content),
-							source_name=doc.get(
-								"source_name",
-								"web_content",
-							),
-						)
+					self._load_dict_document_into_rag(doc)
 					continue
 
 				if isinstance(doc, str) and (
@@ -417,6 +375,51 @@ class LLMGenerateWorker(
 				self.logger.error(
 					f"Failed to load RAG document {repr(doc)}: {error}"
 				)
+
+	def _load_dict_document_into_rag(self, doc: dict) -> None:
+		"""Load one dict-shaped document into RAG by its file type."""
+		file_type = doc.get("file_type", "")
+		content = doc.get("content")
+		source_name = doc.get("source_name", "web_content")
+		if file_type.lower() in [".html", "html"]:
+			self.model_manager.load_file_into_rag(
+				content,
+				source_name=source_name,
+			)
+			return
+		if file_type.lower() in [
+			".epub",
+			"epub",
+			".mobi",
+			"mobi",
+			".pdf",
+			"pdf",
+		]:
+			self._load_bytes_document_into_rag(content, file_type, doc)
+			return
+		self.model_manager.load_html_into_rag(
+			str(content),
+			source_name=source_name,
+		)
+
+	def _load_bytes_document_into_rag(self, content, file_type, doc) -> None:
+		"""Load one bytes-or-text document with its normalized extension."""
+		content_bytes = (
+			content
+			if isinstance(content, (bytes, bytearray))
+			else str(content).encode("utf-8")
+		)
+		normalized_ext = str(file_type).lower()
+		if not normalized_ext.startswith("."):
+			normalized_ext = f".{normalized_ext}"
+		self.model_manager.load_bytes_into_rag(
+			content_bytes,
+			source_name=doc.get(
+				"source_name",
+				f"{normalized_ext.removeprefix('.')}" + "_upload",
+			),
+			file_ext=normalized_ext,
+		)
 
 	def _start_inactivity_timer(self) -> None:
 		"""Start the inactivity monitoring timer when auto-unload is on."""
