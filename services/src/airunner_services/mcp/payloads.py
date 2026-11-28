@@ -9,6 +9,7 @@ these checks are a fast local fail, not the authority.
 from __future__ import annotations
 
 import base64
+import os
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,16 @@ MAX_STRENGTH = 1.0
 MAX_SEED = 2**31 - 1
 LOCAL_PROVIDER = "local"
 MUSE_PROVIDER = "muse"
+DEFAULT_MAX_IMAGE_BYTES = 25 * 1024 * 1024
+
+
+def _max_image_bytes() -> int:
+    """Maximum decoded (not base64-encoded) input-image size, in bytes."""
+    return int(
+        os.environ.get(
+            "AIRUNNER_ART_MAX_IMAGE_BYTES", str(DEFAULT_MAX_IMAGE_BYTES)
+        )
+    )
 
 
 def validate_prompt(prompt: str) -> str:
@@ -95,10 +106,17 @@ def validate_options(
 
 
 def load_input_image_b64(path: str) -> str:
-    """Return base64 input bytes for img2img or raise when unreadable."""
+    """Return base64 input bytes for img2img or raise when unreadable or oversize."""
     target = Path(path).expanduser()
     if not target.is_file():
         raise ValueError(f"input image not found: {path}")
+    size = target.stat().st_size
+    max_bytes = _max_image_bytes()
+    if size > max_bytes:
+        raise ValueError(
+            f"input image ({size} bytes) exceeds maximum allowed size "
+            f"({max_bytes} bytes)"
+        )
     return base64.b64encode(target.read_bytes()).decode("ascii")
 
 
