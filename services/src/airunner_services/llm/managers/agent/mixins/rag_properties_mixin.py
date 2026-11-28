@@ -10,6 +10,19 @@ from airunner_services.llm.managers.agent.mixins.runtime_activity import (
     runtime_activity_locked,
 )
 
+
+def _select_embedding_device() -> str:
+    """Pick the best available embedding device name."""
+    device = "cpu"
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif (
+        hasattr(torch.backends, "mps")
+        and torch.backends.mps.is_available()
+    ):
+        device = "mps"
+    return device
+
 class RAGPropertiesMixin:
     """Mixin for RAG properties and configuration."""
 
@@ -107,86 +120,10 @@ class RAGPropertiesMixin:
             endpoint = (os.environ.get("AIRUNNER_EMBED_ENDPOINT")
                         or "").strip()
             if endpoint:
-                # Opt-in: run embeddings on another machine (e.g. mx's
-                # RTX 2080 SUPER) so this GPU is kept for the LLM. Unset
-                # the env var to restore the original local behaviour.
-                from langchain_ollama import OllamaEmbeddings
-
-                self._embedding = OllamaEmbeddings(
-                    base_url=endpoint,
-                    model=os.environ.get(
-                        "AIRUNNER_EMBED_MODEL", "qwen3-embedding:8b"),
-                )
-                self.logger.info(
-                    "Using remote embedding endpoint %s", endpoint)
+                self._embedding = self._remote_embedding(endpoint)
                 return self._embedding
             try:
-                # Construct local path to embedding model files
-                # Must use local filesystem path, not HuggingFace repo ID
-                model_name = os.path.expanduser(
-                    os.path.join(
-                        self.path_settings.base_path,
-                        "text",
-                        "models",
-                        "llm",
-                        "embedding",
-                        "intfloat/e5-large",
-                    )
-                )
-
-                # Bind the model to the reviewed immutable files before
-                # constructing the runtime. The verifier rejects mutable or
-                # unexpected artifacts and never imports code from this path.
-                from airunner_services.runtimes.e5_model_identity import (
-                    E5ModelIdentityError,
-                    VerifiedE5Embedder,
-                    verify_e5_model_directory,
-                )
-
-                try:
-                    verified_identity = verify_e5_model_directory(model_name)
-                except (E5ModelIdentityError, OSError) as exc:
-                    self.logger.warning(
-                        "Local E5 embedding is unavailable: model files are "
-                        "missing or do not match the reviewed manifest (%s)",
-                        exc,
-                    )
-                    return None
-
-                device = "cpu"
-                if torch.cuda.is_available():
-                    device = "cuda"
-                elif (
-                    hasattr(torch.backends, "mps")
-                    and torch.backends.mps.is_available()
-                ):
-                    device = "mps"
-
-                self.logger.info(
-                    f"Initializing embedding model on {device}: "
-                    f"{model_name}"
-                )
-
-                model_kwargs = {}
-                model_kwargs["device"] = device
-                # intfloat/e5-large is natively supported; do not execute
-                # code shipped inside a downloaded model repo.
-                model_kwargs["trust_remote_code"] = False
-                model_kwargs["local_files_only"] = True
-
-                raw_embedder = HuggingFaceEmbeddings(
-                    model_name=model_name,
-                    model_kwargs=model_kwargs,
-                    encode_kwargs={"normalize_embeddings": True},
-                )
-                self._embedding = VerifiedE5Embedder(
-                    raw_embedder,
-                    verified_identity,
-                    activity_lock=getattr(self, "runtime_activity_lock", None),
-                )
-
-                self.logger.info("Embedding model initialized successfully")
-
+                self._embedding = self._local_embedding()
             except Exception as e:
                 self.logger.error(
                     f"Failed to initialize embedding model: {e}",
@@ -196,6 +133,84 @@ class RAGPropertiesMixin:
                 return None
 
         return self._embedding
+
+    def _remote_embedding(self, endpoint: str):
+        """Build the remote Ollama embedding client for one endpoint."""
+        # Opt-in: run embeddings on another machine (e.g. mx's
+        # RTX 2080 SUPER) so this GPU is kept for the LLM. Unset
+        # the env var to restore the original local behaviour.
+        from langchain_ollama import OllamaEmbeddings
+
+        embedding = OllamaEmbeddings(
+            base_url=endpoint,
+            model=os.environ.get(
+                "AIRUNNER_EMBED_MODEL", "qwen3-embedding:8b"),
+        )
+        self.logger.info(
+            "Using remote embedding endpoint %s", endpoint)
+        return embedding
+
+    def _local_embedding(self):
+        """Load the verified local E5 embedding model, or None on failure."""
+        # Construct local path to embedding model files
+        # Must use local filesystem path, not HuggingFace repo ID
+        model_name = os.path.expanduser(
+            os.path.join(
+                self.path_settings.base_path,
+                "text",
+                "models",
+                "llm",
+                "embedding",
+                "intfloat/e5-large",
+            )
+        )
+
+        # Bind the model to the reviewed immutable files before
+        # constructing the runtime. The verifier rejects mutable or
+        # unexpected artifacts and never imports code from this path.
+        from airunner_services.runtimes.e5_model_identity import (
+            E5ModelIdentityError,
+            VerifiedE5Embedder,
+            verify_e5_model_directory,
+        )
+
+        try:
+            verified_identity = verify_e5_model_directory(model_name)
+        except (E5ModelIdentityError, OSError) as exc:
+            self.logger.warning(
+                "Local E5 embedding is unavailable: model files are "
+                "missing or do not match the reviewed manifest (%s)",
+                exc,
+            )
+            return None
+
+        device = _select_embedding_device()
+
+        self.logger.info(
+            f"Initializing embedding model on {device}: "
+            f"{model_name}"
+        )
+
+        model_kwargs = {}
+        model_kwargs["device"] = device
+        # intfloat/e5-large is natively supported; do not execute
+        # code shipped inside a downloaded model repo.
+        model_kwargs["trust_remote_code"] = False
+        model_kwargs["local_files_only"] = True
+
+        raw_embedder = HuggingFaceEmbeddings(
+            model_name=model_name,
+            model_kwargs=model_kwargs,
+            encode_kwargs={"normalize_embeddings": True},
+        )
+        embedding = VerifiedE5Embedder(
+            raw_embedder,
+            verified_identity,
+            activity_lock=getattr(self, "runtime_activity_lock", None),
+        )
+
+        self.logger.info("Embedding model initialized successfully")
+        return embedding
 
     @property
     def target_files(self) -> Optional[list[str]]:
