@@ -64,23 +64,30 @@ def resolve_scheduler_class(class_name: str, logger: Any) -> Optional[Any]:
 
 
 class SomeModelClass:  # legacy test helper
+    """Stand-in model object used by legacy loader tests."""
+
     def __init__(self, path):
         self.path = path
 
     def unload(self):
+        """Report a successful unload for this stand-in model."""
         return True
 
 
 class SomeSchedulerClass:  # legacy test helper
-    pass
+    """Stand-in scheduler object used by legacy loader tests."""
 
 
 class SomeCompelClass:  # legacy test helper
+    """Stand-in Compel object used by legacy loader tests."""
+
     def __init__(self, *args, **kwargs):
         pass
 
 
 class SomeDeepCacheClass:  # legacy test helper
+    """Stand-in DeepCache object used by legacy loader tests."""
+
     def __init__(self, *args, **kwargs):
         pass
 
@@ -88,6 +95,7 @@ class SomeDeepCacheClass:  # legacy test helper
 def load_scheduler(
     scheduler_name: str, path_settings, version: str, logger: Any
 ) -> Optional[SchedulerMixin]:
+    """Load one allowlisted scheduler from local files."""
     base_path = path_settings.base_path
     scheduler_path = os.path.expanduser(
         os.path.join(
@@ -172,24 +180,30 @@ def unload_deep_cache_helper(deep_cache_helper: Any, logger: Any) -> None:
 
 
 def load_model(path):
+    """Return a stand-in model for legacy loader tests."""
     return SomeModelClass(path)
 
 
 def unload_model(model):
+    """Unload one stand-in model for legacy loader tests."""
     return model.unload()
 
 
 def load_compel(*args, **kwargs):
+    """Return a stand-in Compel object for legacy loader tests."""
     return SomeCompelClass(*args, **kwargs)
 
 
 def load_deep_cache(*args, **kwargs):
+    """Return a stand-in DeepCache object for legacy loader tests."""
     return SomeDeepCacheClass(*args, **kwargs)
 
 
 def load_scheduler(*args, **kwargs):
+    """Return a stand-in scheduler for legacy loader tests."""
     return SomeSchedulerClass()
 
 
 def unload_deep_cache(instance):
+    """Unload one stand-in DeepCache object for legacy loader tests."""
     return instance.unload()
