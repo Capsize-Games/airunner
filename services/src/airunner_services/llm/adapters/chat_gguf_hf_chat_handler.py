@@ -75,6 +75,7 @@ def _thinking_chat_handler(
 ) -> Any:
     """Pass the current thinking option through without replacing formatter behavior."""
     def chat_handler_with_kwargs(*args: Any, **kwargs: Any) -> Any:
+        """Invoke the base handler with thinking and optional normalization."""
         if normalize_messages and isinstance(kwargs.get("messages"), list):
             kwargs = {
                 **kwargs,
@@ -106,6 +107,7 @@ class _PromptSuffixLlamaProxy:
         return getattr(self._llama, name)
 
     def tokenize(self, prompt: bytes, *args: Any, **kwargs: Any) -> Any:
+        """Tokenize UTF-8 byte prompts, stripping the open thinking marker."""
         if isinstance(prompt, bytes):
             try:
                 decoded = prompt.decode("utf-8")
@@ -159,6 +161,7 @@ def _load_llama_chat_format() -> Any | None:
 def _format_messages_handler(tokenizer: Any, chat_format: Any) -> Any:
     """Return a llama.cpp formatter callback for one HF tokenizer."""
     def format_messages(messages: list[dict[str, Any]], **kwargs: Any) -> Any:
+        """Format normalized messages through one HF tokenizer template."""
         return _chat_formatter_response(
             tokenizer,
             _normalize_tool_call_arguments(messages),
