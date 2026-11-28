@@ -135,6 +135,37 @@ def _resolve_download_jobs(
     return jobs
 
 
+async def _queue_setup_downloads(download_service, jobs: list, payload: SetupInstallRequest, total_jobs: int):
+    """Queue downloads, yielding progress updates and running counts."""
+    queued = 0
+    for idx, job in enumerate(jobs):
+        try:
+            job_id = await download_service.start_huggingface_download(
+                repo_id=job["repo_id"],
+                model_type=job["model_type"],
+                prefer_pre_quantized=payload.prefer_pre_quantized,
+            )
+            if not job_id:
+                raise RuntimeError("Download was not queued")
+            queued += 1
+            yield {
+                "status": "queued",
+                "message": f"Started: {job['repo_id']}",
+                "progress": 10 + int(85 * idx / max(total_jobs, 1)),
+                "job_id": job_id,
+                "repo_id": job["repo_id"],
+            }, queued
+        except Exception as exc:
+            logger.warning("Failed to queue %s: %s", job["repo_id"], exc)
+            # Generic message only; the exception detail stays in the
+            # server log (CodeQL py/stack-trace-exposure, issue #2079).
+            yield {
+                "status": "failed",
+                "message": f"Failed: {job['repo_id']}",
+                "progress": 10 + int(85 * idx / max(total_jobs, 1)),
+            }, queued
+
+
 @router.post("/install")
 async def setup_install(
     payload: SetupInstallRequest,
@@ -178,32 +209,11 @@ async def setup_install(
         yield _emit({"status": "installing", "message": f"Queuing {total_jobs} model downloads...", "progress": 10})
 
         queued = 0
-        for idx, job in enumerate(jobs):
-            try:
-                job_id = await download_service.start_huggingface_download(
-                    repo_id=job["repo_id"],
-                    model_type=job["model_type"],
-                    prefer_pre_quantized=payload.prefer_pre_quantized,
-                )
-                if not job_id:
-                    raise RuntimeError("Download was not queued")
-                queued += 1
-                yield _emit({
-                    "status": "queued",
-                    "message": f"Started: {job['repo_id']}",
-                    "progress": 10 + int(85 * idx / max(total_jobs, 1)),
-                    "job_id": job_id,
-                    "repo_id": job["repo_id"],
-                })
-            except Exception as exc:
-                logger.warning("Failed to queue %s: %s", job["repo_id"], exc)
-                # Generic message only; the exception detail stays in the
-                # server log (CodeQL py/stack-trace-exposure, issue #2079).
-                yield _emit({
-                    "status": "failed",
-                    "message": f"Failed: {job['repo_id']}",
-                    "progress": 10 + int(85 * idx / max(total_jobs, 1)),
-                })
+        async for update, count in _queue_setup_downloads(
+            download_service, jobs, payload, total_jobs
+        ):
+            queued = count
+            yield update
 
         if queued < total_jobs:
             status = "partial" if queued else "failed"
