@@ -219,6 +219,12 @@ jobs:
             services/tests/test_download_security.py \
             services/tests/test_release_b02.py \
             services/tests/test_import_boundaries.py \
+            services/tests/test_art_muse_safety_usage.py \
+            services/tests/test_art_docs_contract.py \
+            services/tests/test_complexity_report_parity.py \
+            services/tests/test_release_s02.py \
+            services/tests/test_release_p07_upgrade.py \
+            services/tests/test_release_p10.py \
             services/tests/test_security_package_pins.py \
             services/tests/test_run_tests_optional_smoke.py \
             services/tests/test_gguf_chat_handler_cpu_contract.py \
