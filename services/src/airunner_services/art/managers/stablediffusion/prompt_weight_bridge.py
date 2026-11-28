@@ -7,7 +7,7 @@ class PromptWeightBridge:
     """
 
     @classmethod
-    def get_weight(cls, total, subtract=False):
+    def get_weight(cls, total: int, subtract: bool = False) -> float:
         """
         Get the weight of the prompt.
         :param subtract:
@@ -28,7 +28,8 @@ class PromptWeightBridge:
         return weight
 
     @classmethod
-    def convert_blend(cls, prompt):
+    def convert_blend(cls, prompt: str) -> str:
+        """Convert blend expressions to Compel blend syntax."""
         # find the pattern: ["word:word:0.1"]
         pattern = r"\[[^:\[0-9\]]+:[^:\[0-9\]]+:\d+\.\d+\]"
         compiled = re.compile(pattern)
@@ -65,7 +66,7 @@ class PromptWeightBridge:
         return prompt
 
     @classmethod
-    def convert_basic_brackets(cls, prompt):
+    def convert_basic_brackets(cls, prompt: str) -> str:
         """
         Basic conversion of prompt syntax.
         Text surrounded with brackets decreases the weight of the prompt by 0.1
@@ -93,7 +94,7 @@ class PromptWeightBridge:
         return prompt
 
     @classmethod
-    def convert_basic_parentheses(cls, prompt):
+    def convert_basic_parentheses(cls, prompt: str) -> str:
         """
         Basic conversion of prompt syntax.
         Text surrounded with parentheses increases the weight of the prompt by 0.1
@@ -121,7 +122,7 @@ class PromptWeightBridge:
         return prompt
 
     @classmethod
-    def convert_prompt_with_weight_value(cls, prompt):
+    def convert_prompt_with_weight_value(cls, prompt: str) -> str:
         """
         Similar to convert_basic_parentheses but this time we are looking for
         values surrounded by parentheses followed by :<float>
@@ -167,7 +168,7 @@ class PromptWeightBridge:
         return prompt
 
     @classmethod
-    def reduce_weights(cls, prompt):
+    def reduce_weights(cls, prompt: str) -> str:
         """
         Reduce all weights over 1.4 to 1.4
         :param prompt:
@@ -189,7 +190,7 @@ class PromptWeightBridge:
         return prompt
 
     @classmethod
-    def convert_prompt_weights(cls, prompt):
+    def convert_prompt_weights(cls, prompt: str) -> str:
         """
         Basic conversion of prompt syntax.
         Text surrounded with parentheses increases the weight of the prompt by 0.1
@@ -209,7 +210,7 @@ class PromptWeightBridge:
         return prompt
 
     @classmethod
-    def convert(cls, prompt):
+    def convert(cls, prompt: str) -> str:
         """
         Run all syntax conversions on a given prompt.
         :param prompt:str
