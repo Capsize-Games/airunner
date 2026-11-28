@@ -12,6 +12,18 @@ AI Runner in this repository is the headless model service and API. Contribution
 
 Preserve the project's GPL-3.0-only license, upstream copyright notices, and third-party notices. Commit generated release inputs only when the packaging workflow needs them, with exact hashes, source provenance, and required license material. Keep model weights, credentials, private policy data, customer data, and local runtime state out of commits.
 
+## First contribution in 30 minutes
+
+For a documentation, test, or small code fix, no GPU or model files are needed:
+
+1. Fork `Capsize-Games/airunner`, clone your fork, and branch from current `master`.
+2. Create the environment: `uv venv --python 3.13.5 .venv`, then `uv pip install --python .venv/bin/python -e "./services[development]" -e ./native`. The base metadata requires `airunner-common~=6.1.8`; its reviewed wheel is in the [common v6.1.8 release](https://github.com/Capsize-Games/airunner-common/releases/tag/v6.1.8), while PyPI publication remains paused (see [#2413](https://github.com/Capsize-Games/airunner/issues/2413)). Do not start with the `headless`, `desktop`, or `tts-python` extras; they are not the contributor path.
+3. Verify the setup: `.venv/bin/python -m pytest services/tests/test_service_bootstrap.py -q` must pass. A skip is not a pass; quote the exact output.
+4. Pick a [`good first issue`](https://github.com/Capsize-Games/airunner/issues?q=label%3A%22good+first+issue%22+state%3Aopen), make one focused change, and run the single related test file. Useful fast subsets are documented under [Tests and reports](#tests-and-reports).
+5. Open a pull request against `master` describing what changed, why, and the exact test output. First-time fork pull requests need a maintainer to approve CI ("Approve and run workflows") before checks run; a red check may be pre-existing, so describe what you observed rather than force-pushing around it.
+
+No CLA, DCO, or sign-off is required. Keep the GPL-3.0-only license notices intact.
+
 ## Development environment
 
 The package metadata requires Python 3.13.3 or newer; Linux candidate CI uses 3.13.5. New Python environments on this machine use `uv`:
