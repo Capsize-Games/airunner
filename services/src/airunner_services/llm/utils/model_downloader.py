@@ -81,66 +81,62 @@ class HuggingFaceDownloader:
             List of file info dicts with 'path', 'size', etc.
         """
         api_key = self._get_huggingface_api_key()
-
-        # Prepare headers with authentication if available
         headers = {}
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
 
-        def fetch_directory(path: str = "") -> List[Dict[str, any]]:
-            """Fetch files from a directory path."""
-            from urllib.parse import urljoin
-
-            from airunner_services.url_safety import (
-                SSRFBlocked,
-                pinned_dns,
-                validate_url_for_fetch,
-            )
-
-            if path:
-                api_url = f"https://huggingface.co/api/models/{repo_id}/tree/{revision}/{path}"
-            else:
-                api_url = f"https://huggingface.co/api/models/{repo_id}/tree/{revision}"
-
-            try:
-                current_url = api_url
-                for _ in range(4):
-                    target = validate_url_for_fetch(current_url)
-                    with pinned_dns(target):
-                        candidate = requests.get(
-                            current_url,
-                            headers=headers,
-                            timeout=30,
-                            allow_redirects=False,
-                        )
-                    if candidate.status_code not in (301, 302, 303, 307, 308):
-                        candidate.raise_for_status()
-                        return candidate.json()
-                    location = candidate.headers.get("location")
-                    candidate.close()
-                    if not location:
-                        raise SSRFBlocked("redirect without location")
-                    current_url = urljoin(current_url, location)
-                raise SSRFBlocked("too many redirects")
-            except Exception as e:
-                raise RuntimeError(
-                    f"Failed to list files for {repo_id}/{path}: {e}"
-                )
-
-        # Fetch root level
         all_files = []
-        items = fetch_directory()
-
+        items = self._fetch_huggingface_directory(repo_id, revision, headers)
         for item in items:
             if item.get("type") == "directory" and recursive:
-                # Recursively fetch subdirectory contents
-                subdir_path = item.get("path", "")
-                subdir_files = fetch_directory(subdir_path)
+                subdir_files = self._fetch_huggingface_directory(
+                    repo_id, revision, headers, item.get("path", "")
+                )
                 all_files.extend(subdir_files)
             else:
                 all_files.append(item)
-
         return all_files
+
+    def _fetch_huggingface_directory(
+        self, repo_id: str, revision: str, headers: Dict[str, str], path: str = ""
+    ) -> List[Dict[str, any]]:
+        """Fetch one HuggingFace directory listing over a pinned fetch."""
+        from urllib.parse import urljoin
+
+        from airunner_services.url_safety import (
+            SSRFBlocked,
+            pinned_dns,
+            validate_url_for_fetch,
+        )
+
+        if path:
+            api_url = f"https://huggingface.co/api/models/{repo_id}/tree/{revision}/{path}"
+        else:
+            api_url = f"https://huggingface.co/api/models/{repo_id}/tree/{revision}"
+        try:
+            current_url = api_url
+            for _ in range(4):
+                target = validate_url_for_fetch(current_url)
+                with pinned_dns(target):
+                    candidate = requests.get(
+                        current_url,
+                        headers=headers,
+                        timeout=30,
+                        allow_redirects=False,
+                    )
+                if candidate.status_code not in (301, 302, 303, 307, 308):
+                    candidate.raise_for_status()
+                    return candidate.json()
+                location = candidate.headers.get("location")
+                candidate.close()
+                if not location:
+                    raise SSRFBlocked("redirect without location")
+                current_url = urljoin(current_url, location)
+            raise SSRFBlocked("too many redirects")
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to list files for {repo_id}/{path}: {e}"
+            )
 
     def download_file(
         self,
