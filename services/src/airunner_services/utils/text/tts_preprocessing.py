@@ -60,6 +60,7 @@ def replace_numbers_with_words(text: str) -> str:
     engine = inflect.engine()
 
     def format_time_with_meridiem(match: re.Match[str]) -> str:
+        """Expand one time with meridiem into spoken words."""
         minutes = engine.number_to_words(match.group(2))
         minutes = minutes.replace("zero", "")
         minutes = minutes.replace("-", " ")
@@ -70,6 +71,7 @@ def replace_numbers_with_words(text: str) -> str:
         )
 
     def format_time(match: re.Match[str]) -> str:
+        """Expand one time without meridiem into spoken words."""
         minutes = engine.number_to_words(match.group(2))
         minutes = minutes.replace("-", " ")
         return f"{engine.number_to_words(match.group(1))} {minutes}"
@@ -113,6 +115,7 @@ def roman_to_int(text: str) -> str:
     }
 
     def convert_roman_to_int(roman: str) -> str:
+        """Return one Roman numeral token as a decimal string."""
         total = 0
         previous_value = 0
         for char in reversed(roman):
