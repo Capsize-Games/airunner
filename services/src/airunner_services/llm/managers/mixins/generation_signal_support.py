@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any, Callable, List, Optional
 
 from airunner_common.llm_response import LLMResponse
 
 
-def current_assistant_turn_index(owner) -> int:
+def current_assistant_turn_index(owner: Any) -> int:
     """Return the current workflow assistant-turn index."""
     workflow_manager = getattr(owner, "_workflow_manager", None)
     turn_index = getattr(workflow_manager, "_assistant_turn_index", 0)
@@ -34,7 +34,7 @@ def _strip_leading_assistant_preamble(existing: str, text: str) -> str:
 
 
 def emit_visible_response(
-    owner,
+    owner: Any,
     llm_request: Optional[Any],
     message: str,
     complete_response: List[str],
@@ -62,11 +62,11 @@ def emit_visible_response(
 
 
 def create_streaming_callback(
-    owner,
+    owner: Any,
     llm_request: Optional[Any],
     complete_response: List[str],
     sequence_counter: List[int],
-):
+) -> Callable[[str], None]:
     """Create the callback that forwards streaming assistant tokens."""
 
     def handle_streaming_token(token_text: str) -> None:
@@ -100,10 +100,10 @@ def create_streaming_callback(
 
 
 def create_thinking_callback(
-    owner,
+    owner: Any,
     llm_request: Optional[Any],
     sequence_counter: List[int],
-):
+) -> Callable[[str, str], None]:
     """Create the callback that emits typed thinking chunks."""
 
     def handle_thinking_event(status: str, content: str) -> None:
@@ -126,7 +126,7 @@ def create_thinking_callback(
 
 
 def send_end_of_message(
-    owner,
+    owner: Any,
     llm_request: Optional[Any],
     sequence_counter: List[int],
     executed_tools: list[str],

@@ -11,7 +11,7 @@ from airunner_services.llm.managers.request_preparation import (
 )
 
 
-def sync_request_scope_to_workflow_manager(owner) -> None:
+def sync_request_scope_to_workflow_manager(owner: Any) -> None:
     """Propagate the active request ID to workflow-scoped emitters."""
     if not owner._workflow_manager:
         return
@@ -36,7 +36,7 @@ def sync_request_scope_to_workflow_manager(owner) -> None:
     setattr(owner._workflow_manager, "_current_request_id", request_id)
 
 
-def clamp_generation_tokens(owner, generation_kwargs: Dict[str, Any]) -> None:
+def clamp_generation_tokens(owner: Any, generation_kwargs: Dict[str, Any]) -> None:
     """Clamp max_new_tokens to the loaded model context length."""
     target_ctx = getattr(owner, "_target_context_length", None)
     requested = generation_kwargs.get("max_new_tokens")
@@ -52,7 +52,7 @@ def clamp_generation_tokens(owner, generation_kwargs: Dict[str, Any]) -> None:
 
 
 def setup_generation_workflow(
-    owner,
+    owner: Any,
     action: LLMActionType,
     system_prompt: Optional[str],
     skip_tool_setup: bool = False,
@@ -92,7 +92,7 @@ def setup_generation_workflow(
 
 
 def apply_workflow_request_setup(
-    owner,
+    owner: Any,
     action: LLMActionType,
     action_system_prompt: str,
     skip_tool_setup: bool,
@@ -107,7 +107,7 @@ def apply_workflow_request_setup(
     update_workflow_tools_for_action(owner, action, skip_tool_setup)
 
 
-def set_workflow_force_tool(owner, force_tool: Optional[str]) -> None:
+def set_workflow_force_tool(owner: Any, force_tool: Optional[str]) -> None:
     """Synchronize the request force-tool state into the workflow."""
     if not hasattr(owner._workflow_manager, "set_force_tool"):
         return
@@ -116,7 +116,7 @@ def set_workflow_force_tool(owner, force_tool: Optional[str]) -> None:
 
 
 def set_workflow_response_format(
-    owner,
+    owner: Any,
     response_format: Optional[str],
 ) -> None:
     """Apply one request response-format override when present."""
@@ -129,7 +129,7 @@ def set_workflow_response_format(
 
 
 def update_workflow_tools_for_action(
-    owner,
+    owner: Any,
     action: LLMActionType,
     skip_tool_setup: bool,
 ) -> None:
