@@ -7,6 +7,7 @@ from typing import Optional
 from airunner_services.llm.managers.mixins.node_streaming_state import (
     StreamingState,
 )
+from airunner_services.llm_workflow_events import LLMWorkflowEventSink
 from airunner_services.llm.thinking_parser import (
     detect_thinking_close_tag,
     detect_thinking_open_tag,
@@ -25,7 +26,7 @@ class NodeStreamingThinkingHelper:
         self,
         state: StreamingState,
         request_id: Optional[str],
-        event_sink,
+        event_sink: LLMWorkflowEventSink,
         reasoning_delta: Optional[str],
         text: str,
     ) -> bool:
@@ -61,7 +62,7 @@ class NodeStreamingThinkingHelper:
         self,
         state: StreamingState,
         request_id: Optional[str],
-        event_sink,
+        event_sink: LLMWorkflowEventSink,
         text: str,
     ) -> bool:
         """Handle one thinking open tag if present."""
@@ -114,7 +115,7 @@ class NodeStreamingThinkingHelper:
         self,
         state: StreamingState,
         request_id: Optional[str],
-        event_sink,
+        event_sink: LLMWorkflowEventSink,
         text: str,
     ) -> None:
         """Handle one chunk while already inside a thinking block."""
@@ -144,7 +145,7 @@ class NodeStreamingThinkingHelper:
         self,
         state: StreamingState,
         request_id: Optional[str],
-        event_sink,
+        event_sink: LLMWorkflowEventSink,
         before_close: str,
     ) -> None:
         """Close one thinking block and emit its final content."""
@@ -169,7 +170,7 @@ class NodeStreamingThinkingHelper:
     def emit_thinking_signal(
         self,
         request_id: Optional[str],
-        event_sink,
+        event_sink: LLMWorkflowEventSink,
         status: str,
         content: str,
     ) -> None:
@@ -200,7 +201,7 @@ class NodeStreamingThinkingHelper:
         self,
         state: StreamingState,
         request_id: Optional[str],
-        event_sink,
+        event_sink: LLMWorkflowEventSink,
     ) -> None:
         """Emit any unfinished reasoning delta after streaming ends."""
         if not state.using_reasoning_deltas or not state.thinking_content:

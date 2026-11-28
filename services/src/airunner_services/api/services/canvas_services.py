@@ -43,14 +43,14 @@ class CanvasAPIService(APIServiceBase):
         """Emit the recenter grid signal."""
         self.emit_signal(get_art_signal_code("RECENTER_GRID_SIGNAL"))
 
-    def toggle_grid(self, val) -> None:
+    def toggle_grid(self, val: bool) -> None:
         """Emit the toggle grid signal."""
         self.emit_signal(
             get_art_signal_code("TOGGLE_GRID"),
             {"show_grid": val},
         )
 
-    def toggle_grid_snap(self, val) -> None:
+    def toggle_grid_snap(self, val: bool) -> None:
         """Emit the toggle grid snap signal."""
         self.emit_signal(
             get_art_signal_code("TOGGLE_GRID_SNAP"),
@@ -61,7 +61,7 @@ class CanvasAPIService(APIServiceBase):
         """Emit the generate mask signal."""
         self.emit_signal(get_art_signal_code("GENERATE_MASK"))
 
-    def mask_response(self, mask) -> None:
+    def mask_response(self, mask: Any) -> None:
         """Emit the mask generator response signal."""
         self.emit_signal(
             get_art_signal_code("MASK_GENERATOR_WORKER_RESPONSE_SIGNAL"),
@@ -84,7 +84,7 @@ class CanvasAPIService(APIServiceBase):
         """Emit the mask updated signal."""
         self.emit_signal(get_art_signal_code("MASK_UPDATED"))
 
-    def brush_color_changed(self, color) -> None:
+    def brush_color_changed(self, color: Any) -> None:
         """Emit the brush color changed signal."""
         self.emit_signal(
             get_art_signal_code("BRUSH_COLOR_CHANGED_SIGNAL"),
@@ -154,21 +154,21 @@ class CanvasAPIService(APIServiceBase):
         """Emit the layers show signal."""
         self.emit_signal(get_art_signal_code("LAYERS_SHOW_SIGNAL"))
 
-    def layer_opacity_changed(self, value) -> None:
+    def layer_opacity_changed(self, value: Any) -> None:
         """Emit the layer opacity changed signal."""
         self.emit_signal(
             get_art_signal_code("LAYER_OPACITY_CHANGED_SIGNAL"),
             value,
         )
 
-    def toggle_tool(self, tool, active) -> None:
+    def toggle_tool(self, tool: Any, active: bool) -> None:
         """Emit the toggle tool signal."""
         self.emit_signal(
             get_art_signal_code("TOGGLE_TOOL"),
             {"tool": tool, "active": active},
         )
 
-    def tool_changed(self, tool, active) -> None:
+    def tool_changed(self, tool: Any, active: bool) -> None:
         """Emit the application tool changed signal."""
         self.emit_signal(
             get_art_signal_code("APPLICATION_TOOL_CHANGED_SIGNAL"),
@@ -196,7 +196,7 @@ class CanvasAPIService(APIServiceBase):
             {"undo": undo, "redo": redo},
         )
 
-    def update_cursor(self, event, apply_cursor) -> None:
+    def update_cursor(self, event: Any, apply_cursor: bool) -> None:
         """Emit the canvas update cursor signal."""
         self.emit_signal(
             get_art_signal_code("CANVAS_UPDATE_CURSOR"),
