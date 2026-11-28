@@ -707,20 +707,8 @@ def _ollama_generate_stream(app, prompt: str, model: str, llm_request: LLMReques
         observer.close()
 
 
-def _ollama_generate_non_stream(app, prompt: str, model: str, llm_request: LLMRequest, request_id: str):
-    """Return one non-streaming Ollama generate response."""
-    start_time = time.monotonic()
-    final_usage: list[dict[str, Any] | None] = [None]
-    observer = LegacyCompletionObserver(
-        request_id,
-        lambda reason: _ndjson_line(
-            _ollama_generate_error(
-                model,
-                "Request timeout" if reason == "timeout" else "LLM generation failed",
-            )
-        ),
-        cancel=lambda: cancel_owned_llm_request(app, request_id),
-    )
+def _ollama_generate_non_stream_callback(observer: LegacyCompletionObserver, final_usage: list) -> Callable[[dict[str, Any]], None]:
+    """Return one non-streaming Ollama generate update callback."""
 
     def callback(data: dict[str, Any]) -> None:
         """Publish one non-streaming Ollama generate update."""
@@ -743,14 +731,11 @@ def _ollama_generate_non_stream(app, prompt: str, model: str, llm_request: LLMRe
             terminal=bool(response.is_end_of_message),
         )
 
-    observer.start_dispatch(
-        lambda cb: _collect_text(app, prompt, llm_request, request_id, cb),
-        callback,
-    )
-    try:
-        events = observer.collect()
-    finally:
-        observer.close()
+    return callback
+
+
+def _ollama_generate_non_stream_result(model: str, start_time: float, events: list, final_usage: list) -> dict[str, Any]:
+    """Return one non-streaming generate payload or raise on failure."""
     if events[-1].failed:
         if events[-1].failure_reason == "timeout":
             raise HTTPException(status_code=504, detail="Request timeout")
@@ -764,6 +749,32 @@ def _ollama_generate_non_stream(app, prompt: str, model: str, llm_request: LLMRe
         "done": True,
         **_ollama_timings(start_time, final_usage[0]),
     }
+
+
+def _ollama_generate_non_stream(app, prompt: str, model: str, llm_request: LLMRequest, request_id: str):
+    """Return one non-streaming Ollama generate response."""
+    start_time = time.monotonic()
+    final_usage: list[dict[str, Any] | None] = [None]
+    observer = LegacyCompletionObserver(
+        request_id,
+        lambda reason: _ndjson_line(
+            _ollama_generate_error(
+                model,
+                "Request timeout" if reason == "timeout" else "LLM generation failed",
+            )
+        ),
+        cancel=lambda: cancel_owned_llm_request(app, request_id),
+    )
+    callback = _ollama_generate_non_stream_callback(observer, final_usage)
+    observer.start_dispatch(
+        lambda cb: _collect_text(app, prompt, llm_request, request_id, cb),
+        callback,
+    )
+    try:
+        events = observer.collect()
+    finally:
+        observer.close()
+    return _ollama_generate_non_stream_result(model, start_time, events, final_usage)
 
 
 def _ollama_generate_error(model: str, message: str) -> dict[str, Any]:
