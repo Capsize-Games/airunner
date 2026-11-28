@@ -320,75 +320,36 @@ def _configure_cors(
 
 def _register_routers(app: FastAPI) -> None:
     """Include every API router on the app in registration order."""
-
-    app.include_router(health.router, prefix="/api/v1", tags=["health"])
-    app.include_router(daemon.router, prefix="/api/v1/daemon", tags=["daemon"])
-    app.include_router(llm.router, prefix="/api/v1/llm", tags=["llm"])
-    app.include_router(
-        conversations.router,
-        prefix="/api/v1/llm",
-        tags=["llm", "conversations"],
-    )
-    app.include_router(
-        persistence.router,
-        prefix="/api/v1/state",
-        tags=["state"],
-    )
-    app.include_router(
-        persistence.router,
-        prefix="/api/v1/persistence",
-        tags=["persistence"],
-    )
-    app.include_router(
-        domain_resources.settings_router,
-        prefix="/api/v1/settings",
-        tags=["settings"],
-    )
-    # Bootstrap owns GET /bootstrap; the domain catalog router
-    # owns /resources/* under the same prefix. No path overlap.
-    app.include_router(
-        catalog_bootstrap.router,
-        prefix="/api/v1/catalog",
-        tags=["catalog"],
-    )
-    app.include_router(
-        domain_resources.catalog_router,
-        prefix="/api/v1/catalog",
-        tags=["catalog"],
-    )
-    app.include_router(
-        domain_resources.library_router,
-        prefix="/api/v1/library",
-        tags=["library"],
-    )
-    app.include_router(
-        domain_resources.workspace_router,
-        prefix="/api/v1/workspace",
-        tags=["workspace"],
-    )
-    app.include_router(art.router, prefix="/api/v1/art", tags=["art"])
-    app.include_router(
-        video.router, prefix="/api/v1/video", tags=["video"]
-    )
-    app.include_router(
-        downloads.router,
-        prefix="/api/v1/downloads",
-        tags=["downloads"],
-    )
-    app.include_router(
-        setup.router,
-        prefix="/api/v1",
-        tags=["setup"],
-    )
-    app.include_router(tts.router, prefix="/api/v1/tts", tags=["tts"])
-    app.include_router(tts_ws.router, prefix="/api/v1/tts", tags=["tts"])
-    app.include_router(stt.router, prefix="/api/v1/stt", tags=["stt"])
-    app.include_router(
-        events.router, prefix="/api/v1", tags=["events"]
-    )
+    for router, prefix, tags in _ROUTER_REGISTRATIONS:
+        app.include_router(router, prefix=prefix, tags=tags)
 
     # Legacy compatibility endpoints for existing clients.
     app.include_router(legacy_routes.router, tags=["legacy"])
+
+
+_ROUTER_REGISTRATIONS = (
+    (health.router, "/api/v1", ["health"]),
+    (daemon.router, "/api/v1/daemon", ["daemon"]),
+    (llm.router, "/api/v1/llm", ["llm"]),
+    (conversations.router, "/api/v1/llm", ["llm", "conversations"]),
+    (persistence.router, "/api/v1/state", ["state"]),
+    (persistence.router, "/api/v1/persistence", ["persistence"]),
+    (domain_resources.settings_router, "/api/v1/settings", ["settings"]),
+    # Bootstrap owns GET /bootstrap; the domain catalog router
+    # owns /resources/* under the same prefix. No path overlap.
+    (catalog_bootstrap.router, "/api/v1/catalog", ["catalog"]),
+    (domain_resources.catalog_router, "/api/v1/catalog", ["catalog"]),
+    (domain_resources.library_router, "/api/v1/library", ["library"]),
+    (domain_resources.workspace_router, "/api/v1/workspace", ["workspace"]),
+    (art.router, "/api/v1/art", ["art"]),
+    (video.router, "/api/v1/video", ["video"]),
+    (downloads.router, "/api/v1/downloads", ["downloads"]),
+    (setup.router, "/api/v1", ["setup"]),
+    (tts.router, "/api/v1/tts", ["tts"]),
+    (tts_ws.router, "/api/v1/tts", ["tts"]),
+    (stt.router, "/api/v1/stt", ["stt"]),
+    (events.router, "/api/v1", ["events"]),
+)
 
 
 def _tenant_middleware_factory(
