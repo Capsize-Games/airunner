@@ -5,6 +5,7 @@ from typing import List
 from fastapi import APIRouter
 
 from airunner_services.model_management.model_registry import (
+    ModelMetadata,
     ModelProvider,
     ModelRegistry,
     ModelType as RegistryModelType,
@@ -41,7 +42,7 @@ def group_models_by_version(
     ]
 
 
-def registry_model_info(configured: str, model) -> ModelInfo:
+def registry_model_info(configured: str, model: ModelMetadata) -> ModelInfo:
     """Return one registry-backed art model response entry.
 
     Scope: ``loaded`` here is catalog-configured state only —
@@ -60,7 +61,7 @@ def registry_model_info(configured: str, model) -> ModelInfo:
 
 
 @router.get("/models", response_model=LocalArtModelsResponse)
-async def list_models():
+async def list_models() -> LocalArtModelsResponse:
     """List installed models per version plus valid schedulers."""
     model_base = art_model_base_dir()
     models = installed_art_models(model_base)
@@ -73,7 +74,7 @@ async def list_models():
 
 
 @router.get("/models/registry", response_model=List[ModelInfo])
-async def list_registry_models():
+async def list_registry_models() -> List[ModelInfo]:
     """List models from AIRunner's internal art model registry."""
     registry = ModelRegistry()
     candidates = registry.list_models(

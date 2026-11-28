@@ -1,4 +1,4 @@
-from typing import Type, Optional
+from typing import Any, Type, Optional
 from abc import ABCMeta
 import os
 import tempfile
@@ -267,7 +267,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             )
         return self._source_se
 
-    def generate(self, tts_request: Type[TTSRequest]):
+    def generate(self, tts_request: TTSRequest) -> Any:
         """
         Generate speech using OpenVoice and apply tone color conversion.
         """
@@ -276,7 +276,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         with self._generate_lock:
             return self._generate_locked(tts_request)
 
-    def _generate_locked(self, tts_request: Type[TTSRequest]):
+    def _generate_locked(self, tts_request: TTSRequest) -> Any:
         """Run one synthesis with per-request temp files.
 
         The previous implementation shared one fixed ``tmp.wav`` and one
@@ -374,7 +374,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         )
         return response
 
-    def load(self, _target_model=None):
+    def load(self, _target_model: Optional[str] = None) -> bool:
         """
         Load and initialize the OpenVoice model.
         """

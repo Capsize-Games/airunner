@@ -65,7 +65,7 @@ class Signal:
         except (ValueError, TypeError, RecursionError):
             self.param_count = 1
 
-    def on_signal_received(self, data: Dict):
+    def on_signal_received(self, data: Dict) -> None:
         """Resolve the callback and deliver one signal payload."""
         try:
             cb = None
@@ -98,7 +98,7 @@ class Signal:
                     pass
 
     @property
-    def signal(self):
+    def signal(self) -> Signal:
         """Return one compatibility object that still exposes emit()."""
         return self
 
@@ -261,7 +261,7 @@ class SignalMediator(metaclass=SingletonMeta):
         self,
         request_id: str,
         callback: Optional[CallableType] = None,
-    ):
+    ) -> queue.Queue:
         """Register one pending request for response correlation."""
         with self._request_lock:
             response_queue = queue.Queue()
