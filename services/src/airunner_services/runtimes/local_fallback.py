@@ -599,10 +599,10 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
             raise EspeakRenderError("tts_invalid_request")
         return self._espeak_cli_renderer.catalogue()
 
-    def invoke(self, request: RequestEnvelope) -> ResponseEnvelope:
-        """Synthesize with a configured backend or honor explicit playback opt-in."""
-        if request.runtime is not RuntimeKind.TTS:
-            raise ValueError("LocalFallbackTTSClient only supports TTS")
+    def _route_action(
+        self, request: RequestEnvelope
+    ) -> Optional[ResponseEnvelope]:
+        """Handle non-invoke actions, returning None for the invoke route."""
         if request.action is RuntimeAction.STATUS:
             return self._status_response(request.request_id)
         if request.action is RuntimeAction.LOAD_MODEL:
@@ -614,7 +614,35 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
             return self._unload_model(request.request_id)
         if request.action is not RuntimeAction.INVOKE:
             raise ValueError("LocalFallbackTTSClient only supports invoke")
-        invocation = TTSInvocationRequest.model_validate(request.payload)
+        return None
+
+    def _select_tts_worker_or_failure(
+        self,
+        request_id: str,
+        requested_model: Optional[str],
+        configured_model: Optional[str],
+    ):
+        """Return (worker, None) or (None, failure_response)."""
+        if self._is_espeak_model_type(requested_model or configured_model):
+            return None, None
+        worker = self._headless_tts_worker()
+        active_model = getattr(worker, "_active_tts_model", None)
+        try:
+            active_model_type = active_model() if callable(active_model) else None
+        except Exception:
+            active_model_type = None
+        if is_deferred_tts_model_type(active_model_type):
+            return worker, self._failure_response(
+                request_id,
+                TTS_BACKEND_UNAVAILABLE_CODE,
+                OPENVOICE_DEFERRED_DETAILS,
+            )
+        return worker, None
+
+    def _invoke_tts_route(
+        self, request: RequestEnvelope, invocation: TTSInvocationRequest
+    ) -> ResponseEnvelope:
+        """Run the invoke route: deferred checks, worker, playback, failure."""
         configured_model = os.environ.get("AIRUNNER_TTS_MODEL_TYPE")
         requested_model = (invocation.metadata or {}).get("model_type")
         if is_deferred_tts_model_type(
@@ -625,33 +653,19 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
                 TTS_BACKEND_UNAVAILABLE_CODE,
                 OPENVOICE_DEFERRED_DETAILS,
             )
-
-        if self._is_espeak_model_type(requested_model or configured_model):
-            return self._invoke_headless_runtime(
-                request.request_id,
-                invocation,
-                worker=None,
-            )
-
-        worker = self._headless_tts_worker()
-        active_model = getattr(worker, "_active_tts_model", None)
-        try:
-            active_model_type = active_model() if callable(active_model) else None
-        except Exception:
-            active_model_type = None
-        if is_deferred_tts_model_type(active_model_type):
-            return self._failure_response(
-                request.request_id,
-                TTS_BACKEND_UNAVAILABLE_CODE,
-                OPENVOICE_DEFERRED_DETAILS,
-            )
-        if worker is not None:
+        worker, failure = self._select_tts_worker_or_failure(
+            request.request_id, requested_model, configured_model
+        )
+        if failure is not None:
+            return failure
+        if worker is not None or self._is_espeak_model_type(
+            requested_model or configured_model
+        ):
             return self._invoke_headless_runtime(
                 request.request_id,
                 invocation,
                 worker=worker,
             )
-
         if self._allow_legacy_playback:
             return self._invoke_playback_runtime(request.request_id, invocation)
         return self._failure_response(
@@ -659,6 +673,16 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
             TTS_BACKEND_UNAVAILABLE_CODE,
             "No headless TTS backend is configured",
         )
+
+    def invoke(self, request: RequestEnvelope) -> ResponseEnvelope:
+        """Synthesize with a configured backend or honor explicit playback opt-in."""
+        if request.runtime is not RuntimeKind.TTS:
+            raise ValueError("LocalFallbackTTSClient only supports TTS")
+        routed = self._route_action(request)
+        if routed is not None:
+            return routed
+        invocation = TTSInvocationRequest.model_validate(request.payload)
+        return self._invoke_tts_route(request, invocation)
 
     def _invoke_headless_runtime(
         self,
