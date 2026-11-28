@@ -8,6 +8,8 @@ from typing import Dict
 
 
 class X4DataUtilsMixin:
+    """Provide request-field helpers for the 4x upscaler."""
+
     def _normalize_request_fields(self, **kwargs) -> Dict:
         """Placeholder normalization hook for request building."""
         return kwargs
