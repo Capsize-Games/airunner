@@ -4,7 +4,7 @@ import io
 import queue
 import re
 import threading
-from typing import Dict, Optional, Type
+from typing import Any, Dict, Optional, Type
 from uuid import uuid4
 
 import soundfile as sf
@@ -360,7 +360,7 @@ class TTSGeneratorWorker(Worker):
 			return model_status
 		return ModelStatus.UNLOADED
 
-	def on_llm_text_streamed_signal(self, data):
+	def on_llm_text_streamed_signal(self, data: dict) -> None:
 		"""Buffer streamed LLM text and queue completed replies for TTS."""
 		response = data.get("response", None)
 		if data.get("_skip_worker_manager_tts"):
@@ -526,7 +526,7 @@ class TTSGeneratorWorker(Worker):
 
 		self._load_tts()
 
-	def on_application_settings_changed_signal(self, data):
+	def on_application_settings_changed_signal(self, data: dict) -> None:
 		"""Reload speaker embeddings when reference settings change."""
 		setting_name = data.get("setting_name", "") if data else ""
 		column_name = data.get("column_name", "") if data else ""
@@ -581,7 +581,7 @@ class TTSGeneratorWorker(Worker):
 		self.tts = tts_model_manager_class_()
 		self.logger.debug(f"Instantiated new TTS model manager: {self.tts}")
 
-	def on_add_to_queue_signal(self, data):
+	def on_add_to_queue_signal(self, data: dict) -> None:
 		"""Queue one TTS request from an external signal."""
 		self.add_to_queue(
 			{
@@ -599,13 +599,13 @@ class TTSGeneratorWorker(Worker):
 		message_type = message.get("_message_type")
 		return isinstance(message_type, str) and bool(message_type.strip())
 
-	def add_to_queue(self, message):
+	def add_to_queue(self, message: Any) -> None:
 		"""Queue one message unless playback is interrupted."""
 		if self.do_interrupt and not self._is_control_queue_message(message):
 			return
 		super().add_to_queue(message)
 
-	def get_item_from_queue(self):
+	def get_item_from_queue(self) -> Any:
 		"""Return the next queued message unless playback is interrupted."""
 		message = super().get_item_from_queue()
 		if message is None:
@@ -614,7 +614,7 @@ class TTSGeneratorWorker(Worker):
 			return None
 		return message
 
-	def handle_message(self, data):
+	def handle_message(self, data: dict) -> None:
 		"""Dispatch one queued TTS message or control signal."""
 		message_type = data.get("_message_type") if data else None
 		if message_type == "interrupt":
@@ -656,7 +656,7 @@ class TTSGeneratorWorker(Worker):
 		timestamp_pattern = re.compile(r"\b(\d{1,2}):(\d{2})\b")
 		text = timestamp_pattern.sub(r"\1 \2", text)
 
-		def word_count(s):
+		def word_count(s: str) -> int:
 			"""Return the number of words in one text chunk."""
 			return len(s.split())
 
