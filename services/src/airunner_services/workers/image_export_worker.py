@@ -18,6 +18,7 @@ class ImageExportWorker(Worker):
 	queue_type = QueueType.GET_LAST_ITEM
 
 	def handle_message(self, message: Dict):
+		"""Export one queued image batch and emit its path signal."""
 		images = message.get("images", [])
 		data = message.get("data", {})
 		self._export_images(images, data)
