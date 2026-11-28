@@ -265,6 +265,7 @@ class WebContentExtractor:
 
     @staticmethod
     def get_cached(url: str) -> Optional[str]:
+        """Return cached text for one URL, or ``None`` when unavailable."""
         path = WebContentExtractor._url_to_cache_path(url)
         if path.exists():
             try:
@@ -288,6 +289,7 @@ class WebContentExtractor:
 
     @staticmethod
     def set_cache(url: str, text: str):
+        """Write text to the cache for one URL; failures only log."""
         path = WebContentExtractor._url_to_cache_path(url)
         try:
             path.write_text(text, encoding="utf-8")
@@ -841,6 +843,7 @@ class WebContentExtractor:
     def content_from_search_results(
         consolidated_results: List[Dict], top_n: int
     ) -> List[str]:
+        """Extract text from the first ``top_n`` linked search results."""
         url_items = [
             item
             for item in consolidated_results
