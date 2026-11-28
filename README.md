@@ -1,5 +1,14 @@
 # AI Runner
 
+[![Hybrid Runtime CI](https://github.com/Capsize-Games/airunner/actions/workflows/eval-tests.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/eval-tests.yml)
+[![Native Runtime Sidecars](https://github.com/Capsize-Games/airunner-native/actions/workflows/native-runtime-sidecars.yml/badge.svg)](https://github.com/Capsize-Games/airunner-native/actions/workflows/native-runtime-sidecars.yml)
+[![Docker Release](https://github.com/Capsize-Games/airunner/actions/workflows/docker-release.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/docker-release.yml)
+[![PyPI](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml)
+[![Python 3.13](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/downloads/)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+[![GitHub last commit](https://img.shields.io/github/last-commit/Capsize-Games/airunner)](https://github.com/Capsize-Games/airunner/commits/master)
+[![Discord](https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?logo=discord&logoColor=white)](https://discord.gg/7254Hkzc4T)
+
 AI Runner provides model workers, runtime orchestration, persistence, and HTTP/WebSocket APIs for other applications. This repository contains the headless service; the Qt desktop application and paid desktop storefront are retired.
 
 AI Runner is Apache-2.0 licensed software. It is maintained by [Capsize LLC](https://capsize.online) and includes contributions from other contributors. [Sponsorship](https://github.com/sponsors/w4ffl35) supports project maintenance.
