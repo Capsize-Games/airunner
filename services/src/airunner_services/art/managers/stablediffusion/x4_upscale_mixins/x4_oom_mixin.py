@@ -5,6 +5,8 @@ OOM handling helpers extracted from core mixin.
 
 
 class X4OOMMixin:
+    """Reduce batch or tile size after memory pressure during upscaling."""
+
     def _reduce_batch_size_if_possible(
         self,
         current_batch_size,
