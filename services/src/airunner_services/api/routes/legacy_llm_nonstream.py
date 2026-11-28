@@ -1,7 +1,7 @@
 """Non-streaming helpers for legacy LLM compatibility routes."""
 
 import logging
-from typing import Any
+from typing import Any, Callable
 
 from fastapi import HTTPException
 
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 def collect_callback(
     observer: LegacyCompletionObserver,
-):
+) -> Callable[[dict], None]:
     """Return the callback used for non-streaming legacy LLM requests."""
 
     def callback(data: dict) -> None:
@@ -62,11 +62,11 @@ def collect_callback(
 
 
 def collect_non_stream_response(
-    app,
+    app: Any,
     body: LegacyLLMGenerateRequest,
     prompt: str,
-    action,
-    llm_request,
+    action: Any,
+    llm_request: Any,
     request_id: str,
 ) -> dict[str, Any]:
     """Collect one complete non-streaming legacy LLM response."""

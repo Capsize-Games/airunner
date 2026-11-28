@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 from airunner_common.contract_enums import LLMActionType
 from airunner_services.api.api_service_base import APIServiceBase
@@ -50,7 +50,7 @@ class LLMAPIService(
 		"""Emit one chatbot-changed signal."""
 		self.emit_signal(SignalCode.CHATBOT_CHANGED)
 
-	def finalize_image_generated_by_llm(self, _data) -> None:
+	def finalize_image_generated_by_llm(self, _data: Any) -> None:
 		"""Ask the LLM to acknowledge a completed image request."""
 		self.send_request(
 			"The image request has completed. Write a single concise "

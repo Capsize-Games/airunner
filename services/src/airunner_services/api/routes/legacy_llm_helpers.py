@@ -210,13 +210,13 @@ def build_llm_request(data: Dict[str, Any]) -> LLMRequest:
 
 
 def send_legacy_llm_request(
-    app,
+    app: Any,
     prompt: str,
     action: LLMActionType,
     llm_request: LLMRequest,
     body: LegacyLLMGenerateRequest,
     request_id: str,
-    callback,
+    callback: Callable[..., Any],
 ) -> None:
     """Send one legacy LLM request through the shared app LLM interface."""
     app.llm.send_request(

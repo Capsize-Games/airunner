@@ -40,7 +40,7 @@ class LLMRequestDispatchMixin:
 
     def send_request(
         self,
-        prompt,
+        prompt: str,
         command: Optional[str] = None,
         llm_request: Optional[LLMRequest] = None,
         action: object = LLMActionType.CHAT,
