@@ -111,10 +111,12 @@ class FormatterExtended:
         if num_triple_backticks % 2 == 1:
             markdown_string += "\n```"
 
-        def process_code_blocks(text):
+        def process_code_blocks(text: str) -> str:
+            """Highlight every fenced code block in one document."""
             pattern = r"```\s*(\w+)?\s*\n(.*?)\n\s*```"
 
-            def replace_code_block(match):
+            def replace_code_block(match: re.Match[str]) -> str:
+                """Return highlighted HTML for one fenced code block."""
                 language = match.group(1) or "text"
                 code = match.group(2)
                 if language.lower() == "markdown":
@@ -298,7 +300,8 @@ class FormatterExtended:
         text = re.sub(r"`[^`]+`", "[inline code omitted]", text)
 
         # Replace LaTeX math environments with a speakable version
-        def latex_to_speakable(match):
+        def latex_to_speakable(match: re.Match[str]) -> str:
+            """Return one LaTeX expression as speakable text."""
             latex = match.group(0)
             # Remove delimiters
             if latex.startswith("$$") and latex.endswith("$$"):
