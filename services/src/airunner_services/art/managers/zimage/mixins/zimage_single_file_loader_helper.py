@@ -171,6 +171,37 @@ class ZImageSingleFileLoaderHelper:
             quant_bits,
         )
         model_dir = os.path.dirname(model_path)
+        self._assemble_fallback_pipeline(
+            pipeline_class,
+            model_path,
+            model_dir,
+            transformer_cfg,
+            model_dtype,
+            max_memory,
+            quant_bits,
+            helper,
+            text_encoder,
+            tokenizer,
+        )
+        self._owner.logger.info(
+            "Fallback loading successful - pipeline assembled (dtype: %s)",
+            model_dtype,
+        )
+
+    def _assemble_fallback_pipeline(
+        self,
+        pipeline_class,
+        model_path: str,
+        model_dir: str,
+        transformer_cfg,
+        model_dtype,
+        max_memory,
+        quant_bits,
+        helper,
+        text_encoder,
+        tokenizer,
+    ) -> None:
+        """Assemble one fallback pipeline from its loaded components."""
         transformer = self._transformer_helper.load_transformer_for_fallback(
             model_dir,
             model_path,
@@ -198,8 +229,4 @@ class ZImageSingleFileLoaderHelper:
             text_encoder=text_encoder,
             tokenizer=tokenizer,
             scheduler=scheduler,
-        )
-        self._owner.logger.info(
-            "Fallback loading successful - pipeline assembled (dtype: %s)",
-            model_dtype,
         )
