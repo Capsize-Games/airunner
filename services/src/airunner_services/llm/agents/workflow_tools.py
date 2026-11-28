@@ -136,25 +136,8 @@ def start_workflow(
             """
     state = get_current_state()
     
-    # CRITICAL: Check if a workflow is already active
-    # If so, return instructions to continue rather than restart
     if state.workflow_type is not None and state.workflow_type != WorkflowType.SIMPLE:
-        current_phase = state.current_phase.value if state.current_phase else "unknown"
-        return f"""⚠️ WORKFLOW ALREADY ACTIVE - DO NOT RESTART!
-
-You already started a {state.workflow_type.value} workflow.
-Current phase: {current_phase}
-
-DO NOT call start_workflow again! Instead, continue with the next step:
-
-If in DISCOVERY phase → call: transition_phase('planning', 'Moving to planning')
-If in PLANNING phase  → call: add_todo_item('title', 'description')
-If in EXECUTION phase → call: start_todo_item('todo_id') then do the work
-If in REVIEW phase    → call: transition_phase('complete', 'All done')
-
-Original task: {state.artifacts.get('task_description', task_description)}
-
-YOUR NEXT ACTION: Continue the workflow from the {current_phase} phase."""
+        return _active_workflow_message(state, task_description)
     
     try:
         wf_type = WorkflowType(workflow_type)
@@ -199,12 +182,31 @@ Description: {phase_def.description}
 Required Steps: {', '.join(phase_def.required_steps)}
 Available Tools: {', '.join(phase_def.allowed_tools) if phase_def.allowed_tools else 'all tools'}
 """
-    
     return f"""Workflow '{workflow_def.name}' started.
 {phase_info}
 Task: {task_description}
 
 Begin with the {state.current_phase.value} phase. Use 'get_workflow_status' to check progress."""
+
+
+def _active_workflow_message(state: Any, task_description: str) -> str:
+    """Build the already-active workflow continuation message."""
+    current_phase = state.current_phase.value if state.current_phase else "unknown"
+    return f"""⚠️ WORKFLOW ALREADY ACTIVE - DO NOT RESTART!
+
+You already started a {state.workflow_type.value} workflow.
+Current phase: {current_phase}
+
+DO NOT call start_workflow again! Instead, continue with the next step:
+
+If in DISCOVERY phase → call: transition_phase('planning', 'Moving to planning')
+If in PLANNING phase  → call: add_todo_item('title', 'description')
+If in EXECUTION phase → call: start_todo_item('todo_id') then do the work
+If in REVIEW phase    → call: transition_phase('complete', 'All done')
+
+Original task: {state.artifacts.get('task_description', task_description)}
+
+YOUR NEXT ACTION: Continue the workflow from the {current_phase} phase."""
 
 
 @tool(
