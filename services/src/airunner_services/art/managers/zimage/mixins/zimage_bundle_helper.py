@@ -146,24 +146,12 @@ class ZImageBundleHelper:
         load_mode = get_active_zimage_load_mode(model_path)
         if load_mode != "pretrained_directory" and not model_path.exists():
             raise RuntimeError(f"Selected Z-Image checkpoint missing: {model_path}")
-        companion_dir = self.resolve_zimage_companion_dir(model_path)
-        search_dir = companion_dir if companion_dir else (
-            model_path.parent if model_path.is_file() else model_path
+        search_dir, bundle_probe_path = self._resolve_bundle_probe(
+            model_path, load_mode
         )
-        bundle_probe_path = search_dir
-        if search_dir.is_dir() and model_path.is_file():
-            bundle_probe_path = search_dir / model_path.name
-        missing_files = get_missing_files_for_mode(bundle_probe_path, load_mode)
-        if (
-            bundle_probe_path != model_path
-            and model_path.exists()
-            and model_path.name in missing_files
-        ):
-            missing_files = [
-                file_name
-                for file_name in missing_files
-                if file_name != model_path.name
-            ]
+        missing_files = self._missing_bundle_files(
+            bundle_probe_path, load_mode, model_path
+        )
         if not missing_files:
             self._owner.logger.info(
                 "All Z-Image model files present for %s (checked %s)",
@@ -179,6 +167,36 @@ class ZImageBundleHelper:
                 missing_files,
             )
             return
+        self._trigger_zimage_download(search_dir, missing_files)
+
+    def _resolve_bundle_probe(self, model_path, load_mode):
+        """Resolve the bundle search dir and probe path for one model path."""
+        companion_dir = self.resolve_zimage_companion_dir(model_path)
+        search_dir = companion_dir if companion_dir else (
+            model_path.parent if model_path.is_file() else model_path
+        )
+        bundle_probe_path = search_dir
+        if search_dir.is_dir() and model_path.is_file():
+            bundle_probe_path = search_dir / model_path.name
+        return search_dir, bundle_probe_path
+
+    def _missing_bundle_files(self, bundle_probe_path, load_mode, model_path):
+        """Return bundle files still missing, excluding the selected file."""
+        missing_files = get_missing_files_for_mode(bundle_probe_path, load_mode)
+        if (
+            bundle_probe_path != model_path
+            and model_path.exists()
+            and model_path.name in missing_files
+        ):
+            missing_files = [
+                file_name
+                for file_name in missing_files
+                if file_name != model_path.name
+            ]
+        return missing_files
+
+    def _trigger_zimage_download(self, search_dir, missing_files):
+        """Emit the download-required signal and raise a download error."""
         repo_id = ModelFileChecker.get_repo_id_for_version(
             "Z-Image Turbo",
             "txt2img",
