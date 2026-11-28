@@ -111,6 +111,7 @@ class CompanionEmbeddingIndex:
 
     @property
     def identity(self) -> EmbeddingModelIdentity:
+        """Return the configured embedding model identity."""
         return self._identity
 
     def __len__(self) -> int:
