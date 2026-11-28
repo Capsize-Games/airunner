@@ -6,7 +6,7 @@ import tempfile
 import threading
 from datetime import date
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from airunner_common.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
 from airunner_services.data.tenant import get_tenant_key
@@ -465,7 +465,7 @@ class KnowledgeBase:
         """Return absolute paths for every knowledge file."""
         return [str(path.absolute()) for path in self.list_files()]
 
-    def ensure_rag_indexed(self, agent=None) -> bool:
+    def ensure_rag_indexed(self, agent: Any = None) -> bool:
         """Index knowledge files explicitly (never from a model tool call).
 
         Indexing is request preparation or route/worker intake work. Search
@@ -532,7 +532,7 @@ class KnowledgeBase:
         self,
         query: str,
         k: int = 5,
-        agent=None,
+        agent: Any = None,
         doc_ids: Optional[Sequence[str]] = None,
     ) -> List[str]:
         """Search indexed knowledge, honoring an explicit per-request scope.

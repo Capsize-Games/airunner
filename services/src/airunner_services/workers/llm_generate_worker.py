@@ -6,7 +6,7 @@ import threading
 import time
 import uuid
 from concurrent.futures import Future, InvalidStateError
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from airunner_services.llm.workers.mixins import ModelDownloadMixin
 from airunner_services.llm.workers.mixins import QuantizationMixin
@@ -559,7 +559,7 @@ class LLMGenerateWorker(
 		self.add_to_queue(message)
 		self.logger.info("Added request to queue")
 
-	def llm_on_interrupt_process_signal(self, data=None) -> None:
+	def llm_on_interrupt_process_signal(self, data: Any = None) -> None:
 		"""Interrupt the active generation and clear queued work."""
 		self._interrupted = True
 		self.clear_queue()
@@ -636,7 +636,7 @@ class LLMGenerateWorker(
 			return None
 		return message.get("request_id")
 
-	def get_next_item(self):
+	def get_next_item(self) -> Any:
 		"""Pop one item only when no other request owns the worker."""
 		with self._queue_lock:
 			with self._active_request_lock:

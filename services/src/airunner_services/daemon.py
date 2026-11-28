@@ -547,7 +547,7 @@ class AIRunnerDaemon:
         self.shutdown()
         sys.exit(0)
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         """Gracefully shutdown the daemon.
 
         Idempotent and safe to call from any thread; performs no
@@ -612,7 +612,7 @@ class AIRunnerDaemon:
             client.close()
 
 
-def main(argv: list[str] | None = None):
+def main(argv: list[str] | None = None) -> None:
     """Main entry point for daemon and explicit offline/operator actions."""
     parser = argparse.ArgumentParser(description="AI Runner Daemon")
     parser.add_argument(
