@@ -37,6 +37,7 @@ try:
 except ImportError:
     # Fallback for older diffusers versions
     def dispatch_attention_fn(query, key, value, attn_mask=None, dropout_p=0.0, is_causal=False, **kwargs):
+        """Dispatch scaled dot-product attention for older diffusers versions."""
         return F.scaled_dot_product_attention(
             query.transpose(1, 2),
             key.transpose(1, 2),
@@ -61,6 +62,8 @@ SEQ_MULTI_OF = 32
 
 
 class TimestepEmbedder(nn.Module):
+    """Embed diffusion timesteps with a small MLP."""
+
     def __init__(self, out_size, mid_size=None, frequency_embedding_size=256):
         super().__init__()
         if mid_size is None:
@@ -82,6 +85,7 @@ class TimestepEmbedder(nn.Module):
 
     @staticmethod
     def timestep_embedding(t, dim, max_period=10000):
+        """Create sinusoidal timestep embeddings."""
         with torch.amp.autocast("cuda", enabled=False):
             half = dim // 2
             freqs = torch.exp(
@@ -94,6 +98,7 @@ class TimestepEmbedder(nn.Module):
             return embedding
 
     def forward(self, t):
+        """Embed one timestep batch."""
         t_freq = self.timestep_embedding(t, self.frequency_embedding_size)
         weight_dtype = self.mlp[0].weight.dtype
         if weight_dtype.is_floating_point:
@@ -141,6 +146,7 @@ class ZSingleStreamAttnProcessor:
 
         # Apply RoPE
         def apply_rotary_emb(x_in: torch.Tensor, freqs_cis: torch.Tensor) -> torch.Tensor:
+            """Apply rotary positional embeddings to attention tensors."""
             with torch.amp.autocast("cuda", enabled=False):
                 x = torch.view_as_complex(x_in.float().reshape(*x_in.shape[:-1], -1, 2))
                 freqs_cis = freqs_cis.unsqueeze(2)
@@ -184,6 +190,8 @@ class ZSingleStreamAttnProcessor:
 
 
 class FeedForward(nn.Module):
+    """SwiGLU feed-forward layer used by transformer blocks."""
+
     def __init__(self, dim: int, hidden_dim: int):
         super().__init__()
         self.w1 = nn.Linear(dim, hidden_dim, bias=False)
@@ -194,11 +202,14 @@ class FeedForward(nn.Module):
         return F.silu(x1) * x3
 
     def forward(self, x):
+        """Apply the SwiGLU feed-forward transformation."""
         return self.w2(self._forward_silu_gating(self.w1(x), self.w3(x)))
 
 
 @maybe_allow_in_graph
 class ZImageTransformerBlock(nn.Module):
+    """Single Z-Image transformer block with attention and feed-forward."""
+
     def __init__(
         self,
         layer_id: int,
@@ -248,6 +259,7 @@ class ZImageTransformerBlock(nn.Module):
         freqs_cis: torch.Tensor,
         adaln_input: Optional[torch.Tensor] = None,
     ):
+        """Run one transformer block with optional AdaLN modulation."""
         if self.modulation:
             assert adaln_input is not None
             scale_msa, gate_msa, scale_mlp, gate_mlp = self.adaLN_modulation(adaln_input).unsqueeze(1).chunk(4, dim=2)
@@ -288,6 +300,8 @@ class ZImageTransformerBlock(nn.Module):
 
 
 class FinalLayer(nn.Module):
+    """Final AdaLN-modulated normalization and projection layer."""
+
     def __init__(self, hidden_size, out_channels):
         super().__init__()
         self.norm_final = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
@@ -298,6 +312,7 @@ class FinalLayer(nn.Module):
         )
 
     def forward(self, x, c):
+        """Apply final modulation and project to the output channels."""
         scale = 1.0 + self.adaLN_modulation(c)
         x = self.norm_final(x) * scale.unsqueeze(1)
         x = self.linear(x)
@@ -305,6 +320,8 @@ class FinalLayer(nn.Module):
 
 
 class RopeEmbedder:
+    """Precompute and apply rotary positional embeddings by axis."""
+
     def __init__(
         self,
         theta: float = 256.0,
@@ -319,6 +336,7 @@ class RopeEmbedder:
 
     @staticmethod
     def precompute_freqs_cis(dim: List[int], end: List[int], theta: float = 256.0):
+        """Precompute complex rotary frequencies for each axis."""
         with torch.device("cpu"):
             freqs_cis = []
             for i, (d, e) in enumerate(zip(dim, end)):
@@ -351,6 +369,7 @@ class RopeEmbedder:
 
 
 class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOriginalModelMixin):
+    """Z-Image 2D diffusion transformer model."""
     _supports_gradient_checkpointing = True
     _no_split_modules = ["ZImageTransformerBlock"]
     _repeated_blocks = ["ZImageTransformerBlock"]
@@ -451,6 +470,7 @@ class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOr
         self.rope_embedder = RopeEmbedder(theta=rope_theta, axes_dims=axes_dims, axes_lens=axes_lens)
 
     def unpatchify(self, x: List[torch.Tensor], size: List[Tuple], patch_size, f_patch_size) -> List[torch.Tensor]:
+        """Reconstruct original image tensors from patched tokens."""
         pH = pW = patch_size
         pF = f_patch_size
         bsz = len(x)
@@ -469,6 +489,7 @@ class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOr
 
     @staticmethod
     def create_coordinate_grid(size, start=None, device=None):
+        """Create a coordinate grid for one tensor shape."""
         if start is None:
             start = (0 for _ in size)
 
@@ -483,6 +504,7 @@ class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOr
         patch_size: int,
         f_patch_size: int,
     ):
+        """Patchify images and captions with padding and position ids."""
         pH = pW = patch_size
         pF = f_patch_size
 
@@ -584,6 +606,7 @@ class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOr
         patch_size=2,
         f_patch_size=1,
     ):
+        """Run the transformer forward pass for one image batch."""
         assert patch_size in self.all_patch_size
         assert f_patch_size in self.all_f_patch_size
 
