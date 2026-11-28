@@ -111,24 +111,9 @@ class ToolManager(
         """Wrap one tool function with dependency injection for LangChain."""
         from functools import wraps
 
-        sig = None
-        accepted_kwargs = set()
-        accepts_var_kwargs = False
-        visible_parameters = []
-        try:
-            sig = inspect.signature(tool_info.func)
-            for param in sig.parameters.values():
-                if param.kind == inspect.Parameter.VAR_KEYWORD:
-                    accepts_var_kwargs = True
-                elif param.kind in (
-                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                    inspect.Parameter.KEYWORD_ONLY,
-                ):
-                    accepted_kwargs.add(param.name)
-                    if param.name != "api":
-                        visible_parameters.append(param)
-        except Exception:
-            sig = None
+        sig, accepted_kwargs, accepts_var_kwargs, visible_parameters = (
+            self._inspect_tool_signature(tool_info)
+        )
 
         @wraps(tool_info.func)
         def wrapped(*args, **kwargs) -> Any:
@@ -150,12 +135,9 @@ class ToolManager(
             if api_error is not None:
                 return api_error
 
-            if self._request_tool_defaults and (accepts_var_kwargs or sig):
-                for key, value in self._request_tool_defaults.items():
-                    if value is None or key in kwargs:
-                        continue
-                    if accepts_var_kwargs or key in accepted_kwargs:
-                        kwargs[key] = value
+            self._merge_request_defaults(
+                sig, accepts_var_kwargs, accepted_kwargs, kwargs
+            )
 
             try:
                 result = tool_info.func(*args, **kwargs)
@@ -185,6 +167,40 @@ class ToolManager(
             )
 
         return wrapped
+
+    @staticmethod
+    def _inspect_tool_signature(tool_info):
+        """Introspect one tool function for the wrapper's signature data."""
+        sig = None
+        accepted_kwargs = set()
+        accepts_var_kwargs = False
+        visible_parameters = []
+        try:
+            sig = inspect.signature(tool_info.func)
+            for param in sig.parameters.values():
+                if param.kind == inspect.Parameter.VAR_KEYWORD:
+                    accepts_var_kwargs = True
+                elif param.kind in (
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    inspect.Parameter.KEYWORD_ONLY,
+                ):
+                    accepted_kwargs.add(param.name)
+                    if param.name != "api":
+                        visible_parameters.append(param)
+        except Exception:
+            sig = None
+        return sig, accepted_kwargs, accepts_var_kwargs, visible_parameters
+
+    def _merge_request_defaults(
+        self, sig, accepts_var_kwargs, accepted_kwargs, kwargs
+    ) -> None:
+        """Merge request-scoped defaults into kwargs where accepted."""
+        if self._request_tool_defaults and (accepts_var_kwargs or sig):
+            for key, value in self._request_tool_defaults.items():
+                if value is None or key in kwargs:
+                    continue
+                if accepts_var_kwargs or key in accepted_kwargs:
+                    kwargs[key] = value
 
     def _inject_tool_api(self, tool_info, kwargs: dict) -> Optional[str]:
         """Inject the tool API dependency or return an error message."""
