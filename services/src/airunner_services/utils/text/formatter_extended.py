@@ -195,17 +195,9 @@ class FormatterExtended:
                 - 'original_content': The original input string
                 - 'parts': For mixed content, a list of content parts with their types
         """
-        # Normalize non-string inputs (e.g., multimodal message content lists)
-        if not isinstance(content_string, str):
-            if isinstance(content_string, list):
-                # Extract text fields if present; otherwise fallback to repr
-                text_parts = []
-                for part in content_string:
-                    if isinstance(part, dict) and part.get("type") == "text":
-                        text_parts.append(str(part.get("text", "")))
-                content_string = " ".join(text_parts) if text_parts else str(content_string)
-            else:
-                content_string = str(content_string)
+        content_string = FormatterExtended._normalize_content_string(
+            content_string
+        )
 
         # Always treat triple-backtick code blocks as markdown, even if mixed
         if re.search(r"```.*```", content_string, re.DOTALL):
@@ -222,16 +214,7 @@ class FormatterExtended:
         if re.search(
             r"\$\$.*?\$\$", content_string, re.DOTALL
         ) and not FormatterExtended._is_pure_latex(content_string):
-            parts = []
-            # Split by LaTeX delimiters
-            segments = re.split(
-                r"(\$\$.*?\$\$)", content_string, flags=re.DOTALL
-            )
-            for segment in segments:
-                if segment.startswith("$$") and segment.endswith("$$"):
-                    parts.append({"type": "latex", "content": segment})
-                elif segment.strip():  # Skip empty text segments
-                    parts.append({"type": "text", "content": segment})
+            parts = FormatterExtended._split_mixed_latex(content_string)
 
             return {
                 "type": FormatterExtended.FORMAT_MIXED,
@@ -266,6 +249,35 @@ class FormatterExtended:
                 "original_content": content_string,
                 "parts": [{"type": "text", "content": content_string}],
             }
+
+    @staticmethod
+    def _normalize_content_string(content_string) -> str:
+        """Coerce non-string input into a plain string."""
+        if isinstance(content_string, str):
+            return content_string
+        if isinstance(content_string, list):
+            # Extract text fields if present; otherwise fallback to repr
+            text_parts = []
+            for part in content_string:
+                if isinstance(part, dict) and part.get("type") == "text":
+                    text_parts.append(str(part.get("text", "")))
+            return " ".join(text_parts) if text_parts else str(content_string)
+        return str(content_string)
+
+    @staticmethod
+    def _split_mixed_latex(content_string: str) -> list:
+        """Split text into alternating text/latex part dicts."""
+        parts = []
+        # Split by LaTeX delimiters
+        segments = re.split(
+            r"(\$\$.*?\$\$)", content_string, flags=re.DOTALL
+        )
+        for segment in segments:
+            if segment.startswith("$$") and segment.endswith("$$"):
+                parts.append({"type": "latex", "content": segment})
+            elif segment.strip():  # Skip empty text segments
+                parts.append({"type": "text", "content": segment})
+        return parts
 
     @staticmethod
     def strip_nonlinguistic(text: str) -> str:
