@@ -429,6 +429,26 @@ class DownloadJobService:
             return
         self._update_job(job_id, 0.0, JobStatus.RUNNING)
         self._record_log_message(job_id, f"Starting download: {filename}")
+        progress = self._make_huggingface_progress_reporter(job_id, filename)
+
+        try:
+            path = self._huggingface_downloader.download_file(
+                repo_id,
+                filename,
+                output_dir,
+                progress_callback=progress,
+                cancel_callback=cancel_event.is_set,
+            )
+            self._complete_huggingface_job(job_id, repo_id, filename, path)
+        except DownloadCancelledError:
+            self._cancel_job(job_id)
+        except Exception as exc:
+            self._fail_job(job_id, str(exc))
+        finally:
+            self._forget_job(job_id)
+
+    def _make_huggingface_progress_reporter(self, job_id: str, filename: str):
+        """Build the throttled progress callback for a Hugging Face file job."""
         last_progress = -1.0
 
         def progress(downloaded: int, total: int) -> None:
@@ -452,29 +472,21 @@ class DownloadJobService:
                 total,
             )
 
-        try:
-            path = self._huggingface_downloader.download_file(
-                repo_id,
-                filename,
-                output_dir,
-                progress_callback=progress,
-                cancel_callback=cancel_event.is_set,
-            )
-            self._complete_job(
-                job_id,
-                {
-                    "provider": "huggingface",
-                    "repo_id": repo_id,
-                    "filename": filename,
-                    "paths": [str(path)],
-                },
-            )
-        except DownloadCancelledError:
-            self._cancel_job(job_id)
-        except Exception as exc:
-            self._fail_job(job_id, str(exc))
-        finally:
-            self._forget_job(job_id)
+        return progress
+
+    def _complete_huggingface_job(
+        self, job_id: str, repo_id: str, filename: str, path
+    ) -> None:
+        """Mark a Hugging Face file job complete with its result payload."""
+        self._complete_job(
+            job_id,
+            {
+                "provider": "huggingface",
+                "repo_id": repo_id,
+                "filename": filename,
+                "paths": [str(path)],
+            },
+        )
 
     def _run_civitai_model_job(
         self,
