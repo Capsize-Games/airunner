@@ -213,6 +213,40 @@ class ZImageModelManager(
         if self._pipe is None:
             return
 
+        requested_name = self._resolve_scheduler_name(scheduler_name)
+
+        current_scheduler = getattr(self._pipe, "scheduler", None)
+        if (
+            current_scheduler is not None
+            and getattr(self, "_scheduler_name", None) == requested_name
+        ):
+            self.logger.debug(f"Scheduler {requested_name} already loaded")
+            return
+
+        self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING)
+
+        base_config = self._scheduler_base_config(current_scheduler)
+
+        try:
+            self._scheduler = create_flow_match_scheduler(
+                requested_name,
+                base_config,
+            )
+            self._pipe.scheduler = self._scheduler
+            self._scheduler_name = requested_name
+
+            self._log_loaded_scheduler(requested_name)
+            self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADED)
+
+        except Exception as exc:
+            self.logger.error(
+                f"Failed to load Z-Image scheduler {requested_name}: {exc}",
+                exc_info=True,
+            )
+            self.change_model_status(ModelType.SCHEDULER, ModelStatus.FAILED)
+
+    def _resolve_scheduler_name(self, scheduler_name) -> str:
+        """Resolve the requested scheduler name, defaulting to flow-match."""
         requested_name = (
             scheduler_name
             or (self.image_request.scheduler if self.image_request else None)
@@ -226,63 +260,44 @@ class ZImageModelManager(
                 f"Z-Image requires flow-match schedulers. Using default."
             )
             requested_name = Scheduler.FLOW_MATCH_EULER.value
+        return requested_name
 
-        current_scheduler = getattr(self._pipe, "scheduler", None)
-        if (
-            current_scheduler is not None
-            and getattr(self, "_scheduler_name", None) == requested_name
+    @staticmethod
+    def _scheduler_base_config(current_scheduler):
+        """Return a sanitized copy of the current scheduler config."""
+        if current_scheduler is None or not hasattr(current_scheduler, "config"):
+            return None
+        base_config = dict(current_scheduler.config)
+        for flag in (
+            "use_karras_sigmas",
+            "stochastic_sampling",
+            "use_exponential_sigmas",
+            "use_beta_sigmas",
         ):
-            self.logger.debug(f"Scheduler {requested_name} already loaded")
-            return
+            base_config.pop(flag, None)
+        return base_config
 
-        self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING)
-
-        base_config = None
-        if current_scheduler is not None and hasattr(current_scheduler, "config"):
-            base_config = dict(current_scheduler.config)
-            for flag in (
+    def _log_loaded_scheduler(self, requested_name: str) -> None:
+        """Log the loaded scheduler with its sampling flags."""
+        config_info = ""
+        if hasattr(self._scheduler, "config"):
+            karras = self._scheduler.config.get(
                 "use_karras_sigmas",
+                False,
+            )
+            stochastic = self._scheduler.config.get(
                 "stochastic_sampling",
-                "use_exponential_sigmas",
-                "use_beta_sigmas",
-            ):
-                base_config.pop(flag, None)
-
-        try:
-            self._scheduler = create_flow_match_scheduler(
-                requested_name,
-                base_config,
+                False,
             )
-            self._pipe.scheduler = self._scheduler
-            self._scheduler_name = requested_name
-
-            config_info = ""
-            if hasattr(self._scheduler, "config"):
-                karras = self._scheduler.config.get(
-                    "use_karras_sigmas",
-                    False,
+            if karras or stochastic:
+                config_info = (
+                    f" (karras={karras}, stochastic={stochastic})"
                 )
-                stochastic = self._scheduler.config.get(
-                    "stochastic_sampling",
-                    False,
-                )
-                if karras or stochastic:
-                    config_info = (
-                        f" (karras={karras}, stochastic={stochastic})"
-                    )
 
-            self.logger.info(
-                f"Loaded scheduler: {requested_name} -> "
-                f"{self._scheduler.__class__.__name__}{config_info}"
-            )
-            self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADED)
-
-        except Exception as exc:
-            self.logger.error(
-                f"Failed to load Z-Image scheduler {requested_name}: {exc}",
-                exc_info=True,
-            )
-            self.change_model_status(ModelType.SCHEDULER, ModelStatus.FAILED)
+        self.logger.info(
+            f"Loaded scheduler: {requested_name} -> "
+            f"{self._scheduler.__class__.__name__}{config_info}"
+        )
 
     def _move_pipe_to_device(self):
         """Override device movement for Z-Image models with CPU offloading."""
