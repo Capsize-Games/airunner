@@ -893,56 +893,72 @@ class SidecarLLMClient(RuntimeClient):
 				selected_n_gpu_layers=selection.get("n_gpu_layers"),
 			)
 		try:
-			resolved = self._settings_resolver(
-				runtime_profile,
-				**{
-					f"selected_{key}": value
-					for key, value in selection.items()
-				},
+			resolved = self._resolve_via_settings_resolver(
+				runtime_profile, selection
 			)
 		except TypeError:
-			try:
-				resolved = self._settings_resolver(runtime_profile)
-			except TypeError:
-				resolved = self._settings_resolver()
+			resolved = self._resolve_fallback_settings(runtime_profile)
 			if not selection:
 				return resolved
-			selected_model_id = selection.get("model_id")
-			selected_model_path = selection.get("model_path")
-			if not selected_model_path or not resolved.model_path:
-				raise RuntimeError(
-					"The sidecar settings resolver cannot bind the selected GGUF"
-				)
-			try:
-				models_match = Path(selected_model_path).expanduser().samefile(
-					Path(resolved.model_path).expanduser()
-				)
-			except OSError:
-				models_match = False
-			if not models_match:
-				raise RuntimeError(
-					"The configured sidecar model does not match the selected GGUF"
-				)
-			if (
-				resolved.model_id
-				and selected_model_id
-				and resolved.model_id != selected_model_id
-			):
-				raise RuntimeError(
-					"The configured sidecar model does not match the selected GGUF"
-				)
-			resolved = replace(
-				resolved,
-				model_id=selected_model_id or resolved.model_id,
-				runtime_profile=runtime_profile or "default",
-				n_ctx=(selection.get("n_ctx") or resolved.n_ctx),
-				n_gpu_layers=(
-					selection.get("n_gpu_layers")
-					if selection.get("n_gpu_layers") is not None
-					else resolved.n_gpu_layers
-				),
+			resolved = self._bind_selected_model(
+				resolved, selection, runtime_profile
 			)
 		return resolved
+
+	def _resolve_via_settings_resolver(self, runtime_profile, selection):
+		"""Resolve settings through the configured resolver with selection kwargs."""
+		return self._settings_resolver(
+			runtime_profile,
+			**{
+				f"selected_{key}": value
+				for key, value in selection.items()
+			},
+		)
+
+	def _resolve_fallback_settings(self, runtime_profile):
+		"""Resolve settings with a bare resolver call (legacy signature)."""
+		try:
+			return self._settings_resolver(runtime_profile)
+		except TypeError:
+			return self._settings_resolver()
+
+	def _bind_selected_model(self, resolved, selection, runtime_profile):
+		"""Verify the resolved model matches the selection and bind it."""
+		selected_model_id = selection.get("model_id")
+		selected_model_path = selection.get("model_path")
+		if not selected_model_path or not resolved.model_path:
+			raise RuntimeError(
+				"The sidecar settings resolver cannot bind the selected GGUF"
+			)
+		try:
+			models_match = Path(selected_model_path).expanduser().samefile(
+				Path(resolved.model_path).expanduser()
+			)
+		except OSError:
+			models_match = False
+		if not models_match:
+			raise RuntimeError(
+				"The configured sidecar model does not match the selected GGUF"
+			)
+		if (
+			resolved.model_id
+			and selected_model_id
+			and resolved.model_id != selected_model_id
+		):
+			raise RuntimeError(
+				"The configured sidecar model does not match the selected GGUF"
+			)
+		return replace(
+			resolved,
+			model_id=selected_model_id or resolved.model_id,
+			runtime_profile=runtime_profile or "default",
+			n_ctx=(selection.get("n_ctx") or resolved.n_ctx),
+			n_gpu_layers=(
+				selection.get("n_gpu_layers")
+				if selection.get("n_gpu_layers") is not None
+				else resolved.n_gpu_layers
+			),
+		)
 
 	@staticmethod
 	def _model_selection(
