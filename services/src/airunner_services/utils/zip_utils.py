@@ -8,7 +8,7 @@ from zipfile import ZipFile, ZipInfo
 
 
 class UnsafeZipPathError(ValueError):
-    pass
+    """Raised when a zip member would escape its directory or is a symlink."""
 
 
 def _is_symlink(info: ZipInfo) -> bool:
