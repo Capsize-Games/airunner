@@ -793,7 +793,6 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         requested_model_type: Optional[str] = None,
     ) -> ResponseEnvelope:
         """Enable and load the local TTS model."""
-        from airunner_common.contract_enums import ModelStatus, SignalCode
 
         if is_deferred_tts_model_type(
             requested_model_type or os.environ.get("AIRUNNER_TTS_MODEL_TYPE")
@@ -806,50 +805,64 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
 
         worker = self._headless_tts_worker()
         if worker is not None:
-            active_model = getattr(worker, "_active_tts_model", None)
-            try:
-                active_model_type = (
-                    active_model() if callable(active_model) else None
-                )
-            except Exception:
-                active_model_type = None
-            if is_deferred_tts_model_type(active_model_type):
-                return self._failure_response(
-                    request_id,
-                    TTS_BACKEND_UNAVAILABLE_CODE,
-                    OPENVOICE_DEFERRED_DETAILS,
-                )
-            load_tts = getattr(worker, "_load_tts", None)
-            current_status = getattr(worker, "_current_tts_status", None)
-            if not callable(load_tts) or not callable(current_status):
-                return self._failure_response(
-                    request_id,
-                    "tts_load_failed",
-                    "Headless TTS worker is unavailable",
-                )
+            return self._load_model_on_worker(request_id, worker)
 
-            load_tts()
-            status = current_status()
-            self._cache_status(status)
-            if status in (ModelStatus.LOADED, ModelStatus.READY):
-                return ResponseEnvelope(
-                    request_id=request_id,
-                    status=EnvelopeStatus.SUCCEEDED,
-                    payload={"model_status": _model_status_value(status)},
-                    metadata=self._status_metadata(),
-                )
-            if status is ModelStatus.FAILED:
-                return self._failure_response(
-                    request_id,
-                    "tts_load_failed",
-                    "TTS load failed",
-                )
+        return self._wait_for_tts_load(request_id)
+
+    def _load_model_on_worker(
+        self, request_id: str, worker
+    ) -> ResponseEnvelope:
+        """Drive an existing headless worker through its model load."""
+        from airunner_common.contract_enums import ModelStatus
+
+        active_model = getattr(worker, "_active_tts_model", None)
+        try:
+            active_model_type = (
+                active_model() if callable(active_model) else None
+            )
+        except Exception:
+            active_model_type = None
+        if is_deferred_tts_model_type(active_model_type):
+            return self._failure_response(
+                request_id,
+                TTS_BACKEND_UNAVAILABLE_CODE,
+                OPENVOICE_DEFERRED_DETAILS,
+            )
+        load_tts = getattr(worker, "_load_tts", None)
+        current_status = getattr(worker, "_current_tts_status", None)
+        if not callable(load_tts) or not callable(current_status):
             return self._failure_response(
                 request_id,
                 "tts_load_failed",
-                "TTS did not reach a loaded state",
-                retryable=True,
+                "Headless TTS worker is unavailable",
             )
+
+        load_tts()
+        status = current_status()
+        self._cache_status(status)
+        if status in (ModelStatus.LOADED, ModelStatus.READY):
+            return ResponseEnvelope(
+                request_id=request_id,
+                status=EnvelopeStatus.SUCCEEDED,
+                payload={"model_status": _model_status_value(status)},
+                metadata=self._status_metadata(),
+            )
+        if status is ModelStatus.FAILED:
+            return self._failure_response(
+                request_id,
+                "tts_load_failed",
+                "TTS load failed",
+            )
+        return self._failure_response(
+            request_id,
+            "tts_load_failed",
+            "TTS did not reach a loaded state",
+            retryable=True,
+        )
+
+    def _wait_for_tts_load(self, request_id: str) -> ResponseEnvelope:
+        """Emit the enable signal and wait for the loaded status."""
+        from airunner_common.contract_enums import ModelStatus, SignalCode
 
         return self._wait_for_model_status(
             request_id,
