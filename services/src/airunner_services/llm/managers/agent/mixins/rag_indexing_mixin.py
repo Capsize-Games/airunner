@@ -107,40 +107,11 @@ class RAGIndexingMixin:
             if self.embedding is None:
                 return False
 
-            doc_index = None
-            for batch in iter_document_batches_from_file(
-                db_doc.path, self._extract_metadata
-            ):
-                for doc in batch:
-                    doc.metadata.update(self._extract_metadata(db_doc.path))
-                    doc.metadata["doc_id"] = doc_id
-
-                if doc_index is None:
-                    doc_index = DocumentVectorIndex.from_documents(
-                        batch, self.embedding, self.text_splitter
-                    )
-                else:
-                    doc_index.add_documents(
-                        batch, self.embedding, self.text_splitter
-                    )
-
+            doc_index = self._build_document_index(db_doc, doc_id)
             if doc_index is None:
                 self.logger.warning(f"No content extracted from {db_doc.path}")
                 return False
-
-            index_dir = self._get_doc_index_dir(doc_id, db_doc.path)
-            os.makedirs(index_dir, exist_ok=True)
-            doc_index.persist(index_dir)
-
-            self._update_registry_entry(
-                doc_id, db_doc.path, len(doc_index.documents)
-            )
-            self._mark_document_indexed(db_doc.path)
-
-            self.logger.info(
-                f"Indexed document {os.path.basename(db_doc.path)} "
-                f"({len(doc_index.documents)} chunks)"
-            )
+            self._persist_document_index(db_doc, doc_id, doc_index)
             try:
                 self._loaded_doc_ids.append(db_doc.path)
             except Exception:
@@ -152,6 +123,39 @@ class RAGIndexingMixin:
                 raise
             self.logger.error(f"Failed to index {db_doc.path}: {e}")
             return False
+
+    def _build_document_index(self, db_doc: DBDocument, doc_id: str):
+        """Build one document index from streamed file batches."""
+        doc_index = None
+        for batch in iter_document_batches_from_file(
+            db_doc.path, self._extract_metadata
+        ):
+            for doc in batch:
+                doc.metadata.update(self._extract_metadata(db_doc.path))
+                doc.metadata["doc_id"] = doc_id
+            if doc_index is None:
+                doc_index = DocumentVectorIndex.from_documents(
+                    batch, self.embedding, self.text_splitter
+                )
+            else:
+                doc_index.add_documents(
+                    batch, self.embedding, self.text_splitter
+                )
+        return doc_index
+
+    def _persist_document_index(self, db_doc: DBDocument, doc_id: str, doc_index) -> None:
+        """Persist one built index and update registry state."""
+        index_dir = self._get_doc_index_dir(doc_id, db_doc.path)
+        os.makedirs(index_dir, exist_ok=True)
+        doc_index.persist(index_dir)
+        self._update_registry_entry(
+            doc_id, db_doc.path, len(doc_index.documents)
+        )
+        self._mark_document_indexed(db_doc.path)
+        self.logger.info(
+            f"Indexed document {os.path.basename(db_doc.path)} "
+            f"({len(doc_index.documents)} chunks)"
+        )
 
     def _index_or_reindex_document(self, db_doc: DBDocument) -> bool:
         """Explicitly index a new document or stage-reindex an existing one."""
