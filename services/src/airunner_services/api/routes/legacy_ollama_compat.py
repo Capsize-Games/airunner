@@ -509,6 +509,26 @@ def _ollama_chat_non_stream(app, prompt: str, model: str, llm_request: LLMReques
         ),
         cancel=lambda: cancel_owned_llm_request(app, request_id),
     )
+    callback = _make_ollama_chat_callback(observer, final_usage)
+
+    observer.start_dispatch(
+        lambda cb: _collect_text(app, prompt, llm_request, request_id, cb),
+        callback,
+    )
+    try:
+        events = observer.collect()
+    finally:
+        observer.close()
+    if events[-1].failed:
+        if events[-1].failure_reason == "timeout":
+            raise HTTPException(status_code=504, detail="Request timeout")
+        raise HTTPException(status_code=500, detail="LLM generation failed")
+
+    return _assemble_ollama_completion(model, events, start_time, final_usage)
+
+
+def _make_ollama_chat_callback(observer, final_usage):
+    """Build the callback that publishes one non-streaming chat update."""
 
     def callback(data: dict[str, Any]) -> None:
         """Publish one non-streaming Ollama chat update."""
@@ -542,19 +562,11 @@ def _ollama_chat_non_stream(app, prompt: str, model: str, llm_request: LLMReques
             replace_text=bool(final_visible),
         )
 
-    observer.start_dispatch(
-        lambda cb: _collect_text(app, prompt, llm_request, request_id, cb),
-        callback,
-    )
-    try:
-        events = observer.collect()
-    finally:
-        observer.close()
-    if events[-1].failed:
-        if events[-1].failure_reason == "timeout":
-            raise HTTPException(status_code=504, detail="Request timeout")
-        raise HTTPException(status_code=500, detail="LLM generation failed")
+    return callback
 
+
+def _assemble_ollama_completion(model, events, start_time, final_usage):
+    """Assemble collected events into the non-streaming completion body."""
     complete_message: List[str] = []
     tool_calls_result: List[Any] = []
     for event in events:
