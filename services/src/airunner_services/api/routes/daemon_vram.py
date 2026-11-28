@@ -80,42 +80,55 @@ def ensure_vram_available_for(
             summary.mode,
         )
     for summary in summaries:
-        if not summary.loaded or summary.runtime == target_runtime.value:
-            continue
-        other_runtime = parse_runtime_kind(summary.runtime)
-        if {target_runtime, other_runtime} == {RuntimeKind.LLM, RuntimeKind.TTS}:
-            continue
-        logger.info(
-            "Unloading %s (%s:%s) to free VRAM for %s",
-            other_runtime.value,
-            summary.provider,
-            summary.mode,
-            target_runtime.value,
+        _unload_conflicting_runtime(
+            request, route_request, target_runtime, summary
         )
-        other_client = resolve_runtime_client(
-            request,
-            other_runtime,
-            summary.provider,
-            summary.mode,
-        )
-        unload_request = RuntimeRouteRequest(
-            provider=summary.provider,
-            deployment_mode=summary.mode,
-            request_id=route_request.request_id,
-            metadata=dict(route_request.metadata or {}),
-        )
-        if target_runtime is RuntimeKind.LLM and other_runtime is RuntimeKind.ART:
-            if summary.mode == "sidecar":
-                unload_request.metadata["release_process"] = True
-        invoke_runtime_action(
-            other_client,
-            other_runtime,
-            RuntimeAction.UNLOAD_MODEL,
-            unload_request,
-        )
-        wait_for_runtime_unload(
-            request,
-            other_runtime,
-            summary.provider,
-            summary.mode,
-        )
+
+
+def _unload_conflicting_runtime(
+    request: Request,
+    route_request: RuntimeRouteRequest,
+    target_runtime: RuntimeKind,
+    summary,
+) -> None:
+    """Unload one conflicting loaded runtime to free VRAM."""
+    logger = logging.getLogger(__name__)
+    if not summary.loaded or summary.runtime == target_runtime.value:
+        return
+    other_runtime = parse_runtime_kind(summary.runtime)
+    if {target_runtime, other_runtime} == {RuntimeKind.LLM, RuntimeKind.TTS}:
+        return
+    logger.info(
+        "Unloading %s (%s:%s) to free VRAM for %s",
+        other_runtime.value,
+        summary.provider,
+        summary.mode,
+        target_runtime.value,
+    )
+    other_client = resolve_runtime_client(
+        request,
+        other_runtime,
+        summary.provider,
+        summary.mode,
+    )
+    unload_request = RuntimeRouteRequest(
+        provider=summary.provider,
+        deployment_mode=summary.mode,
+        request_id=route_request.request_id,
+        metadata=dict(route_request.metadata or {}),
+    )
+    if target_runtime is RuntimeKind.LLM and other_runtime is RuntimeKind.ART:
+        if summary.mode == "sidecar":
+            unload_request.metadata["release_process"] = True
+    invoke_runtime_action(
+        other_client,
+        other_runtime,
+        RuntimeAction.UNLOAD_MODEL,
+        unload_request,
+    )
+    wait_for_runtime_unload(
+        request,
+        other_runtime,
+        summary.provider,
+        summary.mode,
+    )
