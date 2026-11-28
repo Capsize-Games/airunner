@@ -79,6 +79,7 @@ class Worker(
 
     @paused.setter
     def paused(self, value: bool) -> None:
+        """Pause or resume worker processing by syncing the resume event."""
         if value:
             self._resume_event.clear()
         else:
