@@ -9,14 +9,14 @@ from airunner_services.api.api_service_base import APIServiceBase
 class TTSAPIService(APIServiceBase):
 	"""Emit TTS-related signals through the shared API layer."""
 
-	def play_audio(self, message) -> None:
+	def play_audio(self, message: str) -> None:
 		"""Queue one final TTS message for playback."""
 		self.emit_signal(
 			SignalCode.TTS_QUEUE_SIGNAL,
 			{"message": message, "is_end_of_message": True},
 		)
 
-	def toggle(self, enabled) -> None:
+	def toggle(self, enabled: bool) -> None:
 		"""Toggle TTS on or off."""
 		self.emit_signal(SignalCode.TOGGLE_TTS_SIGNAL, {"enabled": enabled})
 
@@ -34,7 +34,7 @@ class TTSAPIService(APIServiceBase):
 		"""Disable TTS."""
 		self.emit_signal(SignalCode.TTS_DISABLE_SIGNAL, {})
 
-	def add_to_stream(self, response) -> None:
+	def add_to_stream(self, response: str) -> None:
 		"""Forward one streamed TTS response chunk when GUI support exists."""
 		stream_signal = getattr(
 			SignalCode,
