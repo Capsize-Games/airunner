@@ -242,6 +242,8 @@ hidden_imports = [
     "airunner_services.bin.docker_wrapper",
     # [[console_script]] airunner-generate-cert.
     "airunner_services.bin.generate_cert",
+    # [[console_script]] airunner-mcp.
+    "airunner_services.mcp.server",
 ]
 # --exclude-module: subtrees the services daemon never executes.
 # Guard-verified in the worktree (issue #2244), not assumed: the
