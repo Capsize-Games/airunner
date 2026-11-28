@@ -286,6 +286,32 @@ class AIRunnerDaemon:
             timeout_seconds = self.config.model_idle_timeout_seconds()
         except Exception:
             timeout_seconds = 300
+        self._export_idle_timeout_env(timeout_seconds)
+        if not update_workers:
+            return
+        explicit = getattr(self, "_explicit_idle_env", {})
+        lifecycle = getattr(self, "lifecycle_service", None)
+        worker = None
+        if lifecycle is not None:
+            try:
+                worker = lifecycle.llm_generate_worker
+            except Exception:
+                worker = None
+        self._refresh_llm_inactivity(worker, explicit, timeout_seconds)
+        manager = None
+        if lifecycle is not None:
+            try:
+                manager = getattr(
+                    getattr(lifecycle, "worker_manager", None),
+                    "_sd_worker",
+                    None,
+                )
+            except Exception:
+                manager = None
+        self._refresh_art_inactivity(manager, explicit, timeout_seconds)
+
+    def _export_idle_timeout_env(self, timeout_seconds: int) -> None:
+        """Record explicit env state and export config-derived timeouts."""
         if not hasattr(self, "_explicit_idle_env"):
             self._explicit_idle_env = {
                 "AIRUNNER_LLM_INACTIVITY_TIMEOUT_SECONDS": (
@@ -301,52 +327,42 @@ class AIRunnerDaemon:
         os.environ.setdefault(
             "AIRUNNER_ART_INACTIVITY_TIMEOUT_SECONDS", str(timeout_seconds)
         )
-        if not update_workers:
-            return
-        explicit = getattr(self, "_explicit_idle_env", {})
-        lifecycle = getattr(self, "lifecycle_service", None)
-        worker = None
-        if lifecycle is not None:
-            try:
-                worker = lifecycle.llm_generate_worker
-            except Exception:
-                worker = None
-        if worker is not None and not explicit.get(
+
+    @staticmethod
+    def _refresh_llm_inactivity(worker, explicit, timeout_seconds: int) -> None:
+        """Push the config timeout into the live LLM worker unless explicit."""
+        if worker is None or explicit.get(
             "AIRUNNER_LLM_INACTIVITY_TIMEOUT_SECONDS", False
         ):
-            try:
-                worker._inactivity_timeout = timeout_seconds
-            except Exception:
-                pass
-            try:
-                os.environ["AIRUNNER_LLM_INACTIVITY_TIMEOUT_SECONDS"] = str(
-                    timeout_seconds
-                )
-            except Exception:
-                pass
-        manager = None
-        if lifecycle is not None:
-            try:
-                manager = getattr(
-                    getattr(lifecycle, "worker_manager", None),
-                    "_sd_worker",
-                    None,
-                )
-            except Exception:
-                manager = None
-        if manager is not None and not explicit.get(
+            return
+        try:
+            worker._inactivity_timeout = timeout_seconds
+        except Exception:
+            pass
+        try:
+            os.environ["AIRUNNER_LLM_INACTIVITY_TIMEOUT_SECONDS"] = str(
+                timeout_seconds
+            )
+        except Exception:
+            pass
+
+    @staticmethod
+    def _refresh_art_inactivity(manager, explicit, timeout_seconds: int) -> None:
+        """Push the config timeout into the live art manager unless explicit."""
+        if manager is None or explicit.get(
             "AIRUNNER_ART_INACTIVITY_TIMEOUT_SECONDS", False
         ):
-            try:
-                manager._art_inactivity_timeout = timeout_seconds
-            except Exception:
-                pass
-            try:
-                os.environ["AIRUNNER_ART_INACTIVITY_TIMEOUT_SECONDS"] = str(
-                    timeout_seconds
-                )
-            except Exception:
-                pass
+            return
+        try:
+            manager._art_inactivity_timeout = timeout_seconds
+        except Exception:
+            pass
+        try:
+            os.environ["AIRUNNER_ART_INACTIVITY_TIMEOUT_SECONDS"] = str(
+                timeout_seconds
+            )
+        except Exception:
+            pass
 
     def _perform_reload(self) -> None:
         """Re-read the config file and swap it in atomically."""
