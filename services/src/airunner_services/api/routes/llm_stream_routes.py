@@ -112,6 +112,22 @@ def _websocket_auth_error(websocket: WebSocket) -> bool:
     return websocket_auth_failed(websocket)
 
 
+async def _send_chat_error(
+    websocket: WebSocket, *, code: str, content: str | None = None
+) -> None:
+    """Send one terminal error frame with the established wire shape.
+
+    Payloads keep the exact key order the route has always emitted
+    (``type``/``code``/``content``/``done``); the ``invalid_request_id``
+    shape carries no ``content`` key, so it stays absent unless given.
+    """
+    payload: dict = {"type": "error", "code": code}
+    if content is not None:
+        payload["content"] = content
+    payload["done"] = True
+    await websocket.send_json(payload)
+
+
 @router.websocket("/stream")
 async def websocket_chat(websocket: WebSocket):
     """Stream chat responses from the runtime-backed local LLM."""
@@ -142,44 +158,34 @@ async def websocket_chat(websocket: WebSocket):
                 # -JSON payload, and keep the connection open, instead of
                 # falling through to the generic exception handler below
                 # (which would close the connection on every parse error).
-                await websocket.send_json(
-                    {
-                        "type": "error",
-                        "code": "invalid_request",
-                        "content": "Invalid request",
-                        "done": True,
-                    }
+                await _send_chat_error(
+                    websocket,
+                    code="invalid_request",
+                    content="Invalid request",
                 )
                 continue
 
             if not _connection_rate_limiter.allow(connection_principal):
-                await websocket.send_json(
-                    {
-                        "type": "error",
-                        "code": "rate_limited",
-                        "content": "Rate limit exceeded",
-                        "done": True,
-                    }
+                await _send_chat_error(
+                    websocket,
+                    code="rate_limited",
+                    content="Rate limit exceeded",
                 )
                 continue
             if not _rate_limiter.allow(principal):
-                await websocket.send_json(
-                    {
-                        "type": "error",
-                        "code": "rate_limited",
-                        "content": "Rate limit exceeded",
-                        "done": True,
-                    }
+                await _send_chat_error(
+                    websocket,
+                    code="rate_limited",
+                    content="Rate limit exceeded",
                 )
                 continue
 
             if is_client_chat(data):
                 request_id = resolve_request_id(data.get("request_id"))
                 if request_id is None:
-                    await websocket.send_json({
-                        "type": "error", "code": "invalid_request_id",
-                        "done": True,
-                    })
+                    await _send_chat_error(
+                        websocket, code="invalid_request_id"
+                    )
                     continue
                 await stream_client_chat(
                     websocket,
@@ -194,31 +200,20 @@ async def websocket_chat(websocket: WebSocket):
             try:
                 parsed = parse_stream_message(data)
             except ValidationError:
-                await websocket.send_json(
-                    {
-                        "type": "error",
-                        "code": "invalid_request",
-                        "content": "Invalid request",
-                        "done": True,
-                    }
+                await _send_chat_error(
+                    websocket,
+                    code="invalid_request",
+                    content="Invalid request",
                 )
                 continue
             except LLMStreamValidationError as exc:
-                await websocket.send_json(
-                    {
-                        "type": "error",
-                        "code": exc.code,
-                        "content": "Request rejected",
-                        "done": True,
-                    }
+                await _send_chat_error(
+                    websocket, code=exc.code, content="Request rejected"
                 )
                 continue
             request_id = resolve_request_id(parsed.request_id)
             if request_id is None:
-                await websocket.send_json({
-                    "type": "error", "code": "invalid_request_id",
-                    "done": True,
-                })
+                await _send_chat_error(websocket, code="invalid_request_id")
                 continue
             await stream_owned_request(
                 websocket,
