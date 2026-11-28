@@ -1001,7 +1001,9 @@ class SidecarLLMClient(RuntimeClient):
 			raise RuntimeError(
 				"The configured sidecar model does not match the selected GGUF"
 			)
-		_validate_selected_model_match(settings, selection, runtime_profile)
+		SidecarLLMClient._validate_selected_model_match(
+			settings, selection, runtime_profile
+		)
 
 
 	@staticmethod
