@@ -11,15 +11,19 @@ from airunner_services.downloads.policy import (
 
 
 class WeatherMixin:
+    """Add Open-Meteo weather lookup to an agent manager."""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     @property
     def weather_cache_expiration(self) -> int:
+        """Return the weather response cache lifetime in seconds."""
         return 3600
 
     @property
     def cache_path(self) -> str:
+        """Return the local weather cache directory path."""
         return os.path.expanduser(
             os.path.join(
                 self.path_settings.base_path,
@@ -32,14 +36,17 @@ class WeatherMixin:
 
     @property
     def unit_system(self) -> str:
+        """Return the configured unit system."""
         return self.user.unit_system
 
     @property
     def is_metric(self) -> bool:
+        """Return whether the configured unit system is metric."""
         return self.unit_system == "metric"
 
     @property
     def temperature_unit(self) -> str:
+        """Return the temperature unit matching the unit system."""
         if self.is_metric:
             return "celsius"
         else:
@@ -47,6 +54,7 @@ class WeatherMixin:
 
     @property
     def wind_speed_unit(self) -> str:
+        """Return the wind speed unit matching the unit system."""
         if self.is_metric:
             return "km/h"
         else:
@@ -54,6 +62,7 @@ class WeatherMixin:
 
     @property
     def precipitation_unit(self) -> str:
+        """Return the precipitation unit matching the unit system."""
         if self.is_metric:
             return "mm"
         else:
@@ -61,10 +70,12 @@ class WeatherMixin:
 
     @property
     def forecast_days(self) -> int:
+        """Return the number of forecast days to request."""
         return 1
 
     @property
     def weather_prompt(self) -> str:
+        """Return a prompt fragment describing current weather."""
         weather = self.get_weather()
         if not weather:
             return ""
@@ -89,6 +100,7 @@ class WeatherMixin:
         )
 
     def get_weather(self) -> Optional[VariablesWithTime]:
+        """Fetch current weather variables when weather prompts are enabled."""
         if not is_openmeteo_allowed():
             return None
             
