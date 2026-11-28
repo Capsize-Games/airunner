@@ -25,6 +25,7 @@ class DocumentIndexRetriever:
         self._doc_ids = doc_ids
 
     def retrieve(self, query: str, doc_ids: Optional[Sequence[str]] = None) -> list[Document]:
+        """Search this index and return matching documents."""
         if self._doc_ids is None:
             effective_doc_ids = doc_ids
         elif doc_ids is None:
