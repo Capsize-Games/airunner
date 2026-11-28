@@ -29,9 +29,5 @@ class MetadataSettings(BaseModel):
     export_metadata = Column(Boolean, default=True)
     import_metadata = Column(Boolean, default=True)
 
-    # Relationship to CanvasLayer temporarily commented out.
-    # TODO: Re-enable after fixing SQLAlchemy relationship mapping.
-    # layer = relationship("CanvasLayer", back_populates="metadata_settings")
-
 
 __all__ = ["MetadataSettings"]

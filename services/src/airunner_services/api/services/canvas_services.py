@@ -9,16 +9,12 @@ from typing import Optional
 
 from airunner_services.api.api_service_base import APIServiceBase
 from airunner_services.api.services._art_signal_code import get_art_signal_code
-from airunner_services.database.models.brush_settings import BrushSettings
 from airunner_services.database.models.canvas_layer import CanvasLayer
 from airunner_services.database.models.drawingpad_settings import (
     DrawingPadSettings,
 )
 from airunner_services.database.models.image_to_image_settings import (
     ImageToImageSettings,
-)
-from airunner_services.database.models.metadata_settings import (
-    MetadataSettings,
 )
 from airunner_services.database.models.outpaint_settings import (
     OutpaintSettings,
@@ -236,8 +232,6 @@ class CanvasAPIService(APIServiceBase):
         DrawingPadSettings.objects.create(**data)
         ImageToImageSettings.objects.create(**data)
         OutpaintSettings.objects.create(**data)
-        BrushSettings.objects.create(**data)
-        MetadataSettings.objects.create(**data)
         self.commit_layer_operation("create", [layer.id])
         return layer
 
