@@ -58,6 +58,25 @@ async def _dispatch_index_job(signal: SignalCode, payload: dict[str, Any]) -> st
     return token
 
 
+async def _await_rag_index_ack(token: str) -> None:
+    """Wait for a reserved job acknowledgement or release the slot."""
+    deadline = asyncio.get_running_loop().time() + ACK_TIMEOUT_SECONDS
+    try:
+        while (
+            get_rag_index_job_ack(token) is None
+            and asyncio.get_running_loop().time() < deadline
+        ):
+            await asyncio.sleep(0.01)
+    except BaseException:
+        finish_rag_index_dispatch(token)
+        raise
+    if not finish_rag_index_dispatch(token):
+        get_rag_job_result(token, consume=True)
+        raise HTTPException(
+            status_code=503, detail="rag_delete_worker_unavailable"
+        )
+
+
 async def delete_documents_via_worker(document_ids: list[int]) -> dict[str, Any]:
     """Serialize generic Document deletion with indexing and await its result."""
     ids = sorted({int(value) for value in document_ids})
@@ -74,22 +93,7 @@ async def delete_documents_via_worker(document_ids: list[int]) -> dict[str, Any]
     except Exception:
         finish_rag_index_dispatch(token)
         raise
-
-    deadline = asyncio.get_running_loop().time() + ACK_TIMEOUT_SECONDS
-    try:
-        while (
-            get_rag_index_job_ack(token) is None
-            and asyncio.get_running_loop().time() < deadline
-        ):
-            await asyncio.sleep(0.01)
-    except BaseException:
-        finish_rag_index_dispatch(token)
-        raise
-    if not finish_rag_index_dispatch(token):
-        get_rag_job_result(token, consume=True)
-        raise HTTPException(
-            status_code=503, detail="rag_delete_worker_unavailable"
-        )
+    await _await_rag_index_ack(token)
 
     deadline = time.monotonic() + DELETE_JOB_TIMEOUT_SECONDS
     result = None
