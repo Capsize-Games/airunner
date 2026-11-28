@@ -1,7 +1,7 @@
 ---
 name: Bug report
-about: Create a report to help us improve
-title: 'Bug report: {{ bug }}'
+about: Report a problem with the headless AI Runner service
+title: ''
 labels: '🐛 bug'
 assignees: ''
 
@@ -10,29 +10,25 @@ assignees: ''
 **Describe the bug**
 A clear and concise description of what the bug is.
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+**To reproduce**
+Steps to reproduce the behavior, including the exact request or command:
+1. ...
+2. ...
 
 **Expected behavior**
-A clear and concise description of what you expected to happen.
+What you expected to happen.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+**Actual behavior**
+What happened instead. Paste the exact error or response.
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
+**Environment**
+- AI Runner version or commit:
+- How it is running (Debian package, Docker, from source, other):
+- Operating system:
+- GPU / model involved, if any (write "none" if not):
 
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
+**Logs**
+Relevant log lines. Do not include credentials, API keys, or private prompts.
 
 **Additional context**
-Add any other context about the problem here.
+Anything else that helps: configuration, whether it worked before, and what changed.

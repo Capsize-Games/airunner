@@ -47,7 +47,7 @@ OpenVoice
 docker-compose.local.yml
 *.pickle
 mathjax
-docs
+# docs (removed bare ignore 2026-11-28: root docs/ and plans/ hold tracked source; a bare name silently ignored new files there)
 .coverage*
 .github/instructions
 .github/prompts
@@ -91,7 +91,7 @@ src/airunner/components/ui_build_marker
 reports/*
 !scripts/build_runtime_sidecars.sh
 !scripts/security_audit.sh
-plans
+# plans (removed bare ignore 2026-11-28: root docs/ and plans/ hold tracked source; a bare name silently ignored new files there)
 facehuggershield
 logs
 .worktrees/

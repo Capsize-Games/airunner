@@ -26,7 +26,7 @@ This repository contains AI Runner's headless model service, runtime integration
 
 ## License and claims
 
-- Preserve the repository's GPL-3.0-only license and required upstream notices.
+- Preserve the repository's Apache-2.0 license and required upstream notices.
 - Do not commit secrets, model weights, customer data, private policy source data, runtime logs, or generated build artifacts.
 - Do not claim hardware, model, language, privacy, or safety support without implementation evidence and the corresponding validation result.
 

@@ -222,33 +222,37 @@ class HuggingFaceDownloader:
 
             total_size = int(response.headers.get("content-length", 0))
             downloaded = 0
+            part_path = local_path.with_name(local_path.name + ".part")
 
-            with open(local_path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if cancel_callback and cancel_callback():
-                        if local_path.exists():
-                            local_path.unlink()
-                        raise DownloadCancelledError(
-                            f"Cancelled download for {filename}"
-                        )
-                    if chunk:
-                        f.write(chunk)
-                        downloaded += len(chunk)
+            try:
+                with open(part_path, "wb") as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if cancel_callback and cancel_callback():
+                            raise DownloadCancelledError(
+                                f"Cancelled download for {filename}"
+                            )
+                        if chunk:
+                            f.write(chunk)
+                            downloaded += len(chunk)
 
-                        if progress_callback and total_size > 0:
-                            progress_callback(downloaded, total_size)
+                            if progress_callback and total_size > 0:
+                                progress_callback(downloaded, total_size)
+                if total_size > 0 and downloaded != total_size:
+                    raise RuntimeError(
+                        f"Truncated download for {filename}: "
+                        f"{downloaded} of {total_size} bytes"
+                    )
+                os.replace(part_path, local_path)
+            except BaseException:
+                part_path.unlink(missing_ok=True)
+                raise
 
             logger.info("Downloaded: %s", local_path)
             return local_path
 
         except DownloadCancelledError:
-            if local_path.exists():
-                local_path.unlink()
             raise
         except Exception as e:
-            # Cleanup partial download
-            if local_path.exists():
-                local_path.unlink()
             raise RuntimeError(
                 f"Failed to download {filename} from {repo_id}: {e}"
             )

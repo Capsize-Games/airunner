@@ -612,7 +612,7 @@ def main():
         try:
             with open(py_file, "r", encoding="utf-8") as f:
                 total_lines += sum(1 for _ in f)
-        except:
+        except (OSError, UnicodeError):
             pass
 
     report.files_analyzed = len(python_files)

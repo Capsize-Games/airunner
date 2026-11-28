@@ -1,6 +1,7 @@
 """Speech-to-text routes backed by the runtime registry."""
 
 import base64
+import os
 from pathlib import Path
 from typing import Any, List
 
@@ -54,7 +55,20 @@ async def transcribe_audio(
         Transcribed text
     """
     try:
-        audio_data = await audio.read()
+        max_upload = int(
+            os.environ.get("AIRUNNER_STT_MAX_UPLOAD_BYTES", str(100 * 1024 * 1024))
+        )
+        chunks: list[bytes] = []
+        received = 0
+        while chunk := await audio.read(1024 * 1024):
+            received += len(chunk)
+            if received > max_upload:
+                raise HTTPException(
+                    status_code=413,
+                    detail="STT upload exceeds the maximum size",
+                )
+            chunks.append(chunk)
+        audio_data = b"".join(chunks)
         logger.info(
             "STT request received (filename_present=%s, size_bytes=%d)",
             bool(audio.filename),

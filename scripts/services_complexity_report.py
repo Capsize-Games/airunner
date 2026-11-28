@@ -20,9 +20,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Iterable
 
-from radon.complexity import cc_rank, cc_visit
-from radon.metrics import h_visit, mi_visit
-from radon.raw import analyze
+try:
+    from radon.complexity import cc_rank, cc_visit
+    from radon.metrics import h_visit, mi_visit
+    from radon.raw import analyze
+except ImportError:
+    sys.exit(
+        "radon is required for this report: install the development "
+        "dependencies or run `uv pip install radon` (advisory tool, not a CI gate)"
+    )
 
 
 DEFAULT_ROOT = Path("services/src/airunner_services")

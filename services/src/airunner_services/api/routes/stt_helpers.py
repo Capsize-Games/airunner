@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import os
 from typing import Any, Dict, Optional, Tuple
 
 from fastapi import HTTPException, Request, WebSocket
@@ -108,6 +109,12 @@ def decode_stream_frame(
     try:
         audio = base64.b64decode(encoded, validate=True)
     except Exception:
+        return None, None
+    max_upload = int(
+        os.environ.get("AIRUNNER_STT_MAX_UPLOAD_BYTES", str(100 * 1024 * 1024))
+    )
+    if len(audio) > max_upload:
+        logger.warning("STT stream frame exceeds the maximum size; dropping it")
         return None, None
     language = frame.get("language")
     return audio, str(language) if language else None

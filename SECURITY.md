@@ -21,8 +21,8 @@ You can expect an initial response within 7 days. We will keep you updated on th
 AI Runner includes a best-effort content-safety layer to reduce the risk of
 prohibited content flowing through generation. It is defense-in-depth, not a
 guarantee: the governing policy remains the prohibition set out in the
-[User Agreement](src/airunner/components/downloader/gui/windows/setup_wizard/user_agreement/user_agreement_text.md).
-Where the automated layer and the User Agreement disagree, the User Agreement
+the project's content policy.
+Where the automated layer and the content policy disagree, the content policy
 controls, and users remain responsible for how they use the software.
 
 ### Input gate
