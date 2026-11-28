@@ -105,116 +105,139 @@ class ApplicationSettings(BaseModel):
 
     @property
     def active_grid_size_lock(self):
+        """Return the active grid size lock setting."""
         return _qsettings_value(
             "active_grid_size_lock", False, value_type=bool
         )
 
     @active_grid_size_lock.setter
     def active_grid_size_lock(self, value):
+        """Store the active grid size lock setting."""
         _set_qsettings_value("active_grid_size_lock", bool(value))
 
     @property
     def current_layer_index(self):
+        """Return the current layer index setting."""
         return _qsettings_value(
             "current_layer_index", 0, value_type=int
         )
 
     @current_layer_index.setter
     def current_layer_index(self, value):
+        """Store the current layer index setting."""
         _set_qsettings_value("current_layer_index", int(value))
 
     @property
     def paths_initialized(self):
+        """Return the paths initialized setting."""
         return _qsettings_value(
             "paths_initialized", False, value_type=bool
         )
 
     @paths_initialized.setter
     def paths_initialized(self, value):
+        """Store the paths initialized setting."""
         _set_qsettings_value("paths_initialized", bool(value))
 
     @property
     def resize_on_paste(self):
+        """Return the resize on paste setting."""
         return _qsettings_value(
             "resize_on_paste", True, value_type=bool
         )
 
     @resize_on_paste.setter
     def resize_on_paste(self, value):
+        """Store the resize on paste setting."""
         _set_qsettings_value("resize_on_paste", bool(value))
 
     @property
     def image_to_new_layer(self):
+        """Return the image to new layer setting."""
         return _qsettings_value(
             "image_to_new_layer", True, value_type=bool
         )
 
     @image_to_new_layer.setter
     def image_to_new_layer(self, value):
+        """Store the image to new layer setting."""
         _set_qsettings_value("image_to_new_layer", bool(value))
 
     @property
     def dark_mode_enabled(self):
+        """Return the dark mode enabled setting."""
         return _qsettings_value(
             "dark_mode_enabled", True, value_type=bool
         )
 
     @dark_mode_enabled.setter
     def dark_mode_enabled(self, value):
+        """Store the dark mode enabled setting."""
         _set_qsettings_value("dark_mode_enabled", bool(value))
 
     @property
     def override_system_theme(self):
+        """Return the override system theme setting."""
         return _qsettings_value(
             "override_system_theme", True, value_type=bool
         )
 
     @override_system_theme.setter
     def override_system_theme(self, value):
+        """Store the override system theme setting."""
         _set_qsettings_value("override_system_theme", bool(value))
 
     @property
     def latest_version_check(self):
+        """Return the latest version check setting."""
         return _qsettings_value(
             "latest_version_check", True, value_type=bool
         )
 
     @latest_version_check.setter
     def latest_version_check(self, value):
+        """Store the latest version check setting."""
         _set_qsettings_value("latest_version_check", bool(value))
 
     @property
     def current_tool(self):
+        """Return the current tool setting."""
         return _qsettings_value(
             "current_tool", CanvasToolName.BRUSH.value
         )
 
     @current_tool.setter
     def current_tool(self, value):
+        """Store the current tool setting."""
         _set_qsettings_value("current_tool", value)
 
     @property
     def show_active_image_area(self):
+        """Return the show active image area setting."""
         return _qsettings_value(
             "show_active_image_area", True, value_type=bool
         )
 
     @show_active_image_area.setter
     def show_active_image_area(self, value):
+        """Store the show active image area setting."""
         _set_qsettings_value("show_active_image_area", bool(value))
 
     @property
     def generator_section(self):
+        """Return the generator section setting."""
         return _qsettings_value(
             "generator_section", GeneratorSection.TXT2IMG.value
         )
 
     @generator_section.setter
     def generator_section(self, value):
+        """Store the generator section setting."""
         _set_qsettings_value("generator_section", value)
 
     @property
     def is_maximized(self):
+        """Return the is maximized setting."""
         return _qsettings_value(
             "is_maximized", False,
             group="window_settings", value_type=bool,
@@ -222,96 +245,115 @@ class ApplicationSettings(BaseModel):
 
     @is_maximized.setter
     def is_maximized(self, value):
+        """Store the is maximized setting."""
         _set_qsettings_value(
             "is_maximized", bool(value), group="window_settings"
         )
 
     @property
     def pivot_point_x(self):
+        """Return the pivot point x setting."""
         return _qsettings_value("pivot_point_x", 0, value_type=int)
 
     @pivot_point_x.setter
     def pivot_point_x(self, value):
+        """Store the pivot point x setting."""
         _set_qsettings_value("pivot_point_x", int(value))
 
     @property
     def pivot_point_y(self):
+        """Return the pivot point y setting."""
         return _qsettings_value("pivot_point_y", 0, value_type=int)
 
     @pivot_point_y.setter
     def pivot_point_y(self, value):
+        """Store the pivot point y setting."""
         _set_qsettings_value("pivot_point_y", int(value))
 
     @property
     def run_setup_wizard(self):
+        """Return the run setup wizard setting."""
         return _qsettings_value(
             "run_setup_wizard", True, value_type=bool
         )
 
     @run_setup_wizard.setter
     def run_setup_wizard(self, value):
+        """Store the run setup wizard setting."""
         _set_qsettings_value("run_setup_wizard", bool(value))
 
     @property
     def download_wizard_completed(self):
+        """Return the download wizard completed setting."""
         return _qsettings_value(
             "download_wizard_completed", False, value_type=bool
         )
 
     @download_wizard_completed.setter
     def download_wizard_completed(self, value):
+        """Store the download wizard completed setting."""
         _set_qsettings_value("download_wizard_completed", bool(value))
 
     @property
     def stable_diffusion_agreement_checked(self):
+        """Return the stable diffusion agreement checked setting."""
         return _qsettings_value(
             "stable_diffusion_agreement_checked", True, value_type=bool
         )
 
     @stable_diffusion_agreement_checked.setter
     def stable_diffusion_agreement_checked(self, value):
+        """Store the stable diffusion agreement checked setting."""
         _set_qsettings_value(
             "stable_diffusion_agreement_checked", bool(value)
         )
 
     @property
     def airunner_agreement_checked(self):
+        """Return the airunner agreement checked setting."""
         return _qsettings_value(
             "airunner_agreement_checked", True, value_type=bool
         )
 
     @airunner_agreement_checked.setter
     def airunner_agreement_checked(self, value):
+        """Store the airunner agreement checked setting."""
         _set_qsettings_value("airunner_agreement_checked", bool(value))
 
     @property
     def user_agreement_checked(self):
+        """Return the user agreement checked setting."""
         return _qsettings_value(
             "user_agreement_checked", True, value_type=bool
         )
 
     @user_agreement_checked.setter
     def user_agreement_checked(self, value):
+        """Store the user agreement checked setting."""
         _set_qsettings_value("user_agreement_checked", bool(value))
 
     @property
     def age_agreement_checked(self):
+        """Return the age agreement checked setting."""
         return _qsettings_value(
             "age_agreement_checked", True, value_type=bool
         )
 
     @age_agreement_checked.setter
     def age_agreement_checked(self, value):
+        """Store the age agreement checked setting."""
         _set_qsettings_value("age_agreement_checked", bool(value))
 
     @property
     def llama_license_agreement_checked(self):
+        """Return the llama license agreement checked setting."""
         return _qsettings_value(
             "llama_license_agreement_checked", True, value_type=bool
         )
 
     @llama_license_agreement_checked.setter
     def llama_license_agreement_checked(self, value):
+        """Store the llama license agreement checked setting."""
         _set_qsettings_value(
             "llama_license_agreement_checked", bool(value)
         )
