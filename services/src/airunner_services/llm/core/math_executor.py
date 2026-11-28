@@ -295,6 +295,7 @@ class SafePythonExecutor:
         errors: list[str] = []
 
         def called_symbol_name(node: ast.AST) -> Optional[str]:
+            """Return the called symbol name from one AST node."""
             if isinstance(node, ast.Name):
                 return node.id
             if isinstance(node, ast.Attribute):
