@@ -128,6 +128,33 @@ async def _send_chat_error(
     await websocket.send_json(payload)
 
 
+async def _check_rate_limits(
+    websocket: WebSocket, *, principal: str, connection_principal: str
+) -> bool:
+    """Return True when the message must be rejected as rate-limited.
+
+    Checks the per-connection budget before the credential-keyed global
+    budget, sending the established ``rate_limited`` error frame for
+    whichever budget is exhausted. Both limiters are read as module
+    globals at call time so tests can replace them per-test (#2425).
+    """
+    if not _connection_rate_limiter.allow(connection_principal):
+        await _send_chat_error(
+            websocket,
+            code="rate_limited",
+            content="Rate limit exceeded",
+        )
+        return True
+    if not _rate_limiter.allow(principal):
+        await _send_chat_error(
+            websocket,
+            code="rate_limited",
+            content="Rate limit exceeded",
+        )
+        return True
+    return False
+
+
 @router.websocket("/stream")
 async def websocket_chat(websocket: WebSocket):
     """Stream chat responses from the runtime-backed local LLM."""
@@ -165,19 +192,11 @@ async def websocket_chat(websocket: WebSocket):
                 )
                 continue
 
-            if not _connection_rate_limiter.allow(connection_principal):
-                await _send_chat_error(
-                    websocket,
-                    code="rate_limited",
-                    content="Rate limit exceeded",
-                )
-                continue
-            if not _rate_limiter.allow(principal):
-                await _send_chat_error(
-                    websocket,
-                    code="rate_limited",
-                    content="Rate limit exceeded",
-                )
+            if await _check_rate_limits(
+                websocket,
+                principal=principal,
+                connection_principal=connection_principal,
+            ):
                 continue
 
             if is_client_chat(data):
