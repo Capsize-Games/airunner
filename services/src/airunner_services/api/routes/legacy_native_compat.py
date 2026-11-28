@@ -16,6 +16,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
 
 from airunner_common.contract_enums import LLMActionType
 from airunner_services.ipc.messages import EnvelopeStatus, RequestEnvelope
@@ -43,8 +44,8 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 # ---------------------------------------------------------------------------
 
 
-@router.post("/llm")
-def legacy_llm_alias(body: LegacyLLMGenerateRequest, req: Request):
+@router.post("/llm", response_model=None)
+def legacy_llm_alias(body: LegacyLLMGenerateRequest, req: Request) -> dict[str, Any] | StreamingResponse:
     """Alias the native LLM endpoint onto the legacy generate handler."""
     return legacy_llm_generate(body, req)
 
@@ -78,8 +79,8 @@ def _map_batch_top_level_params(
 _MAX_BATCH_PROMPTS = 16
 
 
-@router.post("/llm/generate_batch")
-def legacy_llm_generate_batch(body: dict, req: Request):
+@router.post("/llm/generate_batch", response_model=None)
+def legacy_llm_generate_batch(body: dict, req: Request) -> dict[str, Any] | list[dict[str, Any]]:
     """Serve the native batch LLM endpoint."""
     app = get_airunner_app(req)
     prompts = body.get("prompts")
@@ -206,8 +207,8 @@ def _process_single_prompt(app, index: int, prompt: str, action: LLMActionType, 
 # ---------------------------------------------------------------------------
 
 
-@router.post("/stt")
-def legacy_stt(body: dict, req: Request):
+@router.post("/stt", response_model=None)
+def legacy_stt(body: dict, req: Request) -> dict[str, str]:
     """Serve the native base64 STT endpoint via the STT runtime."""
     audio_b64 = body.get("audio", "")
     if not audio_b64:
@@ -243,8 +244,8 @@ def legacy_stt(body: dict, req: Request):
     }
 
 
-@router.post("/tts")
-def legacy_tts(body: dict, req: Request):
+@router.post("/tts", response_model=None)
+def legacy_tts(body: dict, req: Request) -> dict[str, Any]:
     """Serve the native text TTS endpoint via the TTS runtime."""
     text = body.get("text", "")
     if not text:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from airunner_common.contract_enums import LLMActionType
 from airunner_services.llm.core.tool_registry import ToolCategory
@@ -21,7 +21,7 @@ from airunner_services.llm.managers.mixins.system_prompt_text import (
 )
 
 
-def get_memory_context(owner, user_query: Optional[str] = None) -> str:
+def get_memory_context(owner: Any, user_query: Optional[str] = None) -> str:
     """Return relevant user memory context when available."""
     try:
         from airunner_services.knowledge import get_knowledge_base
@@ -71,7 +71,7 @@ def _normalize_tool_categories(tool_categories: List) -> list:
     return category_values
 
 
-def build_base_prompt_parts(owner, action: LLMActionType) -> List[str]:
+def build_base_prompt_parts(owner: Any, action: LLMActionType) -> List[str]:
     """Return the context-aware prompt parts for one action."""
     parts = _identity_parts(owner, action)
     _append_if_present(parts, _datetime_part(action))
@@ -137,7 +137,7 @@ def _append_if_present(parts: list[str], value: Optional[str]) -> None:
 
 
 def augment_custom_system_prompt(
-    owner,
+    owner: Any,
     base_prompt: str,
     action: LLMActionType,
     include_mood: Optional[bool] = None,
@@ -166,7 +166,7 @@ def _should_include(flag: Optional[bool]) -> bool:
     return flag is True
 
 
-def build_research_mode_prompt(owner) -> str:
+def build_research_mode_prompt(owner: Any) -> str:
     """Return the focused deep-research system prompt."""
     chatbot = getattr(owner, "chatbot", None)
     if chatbot:
@@ -187,6 +187,6 @@ def build_research_mode_prompt(owner) -> str:
     return "\n\n".join([identity, datetime_line, instruction])
 
 
-def build_system_prompt_for_action(owner, action: LLMActionType) -> str:
+def build_system_prompt_for_action(owner: Any, action: LLMActionType) -> str:
     """Return the base system prompt for one action."""
     return "\n\n".join(build_base_prompt_parts(owner, action))

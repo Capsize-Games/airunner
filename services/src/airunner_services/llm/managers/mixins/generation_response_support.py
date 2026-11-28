@@ -117,7 +117,7 @@ def _tool_only_fallback(effective_tools: list[str]) -> str:
     )
 
 def handle_interrupted_generation(
-    owner,
+    owner: Any,
     llm_request: Optional[Any],
     sequence_counter: int,
 ) -> str:
@@ -136,7 +136,7 @@ def handle_interrupted_generation(
     )
     return ""
 
-def handle_generation_error(owner, exc: Exception, llm_request: Optional[Any]) -> str:
+def handle_generation_error(owner: Any, exc: Exception, llm_request: Optional[Any]) -> str:
     """Handle generation errors and emit the system error chunk."""
     owner.logger.error("Error during generation: %s", exc, exc_info=True)
     owner.logger.error("[ERROR HANDLER] Exception type: %s", type(exc))
@@ -177,7 +177,7 @@ def _generation_error_message(owner, exc: Exception) -> str:
         "applied."
     )
 
-def extract_final_response(owner, result: Dict[str, Any]) -> str:
+def extract_final_response(owner: Any, result: Dict[str, Any]) -> str:
     """Extract the final visible assistant response from one result."""
     final_messages = _final_ai_messages(result)
     if not final_messages:
@@ -329,7 +329,7 @@ def _int_or_none(value: Optional[int]) -> Optional[int]:
         return None
     return int(value)
 
-def executed_tools_from_workflow(workflow_manager) -> list[str]:
+def executed_tools_from_workflow(workflow_manager: Any) -> list[str]:
     """Return the executed tools reported by one workflow manager."""
     if not hasattr(workflow_manager, "get_executed_tools"):
         return []
