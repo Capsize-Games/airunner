@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import librosa
 import torch
@@ -58,13 +58,13 @@ class StreamingToneColorConverter(ToneColorConverter):
 
     def convert(
         self,
-        audio_src_path,
-        src_se,
-        tgt_se,
-        output_path=None,
-        tau=0.3,
-        message="default",
-    ):
+        audio_src_path: str,
+        src_se: Any,
+        tgt_se: Any,
+        output_path: Optional[str] = None,
+        tau: float = 0.3,
+        message: str = "default",
+    ) -> Any:
         """Convert audio tone color using the specified parameters."""
         hps = self.hps
         try:
@@ -179,7 +179,7 @@ def ensure_reference_speaker_embedding(
     converter: StreamingToneColorConverter,
     *,
     target_dir: Optional[str] = None,
-):
+) -> Any:
     """Return one cached or newly extracted speaker embedding."""
     if not os.path.isfile(reference_speaker_path):
         raise FileMissing(reference_speaker_path)
