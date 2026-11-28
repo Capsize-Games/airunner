@@ -89,9 +89,15 @@ class SDMemoryManagementMixin:
             "tome_sd_applied", "use_tome_sd", self._apply_tome
         )
 
-        # torch.compile is an explicit opt-in and requires the reviewed
-        # external Triton toolchain. Keep the eager UNet active when the
-        # environment is unsupported or incomplete.
+        self._apply_torch_compile_opt_in()
+
+    def _apply_torch_compile_opt_in(self):
+        """Apply the torch.compile opt-in setting if it changed.
+
+        torch.compile is an explicit opt-in and requires the reviewed
+        external Triton toolchain. Keep the eager UNet active when the
+        environment is unsupported or incomplete.
+        """
         compile_enabled = bool(
             getattr(self.memory_settings, "use_torch_compile", False)
         )
