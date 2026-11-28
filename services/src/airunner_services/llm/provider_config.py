@@ -311,6 +311,7 @@ class LLMProviderConfig:
 
     @classmethod
     def get_models_for_provider(cls, provider: str) -> List[str]:
+        """Return the supported model ids for one provider."""
         if provider == "local":
             return [
                 model_id
@@ -325,6 +326,7 @@ class LLMProviderConfig:
 
     @classmethod
     def get_model_display_name(cls, provider: str, model_id: str) -> str:
+        """Return the display name for one model."""
         if provider == "local" and model_id in cls.LOCAL_MODELS:
             model_info = cls.LOCAL_MODELS[model_id]
             if model_info["function_calling"]:
@@ -334,12 +336,14 @@ class LLMProviderConfig:
 
     @classmethod
     def get_model_info(cls, provider: str, model_id: str) -> Dict:
+        """Return metadata for one local model, or an empty dict."""
         if provider == "local" and model_id in cls.LOCAL_MODELS:
             return cls.LOCAL_MODELS[model_id]
         return {}
 
     @classmethod
     def get_model_id_for_name(cls, provider: str, model_name: str) -> str:
+        """Return the local model id matching one display name or alias."""
         target = cls._normalize_identifier(model_name)
         if provider != "local" or not target:
             return ""
@@ -352,6 +356,7 @@ class LLMProviderConfig:
 
     @classmethod
     def resolve_model_id(cls, provider: str, identifier: str) -> str:
+        """Resolve one model identifier to a local model id."""
         if provider != "local" or not identifier:
             return ""
 
@@ -368,6 +373,7 @@ class LLMProviderConfig:
 
     @classmethod
     def get_model_id_for_repo_id(cls, provider: str, repo_id: str) -> str:
+        """Return the local model id for one Hugging Face repo id."""
         if provider != "local" or not repo_id:
             return ""
 
@@ -390,6 +396,7 @@ class LLMProviderConfig:
         repo_id: Optional[str] = None,
         prefer_pre_quantized: bool = True,
     ) -> Optional[Dict[str, Any]]:
+        """Resolve the download target for one local model."""
         if provider != "local":
             return None
 
@@ -440,6 +447,7 @@ class LLMProviderConfig:
         repo_id: Optional[str] = None,
         prefer_pre_quantized: bool = True,
     ) -> str:
+        """Return the local storage path for one model download."""
         base_dir = os.path.join(
             os.path.expanduser(base_path),
             "text/models/llm/causallm",
@@ -481,6 +489,7 @@ class LLMProviderConfig:
         repo_id: Optional[str] = None,
         prefer_pre_quantized: bool = True,
     ) -> str:
+        """Return the expected on-disk artifact path for one model."""
         storage_path = cls.get_local_storage_path(
             base_path,
             provider,
@@ -507,6 +516,7 @@ class LLMProviderConfig:
         model_id: str,
         quantization_bits: int,
     ) -> int:
+        """Return the VRAM estimate in GB for one quantization level."""
         if provider == "local" and model_id in cls.LOCAL_MODELS:
             model_info = cls.LOCAL_MODELS[model_id]
             vram_key = f"vram_{quantization_bits}bit_gb"
@@ -515,10 +525,12 @@ class LLMProviderConfig:
 
     @classmethod
     def requires_download(cls, provider: str, model_id: str) -> bool:
+        """Return whether one model needs a download before use."""
         return provider == "local" and model_id != "custom"
 
     @classmethod
     def has_gguf_support(cls, provider: str, model_id: str) -> bool:
+        """Return whether one model has a pre-quantized GGUF variant."""
         if provider == "local" and model_id in cls.LOCAL_MODELS:
             model_info = cls.LOCAL_MODELS[model_id]
             return bool(
@@ -529,6 +541,7 @@ class LLMProviderConfig:
 
     @classmethod
     def has_gguf_variant(cls, model_id: str) -> bool:
+        """Return whether one local model has a GGUF variant."""
         if model_id in cls.LOCAL_MODELS:
             model_info = cls.LOCAL_MODELS[model_id]
             return bool(
@@ -543,6 +556,7 @@ class LLMProviderConfig:
         provider: str,
         model_id: str,
     ) -> Optional[Dict[str, str]]:
+        """Return GGUF repo and filename info for one local model."""
         if provider == "local" and model_id in cls.LOCAL_MODELS:
             model_info = cls.LOCAL_MODELS[model_id]
             repo_id = model_info.get("gguf_repo_id")
