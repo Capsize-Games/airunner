@@ -46,9 +46,14 @@ class ArtLauncherLike(Protocol):
 	endpoint: str
 	api_base_url: str
 
-	def start(self) -> None: ...
-	def stop(self) -> None: ...
-	def health_status(self) -> tuple[RuntimeHealthStatus, str]: ...
+	def start(self) -> None:
+		"""Start the launcher."""
+
+	def stop(self) -> None:
+		"""Stop the launcher."""
+
+	def health_status(self) -> tuple[RuntimeHealthStatus, str]:
+		"""Return launcher health status and a detail message."""
 
 
 ArtLauncherFactory = Callable[[ArtDaemonRuntimeSettings], ArtLauncherLike]
