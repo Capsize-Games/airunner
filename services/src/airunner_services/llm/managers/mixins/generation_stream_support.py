@@ -150,9 +150,7 @@ def send_end_of_message(
         return
     text = final_visible_message or ""
     if not _publication_policy_is_enforced(owner):
-        if text and not getattr(owner, "_publication_flushed", False):
-            _emit_allowed_visible_text(owner, llm_request, text, sequence_counter)
-            owner._publication_flushed = True
+        _maybe_flush_visible_text(owner, llm_request, text, sequence_counter)
         _send_end_of_message_ungated(
             owner,
             llm_request,
@@ -165,6 +163,42 @@ def send_end_of_message(
             tool_calls,
         )
         return
+    _publish_final_or_denial(
+        owner,
+        llm_request,
+        sequence_counter,
+        executed_tools,
+        prompt_tokens,
+        completion_tokens,
+        total_tokens,
+        final_visible_message,
+        tool_calls,
+        text,
+    )
+
+
+def _maybe_flush_visible_text(
+    owner, llm_request, text, sequence_counter
+) -> None:
+    """Emit the reviewed visible text once when enforcement is off or allowed."""
+    if text and not getattr(owner, "_publication_flushed", False):
+        _emit_allowed_visible_text(owner, llm_request, text, sequence_counter)
+        owner._publication_flushed = True
+
+
+def _publish_final_or_denial(
+    owner,
+    llm_request,
+    sequence_counter,
+    executed_tools,
+    prompt_tokens,
+    completion_tokens,
+    total_tokens,
+    final_visible_message,
+    tool_calls,
+    text,
+) -> None:
+    """Run the enforced-mode denial check and final publication."""
     denied = bool(getattr(owner, "_publication_denied", False))
     if (
         not denied
