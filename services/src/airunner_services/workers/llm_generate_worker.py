@@ -66,7 +66,15 @@ class LLMGenerateWorker(
 
 	def __init__(self):
 		"""Initialize worker state and deferred LLM lifecycle helpers."""
-		self.signal_handlers = {
+		self.signal_handlers = self._build_signal_handlers()
+		self._initialize_worker_state()
+		super().__init__()
+		self._llm_thread = None
+		self._initialize_lifecycle_state()
+
+	def _build_signal_handlers(self):
+		"""Return the signal-code to handler mapping for this worker."""
+		return {
 			SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: (
 				self.on_llm_request_signal
 			),
@@ -95,6 +103,9 @@ class LLMGenerateWorker(
 				self.on_llm_model_download_required_signal
 			),
 		}
+
+	def _initialize_worker_state(self):
+		"""Initialize request, download, and embedding state."""
 		self._model_manager: Optional[LLMModelManager] = None
 		self._model_manager_lock = threading.Lock()
 		self._interrupted = False
@@ -115,8 +126,9 @@ class LLMGenerateWorker(
 		self._pending_unload_request: Optional[Dict] = None
 		self.manager_thread: Optional[object] = None
 		self.download_manager = None
-		super().__init__()
-		self._llm_thread = None
+
+	def _initialize_lifecycle_state(self):
+		"""Initialize LLM thread and inactivity lifecycle state."""
 
 		self._last_request_time: Optional[float] = None
 		self._inactivity_timer: Optional[object] = None
