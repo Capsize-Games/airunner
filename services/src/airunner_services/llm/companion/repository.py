@@ -111,6 +111,7 @@ class SqlCompanionMemoryRepository:
         self._clock = clock
 
     def get_or_start_session(self, chatbot_id: ChatbotId) -> SessionRecord:
+        """Return the active session or start a new one after the gap."""
         now = self._clock()
         with session_scope() as db:
             latest = (
@@ -143,6 +144,7 @@ class SqlCompanionMemoryRepository:
             return _session_to_record(session_row)
 
     def append_turn(self, turn: TurnRecord) -> TurnRecord:
+        """Persist one turn idempotently and return the stored turn."""
         with session_scope() as db:
             existing = _find_existing_turn(db, turn)
             if existing is not None:
@@ -231,6 +233,7 @@ class SqlCompanionMemoryRepository:
     def get_recent_turns(
         self, chatbot_id: ChatbotId, session_id: SessionId, *, limit: int
     ) -> List[TurnRecord]:
+        """Return up to ``limit`` recent turns oldest-first."""
         if limit <= 0:
             return []
         with session_scope() as db:
@@ -254,6 +257,7 @@ class SqlCompanionMemoryRepository:
             return [_turn_to_record(row) for row in reversed(rows)]
 
     def update_session_summary(self, session: SessionRecord) -> None:
+        """Replace one session's summary fields with the given record."""
         with session_scope() as db:
             session_row = (
                 db.query(CompanionSession)
