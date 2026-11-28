@@ -499,65 +499,102 @@ class DownloadJobService:
         """Run one CivitAI model download inside a background thread."""
         self._update_job(job_id, 0.0, JobStatus.RUNNING)
         try:
-            model_info = fetch_model_info_for_url(url, api_key)
-            version = model_info.get("selectedVersion") or select_version(
-                model_info
+            model_name, model_path, files_to_download = (
+                self._resolve_civitai_model(url, output_dir, api_key)
             )
-            if version is None:
-                raise ValueError("No CivitAI model version available")
-            model_name = sanitize_filename(
-                str(model_info.get("name") or "civitai_model")
-            )
-            model_path = Path(output_dir) / model_name
-            files_to_download = get_files_to_download(version, model_path)
             total_size = sum(
                 max(0, int(file_info.get("size") or 0))
                 for file_info in files_to_download
             )
-            downloaded_size = 0
-            downloaded_paths = []
-            for file_info in files_to_download:
-                file_total = max(0, int(file_info.get("size") or 0))
-                safe_name = _safe_filename(
-                    str(file_info.get("filename") or "")
-                )
-                output_path = _assert_output_path_contained(
-                    model_path / safe_name
-                )
-                progress = _civitai_progress_reporter(
-                    job_id,
-                    self._tracker,
-                    downloaded_size,
-                    total_size,
-                )
-                completed = download_civitai_file(
-                    file_info["url"],
-                    output_path,
-                    file_total,
-                    api_key=api_key,
-                    progress_callback=progress,
-                    cancel_callback=cancel_event.is_set,
-                )
-                if not completed or cancel_event.is_set():
-                    self._cancel_job(job_id)
-                    return
-                downloaded_size += file_total
-                downloaded_paths.append(str(output_path))
+            downloaded_paths = self._download_civitai_files(
+                job_id,
+                cancel_event,
+                files_to_download,
+                model_path,
+                total_size,
+                api_key,
+            )
+            if downloaded_paths is None:
+                return
             if not files_to_download:
                 downloaded_paths.append(str(model_path))
-            self._complete_job(
-                job_id,
-                {
-                    "provider": "civitai",
-                    "url": url,
-                    "model_name": model_name,
-                    "paths": downloaded_paths,
-                },
+            self._complete_civitai_job(
+                job_id, url, model_name, downloaded_paths
             )
         except Exception as exc:
             self._fail_job(job_id, str(exc))
         finally:
             self._forget_job(job_id)
+
+    def _resolve_civitai_model(self, url, output_dir, api_key):
+        """Fetch model info and resolve the file download plan."""
+        model_info = fetch_model_info_for_url(url, api_key)
+        version = model_info.get("selectedVersion") or select_version(
+            model_info
+        )
+        if version is None:
+            raise ValueError("No CivitAI model version available")
+        model_name = sanitize_filename(
+            str(model_info.get("name") or "civitai_model")
+        )
+        model_path = Path(output_dir) / model_name
+        files_to_download = get_files_to_download(version, model_path)
+        return model_name, model_path, files_to_download
+
+    def _download_civitai_files(
+        self,
+        job_id,
+        cancel_event,
+        files_to_download,
+        model_path,
+        total_size,
+        api_key,
+    ):
+        """Download each planned file, or None (with cancel) when aborted."""
+        downloaded_size = 0
+        downloaded_paths = []
+        for file_info in files_to_download:
+            file_total = max(0, int(file_info.get("size") or 0))
+            safe_name = _safe_filename(
+                str(file_info.get("filename") or "")
+            )
+            output_path = _assert_output_path_contained(
+                model_path / safe_name
+            )
+            progress = _civitai_progress_reporter(
+                job_id,
+                self._tracker,
+                downloaded_size,
+                total_size,
+            )
+            completed = download_civitai_file(
+                file_info["url"],
+                output_path,
+                file_total,
+                api_key=api_key,
+                progress_callback=progress,
+                cancel_callback=cancel_event.is_set,
+            )
+            if not completed or cancel_event.is_set():
+                self._cancel_job(job_id)
+                return None
+            downloaded_size += file_total
+            downloaded_paths.append(str(output_path))
+        return downloaded_paths
+
+    def _complete_civitai_job(
+        self, job_id, url, model_name, downloaded_paths
+    ) -> None:
+        """Mark a CivitAI model job complete with its result payload."""
+        self._complete_job(
+            job_id,
+            {
+                "provider": "civitai",
+                "url": url,
+                "model_name": model_name,
+                "paths": downloaded_paths,
+            },
+        )
 
     def _run_civitai_file_job(
         self,
