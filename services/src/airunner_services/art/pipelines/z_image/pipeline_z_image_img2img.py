@@ -40,12 +40,13 @@ logger = logging.get_logger(__name__)
 
 
 def calculate_shift(
-    image_seq_len,
+    image_seq_len: int,
     base_seq_len: int = 256,
     max_seq_len: int = 4096,
     base_shift: float = 0.5,
     max_shift: float = 1.16,
-):
+) -> float:
+    """Return the linearly interpolated shift for one sequence length."""
     m = (max_shift - base_shift) / (max_seq_len - base_seq_len)
     b = base_shift - m * base_seq_len
     mu = image_seq_len * m + b
@@ -227,6 +228,7 @@ class ZImageImg2ImgPipeline(DiffusionPipeline, FromSingleFileMixin):
         prompt_embeds=None,
         max_sequence_length=None,
     ):
+        """Validate img2img dimensions, strength, prompts, and input image."""
         if height % (self.vae_scale_factor * 2):
             raise ValueError(
                 f"`height` must be divisible by {self.vae_scale_factor * 2} but is {height}."
@@ -345,14 +347,17 @@ class ZImageImg2ImgPipeline(DiffusionPipeline, FromSingleFileMixin):
 
     @property
     def guidance_scale(self):
+        """Return the configured guidance scale."""
         return self._guidance_scale
 
     @property
     def num_timesteps(self):
+        """Return the configured inference timestep count."""
         return self._num_timesteps
 
     @property
     def interrupt(self):
+        """Return whether generation has been interrupted."""
         return self._interrupt
 
     @torch.no_grad()
