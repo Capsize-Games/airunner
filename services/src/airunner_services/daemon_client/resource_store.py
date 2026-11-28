@@ -285,6 +285,7 @@ class DomainResourceClient:
         *,
         create_if_missing: bool = True,
     ) -> Dict[str, Any]:
+        """Return the singleton resource, creating it when requested."""
         response = self._client._request(
             "GET",
             (
@@ -299,6 +300,7 @@ class DomainResourceClient:
         resource_name: str,
         values: Dict[str, Any],
     ) -> Dict[str, Any]:
+        """Update the singleton resource and return the server response."""
         response = self._client._request(
             "PUT",
             f"/api/v1/{self._domain}/resources/{resource_name}/singleton",
@@ -313,6 +315,7 @@ class DomainResourceClient:
         *,
         create_if_missing: bool = True,
     ) -> Dict[str, Any]:
+        """Return one resource layer, creating it when requested."""
         response = self._client._request(
             "GET",
             (
@@ -329,6 +332,7 @@ class DomainResourceClient:
         layer_id: int,
         values: Dict[str, Any],
     ) -> Dict[str, Any]:
+        """Update one resource layer and return the server response."""
         response = self._client._request(
             "PUT",
             f"/api/v1/{self._domain}/resources/{resource_name}/layers/{layer_id}",
@@ -345,6 +349,7 @@ class DomainResourceClient:
         eager_load: Optional[List[str]] = None,
         limit: Optional[int] = None,
     ) -> Dict[str, Any]:
+        """Run one filtered, ordered collection query."""
         response = self._client._request(
             "POST",
             f"/api/v1/{self._domain}/resources/{resource_name}/query",
@@ -365,6 +370,7 @@ class DomainResourceClient:
         order_by: Optional[List[Dict[str, str]]] = None,
         eager_load: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
+        """Return the first record matching one collection query."""
         response = self._client._request(
             "POST",
             f"/api/v1/{self._domain}/resources/{resource_name}/first",
@@ -377,6 +383,7 @@ class DomainResourceClient:
         return response.json()
 
     def get(self, resource_name: str, record_id: int) -> Dict[str, Any]:
+        """Return one record by id."""
         response = self._client._request(
             "GET",
             f"/api/v1/{self._domain}/resources/{resource_name}/{record_id}",
@@ -388,6 +395,7 @@ class DomainResourceClient:
         resource_name: str,
         values: Dict[str, Any],
     ) -> Dict[str, Any]:
+        """Create one record and return the server response."""
         response = self._client._request(
             "POST",
             f"/api/v1/{self._domain}/resources/{resource_name}",
@@ -401,6 +409,7 @@ class DomainResourceClient:
         record_id: int,
         values: Dict[str, Any],
     ) -> Dict[str, Any]:
+        """Update one record and return the server response."""
         response = self._client._request(
             "PUT",
             f"/api/v1/{self._domain}/resources/{resource_name}/{record_id}",
@@ -409,6 +418,7 @@ class DomainResourceClient:
         return response.json()
 
     def delete(self, resource_name: str, record_id: int) -> Dict[str, Any]:
+        """Delete one record and return the deletion result."""
         response = self._client._request(
             "DELETE",
             f"/api/v1/{self._domain}/resources/{resource_name}/{record_id}",
@@ -421,6 +431,7 @@ class DomainResourceClient:
         *,
         filters: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        """Delete records matching one filter and return the result."""
         response = self._client._request(
             "POST",
             f"/api/v1/{self._domain}/resources/{resource_name}/delete",
