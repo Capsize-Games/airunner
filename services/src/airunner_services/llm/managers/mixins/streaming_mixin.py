@@ -69,6 +69,12 @@ class StreamingMixin:
         result["tools"] = self._executed_tools.copy()
         return result
 
+    def _new_ai_messages(self, event: dict) -> tuple[list[AIMessage], int]:
+        """Collect the AI messages in one stream event."""
+        messages = event["messages"]
+        ai_messages = [msg for msg in messages if isinstance(msg, AIMessage)]
+        return ai_messages, len(ai_messages)
+
     def stream(
         self, user_input: str, generation_kwargs: Optional[Dict] = None,
         images: Optional[list] = None,
@@ -114,26 +120,13 @@ class StreamingMixin:
                     if self._interrupted:
                         break
 
-                    # Yield only NEW AI messages (not previously yielded)
-                    # Note: We don't filter by content because tool_calls may have empty content
                     if self._has_ai_message(event):
-                        messages = event["messages"]
-
-                        # Only yield AIMessages we haven't yielded yet
-                        # Count how many AIMessages are in the list
-                        ai_message_count = sum(
-                            1 for msg in messages if isinstance(msg, AIMessage)
+                        ai_messages, ai_message_count = (
+                            self._new_ai_messages(event)
                         )
 
                         # If there are more AIMessages than we've yielded, yield the new ones
                         if ai_message_count > last_yielded_count:
-                            # Get all AIMessages
-                            ai_messages = [
-                                msg
-                                for msg in messages
-                                if isinstance(msg, AIMessage)
-                            ]
-                            # Yield only the ones we haven't yielded yet
                             for i in range(last_yielded_count, ai_message_count):
                                 content_preview = (
                                     ai_messages[i].content[:100]
