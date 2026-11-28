@@ -340,6 +340,11 @@ def evaluate_fields_semantic(fields: dict[str, str]) -> SemanticVerdict:
             REASON_ERROR,
         )
         return SemanticVerdict.allow(REASON_ERROR, evaluated=True)
+    return _handle_judge_verdict(verdict, field_count)
+
+
+def _handle_judge_verdict(verdict, field_count: int) -> SemanticVerdict:
+    """Normalize one judge result, allowing anything but evaluated blocks."""
     if not isinstance(verdict, SemanticVerdict):
         logger.warning(
             "Semantic content-safety judge returned an unexpected result; "
