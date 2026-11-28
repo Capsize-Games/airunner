@@ -61,7 +61,7 @@ def build_health_payload(status: str) -> Dict[str, Any]:
 
 
 @router.get("/health", response_model=HealthResponse)
-async def health_check():
+async def health_check() -> HealthResponse:
     """
     Health check endpoint.
 
@@ -71,7 +71,7 @@ async def health_check():
 
 
 @router.get("/health/daemon", response_model=DaemonStatusResponse)
-async def daemon_status(request: Request):
+async def daemon_status(request: Request) -> DaemonStatusResponse:
     """Return daemon lifecycle state when available."""
     lifecycle_service = getattr(request.app.state, "lifecycle_service", None)
     if lifecycle_service is None:
@@ -80,7 +80,7 @@ async def daemon_status(request: Request):
 
 
 @router.get("/")
-async def root():
+async def root() -> Dict[str, Any]:
     """Root endpoint with API information."""
     return {
         "message": "AI Runner API",
