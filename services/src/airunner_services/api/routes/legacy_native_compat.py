@@ -167,6 +167,7 @@ def _process_single_prompt(app, index: int, prompt: str, action: LLMActionType, 
     done = threading.Event()
 
     def callback(data: dict[str, Any]) -> None:
+        """Collect one batch prompt response until completion."""
         response = data.get("response")
         if not response:
             return
