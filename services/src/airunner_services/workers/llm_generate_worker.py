@@ -1013,6 +1013,7 @@ class LLMGenerateWorker(
 	) -> None:
 		"""Emit one system completion while preserving legacy error fallback."""
 		def emit() -> None:
+			"""Emit one system completion for this request."""
 			request_id = message.get("request_id")
 			resolved_action = action
 			resolved_text = text
