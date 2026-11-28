@@ -38,6 +38,7 @@ class ObservedEvent:
 
     @property
     def size_bytes(self) -> int:
+        """Return the byte size charged to this event."""
         if self.payload is not None:
             return len(self.payload)
         return len(self.text.encode("utf-8")) + sum(
@@ -123,11 +124,13 @@ class LegacyCompletionObserver:
 
     @property
     def active(self) -> bool:
+        """Return whether this observer still accepts callbacks."""
         with self._lock:
             return not self._terminal and not self._closed
 
     @property
     def closed(self) -> bool:
+        """Return whether this observer has been closed."""
         with self._lock:
             return self._closed
 
@@ -139,6 +142,7 @@ class LegacyCompletionObserver:
         """Dispatch outside the caller so even kickoff uses the total deadline."""
 
         def kickoff() -> None:
+            """Dispatch the handler and mark the request failed on error."""
             if not self.active:
                 return
             try:
@@ -165,6 +169,7 @@ class LegacyCompletionObserver:
         """Wrap a route callback so late events/errors cannot strand a request."""
 
         def callback(data: dict) -> None:
+            """Run one route callback while the observer is active."""
             if not self.active:
                 return
             try:
