@@ -369,30 +369,47 @@ class GuiDaemonClient(GuiBridgeMixin):
             width,
             height,
         )
+        payload = self._art_generation_payload(
+            prompt, negative_prompt, width, height, steps, cfg_scale, seed,
+            num_images, model, version, scheduler, pipeline, strength,
+            image_b64, skip_auto_export,
+        )
         response = self._request(
             "POST",
             "/api/v1/art/generate",
-            json_payload={
-                "prompt": prompt,
-                "negative_prompt": negative_prompt,
-                "width": width,
-                "height": height,
-                "steps": steps,
-                "cfg_scale": cfg_scale,
-                "seed": seed,
-                "num_images": num_images,
-                "model": model,
-                "version": version,
-                "scheduler": scheduler,
-                "pipeline": pipeline,
-                "strength": strength,
-                "image_b64": image_b64,
-                "skip_auto_export": skip_auto_export,
-            },
+            json_payload=payload,
             auto_start=auto_start,
             timeout_seconds=30.0,
         )
         return response.json()
+
+    @staticmethod
+    def _art_generation_payload(
+        prompt: str, negative_prompt: str, width: int, height: int,
+        steps: int, cfg_scale: float, seed: Optional[int],
+        num_images: int, model: Optional[str], version: Optional[str],
+        scheduler: Optional[str], pipeline: Optional[str],
+        strength: Optional[float], image_b64: Optional[str],
+        skip_auto_export: bool,
+    ) -> Dict[str, Any]:
+        """Build one art generation request payload."""
+        return {
+            "prompt": prompt,
+            "negative_prompt": negative_prompt,
+            "width": width,
+            "height": height,
+            "steps": steps,
+            "cfg_scale": cfg_scale,
+            "seed": seed,
+            "num_images": num_images,
+            "model": model,
+            "version": version,
+            "scheduler": scheduler,
+            "pipeline": pipeline,
+            "strength": strength,
+            "image_b64": image_b64,
+            "skip_auto_export": skip_auto_export,
+        }
 
     def art_job_status(
         self,
