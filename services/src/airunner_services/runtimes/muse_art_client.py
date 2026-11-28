@@ -56,6 +56,7 @@ class MuseArtClient(RuntimeClient):
             supports_streaming=False, allows_model_control=False)
 
     def invoke(self, request: Any) -> Any:
+        """Invoke this client without a progress callback."""
         return self.invoke_with_progress(request)
 
     def invoke_with_progress(
@@ -63,6 +64,7 @@ class MuseArtClient(RuntimeClient):
         request: Any,
         progress_callback: Optional[ProgressCallback] = None,
     ) -> Any:
+        """Handle one art invocation request with optional progress updates."""
         request_id, invocation = parse_muse_request(request)
         action = getattr(request, "action", RuntimeAction.INVOKE)
         if action is RuntimeAction.STATUS:
@@ -78,6 +80,7 @@ class MuseArtClient(RuntimeClient):
         return self._generate(request_id, invocation, progress_callback)
 
     def healthcheck(self) -> RuntimeHealth:
+        """Report whether the Muse runtime is configured and ready."""
         metadata = {"provider": "muse", "model": self._settings.model}
         if not self._settings.api_key:
             return RuntimeHealth(descriptor=self.descriptor,
@@ -88,6 +91,7 @@ class MuseArtClient(RuntimeClient):
             details="Muse art runtime is configured")
 
     def cancel(self, request_id: str) -> Any:
+        """Mark one active request for best-effort cancellation."""
         messages = load_message_types()
         with self._lock:
             self._cancelled.add(request_id)
@@ -102,6 +106,7 @@ class MuseArtClient(RuntimeClient):
         )
 
     def close(self) -> None:
+        """Close the underlying HTTP session when supported."""
         close = getattr(self._session, "close", None)
         if callable(close):
             close()
@@ -170,6 +175,7 @@ class MuseArtClient(RuntimeClient):
 
     @property
     def usage_ledger(self) -> MuseUsageLedger:
+        """Return the per-job image usage ledger."""
         return self._ledger
 
     @staticmethod
@@ -231,6 +237,7 @@ class MuseArtClient(RuntimeClient):
 
 def register_muse_art_client(registry: RuntimeRegistry,
         muse_client: Optional[RuntimeClient] = None) -> RuntimeRegistry:
+    """Register the Muse art client route and return the registry."""
     client = muse_client or MuseArtClient()
     provider = client.descriptor.provider
     route = RuntimeRoute(RuntimeKind.ART, provider=provider,
