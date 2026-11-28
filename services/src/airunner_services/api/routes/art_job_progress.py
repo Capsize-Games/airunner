@@ -1,7 +1,7 @@
 """Progress helpers for art job execution."""
 
 import asyncio
-from typing import Optional
+from typing import Callable, Optional
 
 from airunner_services.utils.job_tracker import (
     JobStatus as JobState,
@@ -60,13 +60,14 @@ def progress_callback(
     loop: asyncio.AbstractEventLoop,
     tracker: JobTracker,
     job_id: str,
-):
+) -> Callable[[dict], None]:
     """Return one thread-safe progress callback for the tracker."""
 
     # The closure keeps the runtime callback tiny while the normalization logic
     # above stays testable and independent from the API route layer.
 
     def on_progress(progress_data: dict) -> None:
+        """Push one runtime progress update into the tracker."""
         update_tracker_progress(loop, tracker, job_id, progress_data)
 
     return on_progress
