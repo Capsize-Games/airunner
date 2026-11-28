@@ -96,58 +96,52 @@ class DuckDuckGoProvider(BaseSearchProvider):
 
         all_results = []
         try:
-            # Get blocklist for filtering
             blocklist = WebContentExtractor.get_blocklist()
-
             with DDGS() as ddgs:
-                for r in ddgs.text(
-                    query,
-                    region="wt-wt",
-                    safesearch="Moderate",
-                    max_results=fetch_count,
-                ):
-                    link = r.get("href", r.get("url", "#"))
-
-                    # Filter out blocked domains
-                    from urllib.parse import urlparse
-
-                    try:
-                        domain = urlparse(link).netloc.lower()
-                        if domain.startswith("www."):
-                            domain = domain[4:]
-
-                        # Check if domain is in blocklist
-                        is_blocked = any(
-                            domain == blocked or domain.endswith("." + blocked)
-                            for blocked in blocklist
-                        )
-
-                        if is_blocked:
-                            self.logger.debug(
-                                f"Filtered blocked domain: {domain}"
-                            )
-                            continue
-
-                    except Exception:
-                        pass  # If parsing fails, include the result
-
-                    all_results.append(
-                        self._format_result(
-                            title=r.get("title", "N/A"),
-                            link=link,
-                            snippet=r.get("body", r.get("snippet", "")),
-                        )
-                    )
-
-                    # Stop once we have enough filtered results
-                    if len(all_results) >= num_results:
-                        break
-
+                all_results = self._collect_search_results(
+                    ddgs, query, fetch_count, blocklist, num_results
+                )
             self.logger.info(
                 f"DuckDuckGo search completed. Found {len(all_results)} results after filtering."
             )
         except Exception as e:
             self.logger.error(f"DuckDuckGo search error: {e}")
+        return all_results
+
+    def _collect_search_results(self, ddgs, query: str, fetch_count: int, blocklist, num_results: int) -> List[Dict[str, str]]:
+        """Fetch and blocklist-filter one query's search results."""
+        from urllib.parse import urlparse
+
+        all_results = []
+        for r in ddgs.text(
+            query,
+            region="wt-wt",
+            safesearch="Moderate",
+            max_results=fetch_count,
+        ):
+            link = r.get("href", r.get("url", "#"))
+            try:
+                domain = urlparse(link).netloc.lower()
+                if domain.startswith("www."):
+                    domain = domain[4:]
+                is_blocked = any(
+                    domain == blocked or domain.endswith("." + blocked)
+                    for blocked in blocklist
+                )
+                if is_blocked:
+                    self.logger.debug(f"Filtered blocked domain: {domain}")
+                    continue
+            except Exception:
+                pass
+            all_results.append(
+                self._format_result(
+                    title=r.get("title", "N/A"),
+                    link=link,
+                    snippet=r.get("body", r.get("snippet", "")),
+                )
+            )
+            if len(all_results) >= num_results:
+                break
         return all_results
 
     async def news_search(
