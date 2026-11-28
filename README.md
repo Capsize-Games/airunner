@@ -2,7 +2,7 @@
 
 AI Runner provides model workers, runtime orchestration, persistence, and HTTP/WebSocket APIs for other applications. This repository contains the headless service; the Qt desktop application and paid desktop storefront are retired.
 
-AI Runner is GPL-3.0-only software. It is maintained by [Capsize LLC](https://capsize.online) and includes contributions from other contributors. [Sponsorship](https://github.com/sponsors/w4ffl35) supports project maintenance.
+AI Runner is Apache-2.0 licensed software. It is maintained by [Capsize LLC](https://capsize.online) and includes contributions from other contributors. [Sponsorship](https://github.com/sponsors/w4ffl35) supports project maintenance.
 
 [Report a bug](https://github.com/Capsize-Games/airunner/issues/new?template=bug_report.md) · [Request a feature](https://github.com/Capsize-Games/airunner/issues/new?template=feature_request.md) · [Report a vulnerability](https://github.com/Capsize-Games/airunner/security/advisories/new)
 

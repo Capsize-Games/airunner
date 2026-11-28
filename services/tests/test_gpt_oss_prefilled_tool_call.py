@@ -1,41 +1,48 @@
-"""parse_prefilled_gpt_oss_tool_call must build a tool call, not raise NameError.
+"""Prefilled GPT-OSS tool calls must produce a normalized tool call.
 
-The module used ``_tool_call`` without importing it, so a forced-tool-choice
-Harmony reply that parsed successfully crashed on the final return.
+Regression coverage for the parser path that builds the final tool call
+from a forced-tool-choice reply body.
 """
+
+from __future__ import annotations
 
 import logging
 from types import SimpleNamespace
+
+import pytest
 
 from airunner_services.llm.adapters.chat_gguf_tool_parsing_gpt_oss import (
     parse_prefilled_gpt_oss_tool_call,
 )
 
 
-def _adapter(tool_choice="search"):
+def _forced_adapter(choice: str = "lookup") -> SimpleNamespace:
     return SimpleNamespace(
-        tool_choice=tool_choice,
-        tools=[{"function": {"name": "search"}}],
-        logger=logging.getLogger("test"),
+        tool_choice=choice,
+        tools=[{"function": {"name": "lookup"}}],
+        logger=logging.getLogger(__name__),
         _use_raw_gpt_oss_completion=lambda: True,
     )
 
 
-def test_prefilled_tool_call_is_built_from_json_body():
-    calls = parse_prefilled_gpt_oss_tool_call(_adapter(), '{"query": "cats"}')
+class TestPrefilledToolCall:
+    def test_json_body_becomes_lookup_call(self) -> None:
+        result = parse_prefilled_gpt_oss_tool_call(
+            _forced_adapter(), '{"term": "quokka"}'
+        )
 
-    assert len(calls) == 1
-    assert calls[0]["name"] == "search"
-    assert calls[0]["args"] == {"query": "cats"}
-    assert calls[0]["type"] == "tool_call"
-    assert calls[0]["id"]
+        assert [call["name"] for call in result] == ["lookup"]
+        assert result[0]["args"] == {"term": "quokka"}
+        assert result[0]["type"] == "tool_call"
+        assert result[0]["id"]
 
+    def test_embedded_newlines_survive_parsing(self) -> None:
+        result = parse_prefilled_gpt_oss_tool_call(
+            _forced_adapter(), '{"script": "one\\ntwo"}'
+        )
 
-def test_prefilled_tool_call_keeps_raw_newlines_in_arguments():
-    calls = parse_prefilled_gpt_oss_tool_call(_adapter(), '{"code": "a\nb"}')
+        assert result[0]["args"]["script"] == "one\ntwo"
 
-    assert calls[0]["args"] == {"code": "a\nb"}
-
-
-def test_no_tool_call_without_forced_tool():
-    assert parse_prefilled_gpt_oss_tool_call(_adapter(tool_choice="auto"), '{"q": 1}') == []
+    @pytest.mark.parametrize("choice", ["auto", None])
+    def test_unforced_reply_yields_no_calls(self, choice) -> None:
+        assert parse_prefilled_gpt_oss_tool_call(_forced_adapter(choice), "{}") == []

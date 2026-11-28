@@ -1,13 +1,13 @@
-"""get_application_state must return its JSON payload, not a NameError message.
+"""The application-state tool must return JSON state, not an error string.
 
-autonomous_control_state_tools.py called ``json.dumps`` without importing
-``json``; the tool wrapper swallowed the NameError and returned
-"Error getting application state: name 'json' is not defined".
+Regression coverage for the state payload builder and the built tool.
 """
+
+from __future__ import annotations
 
 import json
 import logging
-from types import SimpleNamespace
+from unittest.mock import Mock
 
 from airunner_services.llm.managers.tools.autonomous_control_state_tools import (
     _application_state_result,
@@ -15,29 +15,27 @@ from airunner_services.llm.managers.tools.autonomous_control_state_tools import 
 )
 
 
-def _owner():
-    return SimpleNamespace(
-        logger=logging.getLogger("test"),
-        rag_manager=object(),
-        active_llm_model_name="test-model",
-        current_conversation_id=7,
-        get_all_tools=lambda: [1, 2, 3],
-    )
+def _owner_mock() -> Mock:
+    owner = Mock()
+    owner.logger = logging.getLogger(__name__)
+    owner.rag_manager = object()
+    owner.active_llm_model_name = "unit-test-model"
+    owner.current_conversation_id = 99
+    owner.get_all_tools = lambda: ["alpha", "beta"]
+    return owner
 
 
-def test_application_state_result_is_json():
-    state = json.loads(_application_state_result(_owner()))
+def test_state_payload_decodes_with_expected_sections() -> None:
+    payload = json.loads(_application_state_result(_owner_mock()))
 
-    assert state["llm"]["model"] == "test-model"
-    assert state["llm"]["tools_count"] == 3
-    assert state["conversation"]["current_id"] == 7
-    assert state["capabilities"]["rag"] is True
+    assert payload["llm"]["model"] == "unit-test-model"
+    assert payload["llm"]["tools_count"] == 2
+    assert payload["conversation"]["current_id"] == 99
+    assert payload["capabilities"]["rag"] is True
 
 
-def test_get_application_state_tool_returns_state_not_error():
-    tool = build_get_application_state_tool(_owner())
+def test_tool_invocation_returns_state_document() -> None:
+    rendered = build_get_application_state_tool(_owner_mock()).invoke({})
 
-    result = tool.invoke({})
-
-    assert not result.startswith("Error")
-    assert json.loads(result)["application"]["name"] == "AI Runner"
+    assert not rendered.startswith("Error")
+    assert json.loads(rendered)["application"]["name"] == "AI Runner"

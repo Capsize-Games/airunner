@@ -18,11 +18,11 @@ from setuptools import find_packages, setup
 _RELEASE_VERSION = "6.1.4"
 VERSION = os.environ.get("AIRUNNER_BUILD_VERSION", _RELEASE_VERSION)
 
-# The project is GPL-3.0-only (issue #2058): the repo-root LICENSE file, every
-# ``license=`` metadata field and these PyPI classifiers must agree. Mirrored
-# from airunner_common/package_metadata.py in Capsize-Games/airunner-common.
+# The project is Apache-2.0 (relicensed 2026-11-28, see RELICENSING.md):
+# the repo-root LICENSE file, every ``license=`` metadata field and these
+# PyPI classifiers must agree.
 LICENSE_CLASSIFIERS = [
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "License :: OSI Approved :: Apache Software License",
 ]
 
 # Optional compatibility pin for consumers that explicitly request the
@@ -110,7 +110,7 @@ def build_native_setup_kwargs(*, package_source_dir: str) -> dict[str, object]:
         "description": "AIRunner native launcher and bundle tooling",
         "long_description": README,
         "long_description_content_type": "text/markdown",
-        "license": "GPL-3.0-only",
+        "license": "Apache-2.0",
         "classifiers": LICENSE_CLASSIFIERS,
         "author_email": "contact@capsizegames.com",
         "url": "https://github.com/Capsize-Games/airunner",

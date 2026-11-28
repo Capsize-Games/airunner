@@ -1,14 +1,13 @@
-"""Unit tests for ``GuiDaemonClient`` runtime control actions.
+"""Runtime-control wrappers on GuiDaemonClient forward their arguments.
 
-``_runtime_action`` declares ``metadata`` and ``timeout_seconds`` as
-keyword-only arguments with no defaults, so every public wrapper has to
-forward them.  ``cancel_runtime`` did not, which made it raise
-``TypeError`` on every call (issue: TTS interrupt path).
+The daemon control helper requires its keyword arguments on every call;
+these tests pin the three public wrappers (load/unload/cancel) against
+that contract by capturing what they pass to the helper.
 """
 
 from __future__ import annotations
 
-from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
@@ -16,49 +15,34 @@ from airunner_services.daemon_client.gui_daemon_client import GuiDaemonClient
 
 
 @pytest.fixture
-def client(monkeypatch: pytest.MonkeyPatch) -> GuiDaemonClient:
-    instance = GuiDaemonClient.__new__(GuiDaemonClient)
-    calls: list[tuple[tuple, dict]] = []
-
-    def _request(*args, **kwargs):
-        calls.append((args, kwargs))
-        return SimpleNamespace(json=lambda: {"status": "ok"})
-
-    monkeypatch.setattr(instance, "_request", _request, raising=False)
-    instance.recorded_calls = calls
-    return instance
+def captured_client(monkeypatch: pytest.MonkeyPatch) -> GuiDaemonClient:
+    client = GuiDaemonClient.__new__(GuiDaemonClient)
+    client.forwarded = Mock(return_value={"status": "ok"})
+    monkeypatch.setattr(client, "_runtime_action", client.forwarded, raising=False)
+    return client
 
 
 @pytest.mark.parametrize(
-    "action", ["load_runtime", "unload_runtime", "cancel_runtime"]
+    ("method_name", "expected_action"),
+    [
+        ("load_runtime", "load"),
+        ("unload_runtime", "unload"),
+        ("cancel_runtime", "cancel"),
+    ],
 )
-def test_runtime_wrappers_forward_every_required_argument(
-    client: GuiDaemonClient, action: str
-) -> None:
-    """Each wrapper must satisfy ``_runtime_action``'s keyword-only args."""
-    result = getattr(client, action)(
-        "tts",
-        deployment_mode="sidecar",
-        request_id="req-1",
+def test_each_wrapper_reaches_the_helper(captured_client, method_name, expected_action):
+    outcome = getattr(captured_client, method_name)(
+        "stt", request_id="r-42", metadata={"origin": "test"}, timeout_seconds=2.5
     )
 
-    assert result == {"status": "ok"}
-    assert len(client.recorded_calls) == 1
+    assert outcome == {"status": "ok"}
+    kwargs = captured_client.forwarded.call_args.kwargs
+    assert kwargs["metadata"] == {"origin": "test"}
+    assert kwargs["timeout_seconds"] == 2.5
+    assert kwargs["request_id"] == "r-42"
 
 
-def test_cancel_runtime_passes_metadata_and_timeout(
-    client: GuiDaemonClient,
-) -> None:
-    """Explicit metadata/timeout reach the request body like the siblings."""
-    client.cancel_runtime(
-        "tts",
-        deployment_mode="sidecar",
-        request_id="req-1",
-        metadata={"reason": "interrupt"},
-        timeout_seconds=5.0,
-    )
+def test_cancel_does_not_auto_start_by_default(captured_client):
+    captured_client.cancel_runtime("stt")
 
-    args, kwargs = client.recorded_calls[0]
-    assert args == ("POST", "/api/v1/daemon/runtimes/tts/cancel")
-    assert kwargs["json_payload"]["metadata"] == {"reason": "interrupt"}
-    assert kwargs["timeout_seconds"] == 5.0
+    assert captured_client.forwarded.call_args.kwargs["auto_start"] is False

@@ -10,7 +10,7 @@ AI Runner in this repository is the headless model service and API. Contribution
 4. Run the relevant existing checks and report their exact results, including skips and unavailable resources.
 5. Open a pull request against the current base branch and respond to review feedback.
 
-Preserve the project's GPL-3.0-only license, upstream copyright notices, and third-party notices. Commit generated release inputs only when the packaging workflow needs them, with exact hashes, source provenance, and required license material. Keep model weights, credentials, private policy data, customer data, and local runtime state out of commits.
+Preserve the project's Apache-2.0 license, upstream copyright notices, and third-party notices. Commit generated release inputs only when the packaging workflow needs them, with exact hashes, source provenance, and required license material. Keep model weights, credentials, private policy data, customer data, and local runtime state out of commits.
 
 ## First contribution in 30 minutes
 
@@ -22,7 +22,7 @@ For a documentation, test, or small code fix, no GPU or model files are needed:
 4. Pick a [`good first issue`](https://github.com/Capsize-Games/airunner/issues?q=label%3A%22good+first+issue%22+state%3Aopen), make one focused change, and run the single related test file. Useful fast subsets are documented under [Tests and reports](#tests-and-reports).
 5. Open a pull request against `master` describing what changed, why, and the exact test output. First-time fork pull requests need a maintainer to approve CI ("Approve and run workflows") before checks run; a red check may be pre-existing, so describe what you observed rather than force-pushing around it.
 
-No CLA, DCO, or sign-off is required. Keep the GPL-3.0-only license notices intact.
+No CLA, DCO, or sign-off is required. Keep the Apache-2.0 license notices intact.
 
 ## Development environment
 
