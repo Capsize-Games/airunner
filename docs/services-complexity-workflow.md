@@ -65,6 +65,23 @@ python scripts/services_complexity_report.py \
   --max-complexity-rank A
 ```
 
+## Opt-in gating
+
+The report stays advisory by default. Pass `--fail-on-hotspot` to
+turn hotspot detection into a gate: the command exits non-zero when
+unexcepted hotspot files remain.
+
+```bash
+python scripts/services_complexity_report.py --fail-on-hotspot
+```
+
+`KNOWN_HOTSPOT_EXCEPTIONS` in the script lists accepted hotspot paths
+(currently empty — no broad exceptions are granted). Entries that stop
+matching any hotspot are stale and also fail the gate, so the list
+cannot silently rot. The JSON payload records `excepted_hotspots` and
+`unexcepted_hotspots` counts, and the Markdown report gains a
+"Known Exceptions" section.
+
 ## Creating GitHub Issues
 
 Use the `issue_candidates` array in the JSON report as the starting point for

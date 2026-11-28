@@ -1,11 +1,10 @@
 [run]
-source = src/airunner
+source = services/src/airunner_services
 omit =
     venv/*
+    .venv/*
     */alembic/*
     */data/bootstrap/*
-    */resources/*
-    src/airunner/resources_*
     */tests/*
     */bin/*
     /*templates/*

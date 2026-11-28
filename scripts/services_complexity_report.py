@@ -37,6 +37,13 @@ DEFAULT_EXCLUDES = ("build", "dist", "vendor", "__pycache__")
 MAX_SOURCE_BYTES = 500_000
 RANKS = "ABCDEF"
 
+#: Hotspot files explicitly accepted while they are handled elsewhere.
+#: Paths are repo-rooted ``path`` values from file reports. Empty by
+#: default: no broad exceptions are granted. Entries that no longer
+#: match a hotspot are stale and fail the opt-in gate so the list
+#: cannot silently rot.
+KNOWN_HOTSPOT_EXCEPTIONS: tuple[str, ...] = ()
+
 
 @dataclass(frozen=True)
 class Thresholds:
@@ -64,6 +71,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-mi", type=float, default=65.0)
     parser.add_argument("--xenon-max-average")
     parser.add_argument("--xenon-max-modules")
+    parser.add_argument(
+        "--fail-on-hotspot",
+        action="store_true",
+        help=(
+            "Exit non-zero when unexcepted hotspots (or stale exception "
+            "entries) remain. Off by default: the report stays advisory."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -266,8 +281,10 @@ def report_score(report: dict[str, Any], thresholds: Thresholds) -> int:
 def summarize_reports(
     reports: list[dict[str, Any]],
     thresholds: Thresholds,
+    exceptions: tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
     """Summarize the report collection."""
+    unexcepted, excepted = partition_hotspots(reports, thresholds, exceptions)
     return {
         "files_analyzed": len(reports),
         "files_over_limit": sum(report["file_lines"] > thresholds.max_file_lines for report in reports),
@@ -276,7 +293,48 @@ def summarize_reports(
         "complex_blocks": sum(len(report["complex_blocks"]) for report in reports),
         "low_mi_files": sum(report["mi"] < thresholds.min_mi for report in reports),
         "hotspot_files": sum(report_score(report, thresholds) > 0 for report in reports),
+        "excepted_hotspots": len(excepted),
+        "unexcepted_hotspots": len(unexcepted),
     }
+
+
+def partition_hotspots(
+    reports: list[dict[str, Any]],
+    thresholds: Thresholds,
+    exceptions: tuple[str, ...] | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Split hotspot files into (unexcepted, excepted) lists.
+
+    A file is a hotspot when its score is above zero. Excepted files
+    are known hotspots handled elsewhere; anything else fails the
+    opt-in ``--fail-on-hotspot`` gate. ``None`` resolves the module
+    default at call time so tests can override it.
+    """
+    if exceptions is None:
+        exceptions = KNOWN_HOTSPOT_EXCEPTIONS
+    excepted: list[dict[str, Any]] = []
+    unexcepted: list[dict[str, Any]] = []
+    for report in reports:
+        if report_score(report, thresholds) == 0:
+            continue
+        (excepted if report["path"] in exceptions else unexcepted).append(report)
+    return unexcepted, excepted
+
+
+def stale_exceptions(
+    reports: list[dict[str, Any]],
+    thresholds: Thresholds,
+    exceptions: tuple[str, ...] | None = None,
+) -> list[str]:
+    """Return exception entries that no longer match any hotspot file."""
+    if exceptions is None:
+        exceptions = KNOWN_HOTSPOT_EXCEPTIONS
+    hotspot_paths = {
+        report["path"]
+        for report in reports
+        if report_score(report, thresholds) > 0
+    }
+    return [entry for entry in exceptions if entry not in hotspot_paths]
 
 
 def area_key(path: str) -> str:
@@ -429,6 +487,14 @@ def build_markdown(payload: dict[str, Any]) -> str:
         reasons = "; ".join(issue_reasons(report, thresholds))
         if reasons:
             lines.append(f"- `{report['path']}`: {reasons}")
+    lines += ["", "## Known Exceptions"]
+    excepted = payload["summary"].get("excepted_hotspots", 0)
+    if payload.get("known_exceptions"):
+        lines.append("Accepted hotspots handled elsewhere:")
+        lines.extend(f"- `{path}`" for path in payload["known_exceptions"])
+    else:
+        lines.append("None. No broad exceptions are granted.")
+    lines.append(f"Excepted hotspot files: {excepted}.")
     lines += ["", "## Draft Issue Titles"]
     lines += [f"- {item['title']}" for item in payload["issue_candidates"]]
     lines += [
@@ -474,6 +540,8 @@ def main() -> int:
         return 2
     reports = [build_file_report(path, root, thresholds) for path in source_files]
     reports.sort(key=lambda item: -report_score(item, thresholds))
+    unexcepted, _excepted = partition_hotspots(reports, thresholds)
+    stale = stale_exceptions(reports, thresholds)
     payload = {
         "generated_at": datetime.now(UTC).isoformat(),
         "root": root.as_posix(),
@@ -481,11 +549,22 @@ def main() -> int:
         "summary": summarize_reports(reports, thresholds),
         "file_reports": reports,
         "issue_candidates": build_issue_candidates(reports, thresholds),
+        "known_exceptions": list(KNOWN_HOTSPOT_EXCEPTIONS),
         "xenon": run_xenon(root, excludes, args),
     }
     json_path, md_path = write_outputs(payload, args.output_dir.resolve())
     print(f"JSON report: {json_path}")
     print(f"Markdown report: {md_path}")
+    # The report stays advisory unless --fail-on-hotspot opts into the gate.
+    # getattr keeps SimpleNamespace-style callers (parity tests) working.
+    if getattr(args, "fail_on_hotspot", False):
+        problems = [report["path"] for report in unexcepted]
+        problems += [f"stale exception: {entry}" for entry in stale]
+        if problems:
+            print("Unexcepted hotspots remain:", file=sys.stderr)
+            for problem in problems:
+                print(f"  - {problem}", file=sys.stderr)
+            return 1
     return 0
 
 

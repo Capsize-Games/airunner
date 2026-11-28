@@ -38,24 +38,19 @@ human review and are not a CI gate. The `Thresholds` dataclass values and the
 `--max-*` / `--min-mi` flags are guidance, not enforcement.
 
 ```bash
-# GUI tree:
-python scripts/gui_complexity_report.py
-
-# Services tree:
+# Services tree (the GUI report was deleted with the desktop client):
 python scripts/services_complexity_report.py
 ```
 
 or, after installing the `[analysis]` extra (`pip install -e ".[analysis]"`):
 
 ```bash
-airunner-gui-complexity-report
 airunner-services-complexity-report
 ```
 
-Outputs are written under `build/gui_complexity/` and
-`build/services_complexity/` respectively (both gitignored).
+Outputs are written under `build/services_complexity/` (gitignored).
 
-The two scripts must keep their skip rules (`_is_generated`: `*_ui.py`,
-`*_rc.py`) and default excludes (`build`, `dist`, `vendor`, `__pycache__`)
-identical so the reports measure the same source surface. Parity is locked by
+The script skips generated modules (`_is_generated`: `*_ui.py`,
+`*_rc.py`) and default excludes (`build`, `dist`, `vendor`,
+`__pycache__`). Parity is locked by
 `services/tests/test_complexity_report_parity.py`.
