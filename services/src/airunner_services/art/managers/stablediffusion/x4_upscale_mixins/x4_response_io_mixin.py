@@ -13,6 +13,8 @@ from PIL import Image
 
 
 class X4ResponseIOMixin:
+    """Provide export and preview image I/O for the 4x upscale manager."""
+
     PREVIEW_FILENAME = "preview_current.png"
 
     def _queue_export(self, images: List[Image.Image], data: Dict):
