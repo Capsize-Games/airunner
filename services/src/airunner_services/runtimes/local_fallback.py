@@ -1224,8 +1224,16 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             )
         except ValueError:
             unload_timeout = 30.0
+        return self._unload_art_model_via_signal(
+            request.request_id, unload_timeout
+        )
+
+    def _unload_art_model_via_signal(self, request_id: str, unload_timeout: float) -> ResponseEnvelope:
+        """Wait for one art unload through the model status signal."""
+        from airunner_common.contract_enums import ModelStatus, SignalCode
+
         response = self._wait_for_model_status(
-            request.request_id,
+            request_id,
             emit_code=SignalCode.SD_UNLOAD_SIGNAL,
             emit_data={},
             success_statuses=(ModelStatus.UNLOADED,),
@@ -1240,7 +1248,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         if response.payload is not None:
             payload.update(response.payload)
         return ResponseEnvelope(
-            request_id=request.request_id,
+            request_id=request_id,
             status=EnvelopeStatus.SUCCEEDED,
             payload=payload,
             metadata=response.metadata,
