@@ -85,11 +85,16 @@ def _table_has_column(bind, table_name: str, column_name: str) -> bool:
     """Return whether one table currently has one column."""
     import sqlalchemy as sa  # noqa: PLC0415
 
-    inspector = sa.inspect(bind)
     try:
+        inspector = sa.inspect(bind)
         columns = inspector.get_columns(table_name)
-    except Exception:
-        return False
+    except Exception as exc:
+        logger.error(
+            "Failed to inspect columns for table '%s': %s",
+            table_name,
+            exc,
+        )
+        raise
     return column_name in {col["name"] for col in columns}
 
 

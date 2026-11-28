@@ -102,8 +102,17 @@ class LLMPreloadSettingsStore:
                 .order_by(AIModels.is_default.desc())
                 .first()
             )
-        except Exception:
+        except Exception as exc:
+            self._log_warning(
+                "Could not query enabled LLM models for preload: %s", exc
+            )
             return None
+
+    def _log_warning(self, message: str, *args: Any) -> None:
+        """Log one warning when the injected logger supports it."""
+        warning = getattr(self.logger, "warning", None)
+        if callable(warning):
+            warning(message, *args)
 
     def _log_info(self, message: str, *args: Any) -> None:
         """Log one info message when the injected logger supports it."""

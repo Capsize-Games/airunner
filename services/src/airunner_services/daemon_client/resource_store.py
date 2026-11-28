@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from airunner_common.contract_enums import AvailableLanguage, CanvasToolName
@@ -196,19 +197,30 @@ def _qsettings_value(
 
 
 def _set_qsettings_value(key: str, value: Any, *, group: str) -> None:
-    """Write one value to QSettings when available."""
+    """Write one value to QSettings when available.
+
+    A missing Qt dependency stays silent (headless daemon); a failed
+    write is logged so dropped settings do not vanish silently.
+    """
     try:
         from airunner_services.utils.settings.get_qsettings import (
             get_qsettings,
         )
-
+    except ImportError:
+        return
+    try:
         settings = get_qsettings()
         settings.beginGroup(group)
         settings.setValue(key, value)
         settings.endGroup()
         settings.sync()
-    except Exception:
-        return
+    except Exception as exc:
+        logging.getLogger(__name__).warning(
+            "Failed to persist QSettings value %r in group %r: %s",
+            key,
+            group,
+            exc,
+        )
 
 
 class ResourceRecord:

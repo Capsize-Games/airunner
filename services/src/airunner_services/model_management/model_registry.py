@@ -61,13 +61,26 @@ class ModelMetadata:
 		return int(self.size_gb * 1024)
 
 
+_PROVIDER_CONFIG_MODULE = "airunner_services.llm.provider_config"
+
+
 def _load_provider_config() -> type | None:
-	"""Load the legacy provider catalog when it is available."""
+	"""Load the legacy provider catalog when it is available.
+
+	Return None only when the catalog module itself is not installed.
+	Any other failure (a broken module, a missing attribute) raises so
+	the registry fails visibly instead of silently registering no LLMs.
+	"""
 	try:
-		module = import_module("airunner_services.llm.provider_config")
+		module = import_module(_PROVIDER_CONFIG_MODULE)
 		return module.LLMProviderConfig
-	except Exception:
-		return None
+	except ModuleNotFoundError as exc:
+		missing = exc.name or ""
+		if _PROVIDER_CONFIG_MODULE == missing or _PROVIDER_CONFIG_MODULE.startswith(
+			missing + "."
+		):
+			return None
+		raise
 
 
 class ModelRegistry:

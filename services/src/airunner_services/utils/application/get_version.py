@@ -33,6 +33,4 @@ def get_version() -> str:
             return package_version(package_name)
         except PackageNotFoundError:
             continue
-        except Exception:
-            continue
     return _load_checkout_version()
