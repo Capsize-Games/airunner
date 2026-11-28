@@ -38,11 +38,11 @@ from airunner_services.llm.managers.mixins.generation_signal_support import (
 
 
 def create_streaming_callback(
-    owner,
+    owner: Any,
     llm_request: Optional[Any],
     complete_response: List[str],
     sequence_counter: List[int],
-):
+) -> Any:
     """Stream tokens immediately unless whole-output enforcement is enabled."""
 
     policy_enforced = content_policy_is_enforced()
@@ -59,6 +59,7 @@ def create_streaming_callback(
         )
 
         def handle_unrestricted_token(token_text: str) -> None:
+            """Forward one token immediately when review is disabled."""
             if getattr(owner, "_interrupted", False):
                 return
             previous_text = complete_response[0]
@@ -84,7 +85,7 @@ def create_streaming_callback(
 
 
 def emit_visible_response(
-    owner,
+    owner: Any,
     llm_request: Optional[Any],
     message: str,
     complete_response: List[str],
@@ -123,7 +124,7 @@ def emit_visible_response(
 
 
 def send_end_of_message(
-    owner,
+    owner: Any,
     llm_request: Optional[Any],
     sequence_counter: List[int],
     executed_tools: list[str],
