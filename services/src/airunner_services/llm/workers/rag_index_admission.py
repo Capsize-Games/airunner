@@ -5,6 +5,7 @@ from __future__ import annotations
 import threading
 import uuid
 import time
+from typing import Any, Dict, Optional
 
 _STATE_LOCK = threading.Lock()
 _ACTIVE_TOKEN: str | None = None
@@ -128,7 +129,7 @@ def record_rag_job_result(token: str, result: dict[str, object]) -> None:
                 _JOB_RESULTS.pop(next(iter(_JOB_RESULTS)))
 
 
-def get_rag_job_result(token: str, *, consume: bool = False):
+def get_rag_job_result(token: str, *, consume: bool = False) -> Optional[Dict[str, Any]]:
     """Read a terminal worker result, optionally consuming its record."""
     with _STATE_LOCK:
         _prune_job_results_locked()

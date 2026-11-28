@@ -106,7 +106,7 @@ class LLMModelManager(
 		apply_cudnn_benchmark(self.memory_settings)
 
 	@property
-	def runtime_activity_lock(self):
+	def runtime_activity_lock(self) -> threading.RLock:
 		"""Return the manager-owned lock shared by model and RAG activity."""
 		return self._runtime_activity_lock
 

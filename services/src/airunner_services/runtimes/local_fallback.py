@@ -23,6 +23,7 @@ from airunner_services.runtimes.contracts import (
     ArtInvocationRequest,
     LLMInvocationRequest,
     RuntimeAction,
+    RuntimeHealth,
     RuntimeKind,
     RuntimeMode,
     RuntimeHealthStatus,
@@ -495,7 +496,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         self._espeak_cli_ready = False
         self._allow_legacy_playback = bool(allow_legacy_playback)
 
-    def healthcheck(self):
+    def healthcheck(self) -> RuntimeHealth:
         """Report loaded TTS identity without creating a worker or model."""
         health = super().healthcheck()
         if self._espeak_cli_ready:

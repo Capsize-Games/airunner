@@ -1,5 +1,6 @@
 """LangChain adapter for supervised or standalone GGUF runtimes."""
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -81,7 +82,7 @@ class ChatGGUF(
         arbitrary_types_allowed = True
 
     @property
-    def logger(self):
+    def logger(self) -> logging.Logger:
         """Get logger instance."""
         if not hasattr(self, "_logger"):
             self._logger = get_logger(
