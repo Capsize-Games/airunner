@@ -172,8 +172,9 @@ explicit option. Standard service artifacts require no private corpus, signing
 keys, semantic judge, or image evaluator. Authentication, URL restrictions,
 sandboxing, admission controls and artifact integrity remain service controls.
 
-The next candidate versions are services 6.1.9 and native launcher 6.1.4.
-The latest existing GitHub application tag is v6.1.8; older tags retained a
+Shipped package versions are services 6.1.11 and native launcher 6.1.4
+(per services/setup.py, native/setup.py and debian/changelog); the latest
+GitHub application tag in this checkout is v6.1.16. Older tags retained a
 stale services version. New promotion checks require the annotated tag,
 services metadata, event commit and candidate source SHA to agree and reject
 existing asset-name collisions before upload. These versions are prepared
