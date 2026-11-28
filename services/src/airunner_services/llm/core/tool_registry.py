@@ -151,6 +151,7 @@ class ToolRegistry:
         """
 
         def decorator(func: Callable) -> Callable:
+            """Register one tool function and return it unchanged."""
             info = ToolInfo(
                 func=func,
                 name=name,
