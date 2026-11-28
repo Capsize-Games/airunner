@@ -30,26 +30,45 @@ def _scaled_fp8_linear(
     compute_dtype: Optional[torch.dtype] = None,
 ) -> Optional[torch.Tensor]:
     """Run an inference linear layer with FP8 tensor-core matrix multiply."""
-    output_dtype = x.dtype
-    if x.dtype not in (torch.float16, torch.bfloat16):
-        # Under CUDA autocast, nn.Linear normally receives FP32 activations
-        # and casts them to the configured compute dtype at the operation.
-        # Mirror that behavior before bypassing nn.Linear with _scaled_mm.
-        try:
-            autocast_enabled = torch.is_autocast_enabled("cuda")
-            autocast_dtype = torch.get_autocast_dtype("cuda")
-        except TypeError:  # torch versions before the device-type API
-            autocast_enabled = torch.is_autocast_enabled()
-            autocast_dtype = torch.get_autocast_gpu_dtype()
-        target_dtype = compute_dtype or autocast_dtype
-        if (
-            not autocast_enabled
-            or target_dtype not in (torch.float16, torch.bfloat16)
-        ):
-            return None
-        output_dtype = target_dtype
-        x = x.to(dtype=target_dtype)
+    mirrored = _mirror_autocast_dtype(x, compute_dtype)
+    if mirrored is None:
+        return None
+    x, output_dtype = mirrored
 
+    input_2d = _fp8_scaled_mm_applicable(x, qweight)
+    if input_2d is None:
+        return None
+
+    return _run_fp8_scaled_mm(
+        input_2d, qweight, weight_scale, bias, x, output_dtype
+    )
+
+
+def _mirror_autocast_dtype(x, compute_dtype):
+    """Mirror autocast dtype casting, or None when no FP16/BF16 path applies."""
+    output_dtype = x.dtype
+    if x.dtype in (torch.float16, torch.bfloat16):
+        return x, output_dtype
+    # Under CUDA autocast, nn.Linear normally receives FP32 activations
+    # and casts them to the configured compute dtype at the operation.
+    # Mirror that behavior before bypassing nn.Linear with _scaled_mm.
+    try:
+        autocast_enabled = torch.is_autocast_enabled("cuda")
+        autocast_dtype = torch.get_autocast_dtype("cuda")
+    except TypeError:  # torch versions before the device-type API
+        autocast_enabled = torch.is_autocast_enabled()
+        autocast_dtype = torch.get_autocast_gpu_dtype()
+    target_dtype = compute_dtype or autocast_dtype
+    if (
+        not autocast_enabled
+        or target_dtype not in (torch.float16, torch.bfloat16)
+    ):
+        return None
+    return x.to(dtype=target_dtype), target_dtype
+
+
+def _fp8_scaled_mm_applicable(x, qweight):
+    """Check scaled-mm applicability, returning the flattened input or None."""
     if (
         x.device.type != "cuda"
         or qweight.dtype != torch.float8_e4m3fn
@@ -66,6 +85,13 @@ def _scaled_fp8_linear(
         return None
     if qweight.ndim != 2 or qweight.shape[1] != input_2d.shape[1]:
         return None
+    return input_2d
+
+
+def _run_fp8_scaled_mm(
+    input_2d, qweight, weight_scale, bias, x, output_dtype
+):
+    """Run the scaled-mm kernel, returning the reshaped output or None."""
 
     try:
         input_float = input_2d.float()
