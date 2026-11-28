@@ -642,24 +642,8 @@ def ollama_generate(body: dict, req: Request) -> StreamingResponse | dict[str, A
     )
 
 
-def _ollama_generate_stream(app, prompt: str, model: str, llm_request: LLMRequest, request_id: str):
-    """Yield one streaming Ollama generate response."""
-    start_time = time.monotonic()
-
-    def error_frame(reason: str) -> bytes:
-        """Return one NDJSON generate error payload for a stream failure."""
-        error = "Request timeout" if reason == "timeout" else (
-            "Response exceeded the configured output limit"
-            if reason == "overflow"
-            else "LLM generation failed"
-        )
-        return _ndjson_line(_ollama_generate_error(model, error))
-
-    observer = LegacyCompletionObserver(
-        request_id,
-        error_frame,
-        cancel=lambda: cancel_owned_llm_request(app, request_id),
-    )
+def _ollama_generate_stream_callback(observer: LegacyCompletionObserver, error_frame, model: str, start_time: float) -> Callable[[dict[str, Any]], None]:
+    """Return one streaming Ollama generate update callback."""
 
     def callback(data: dict[str, Any]) -> None:
         """Publish one streaming Ollama generate update."""
@@ -689,6 +673,30 @@ def _ollama_generate_stream(app, prompt: str, model: str, llm_request: LLMReques
             text=getattr(response, "message", "") or "",
             terminal=bool(response.is_end_of_message),
         )
+
+    return callback
+
+
+def _ollama_generate_stream(app, prompt: str, model: str, llm_request: LLMRequest, request_id: str):
+    """Yield one streaming Ollama generate response."""
+    start_time = time.monotonic()
+
+    def error_frame(reason: str) -> bytes:
+        """Return one NDJSON generate error payload for a stream failure."""
+        error = "Request timeout" if reason == "timeout" else (
+            "Response exceeded the configured output limit"
+            if reason == "overflow"
+            else "LLM generation failed"
+        )
+        return _ndjson_line(_ollama_generate_error(model, error))
+
+    observer = LegacyCompletionObserver(
+        request_id,
+        error_frame,
+        cancel=lambda: cancel_owned_llm_request(app, request_id),
+    )
+
+    callback = _ollama_generate_stream_callback(observer, error_frame, model, start_time)
 
     observer.start_dispatch(
         lambda cb: _collect_text(app, prompt, llm_request, request_id, cb),

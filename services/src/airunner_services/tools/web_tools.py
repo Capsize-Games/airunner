@@ -5,7 +5,7 @@ import ipaddress
 import socket
 import threading
 import time
-from typing import Annotated, Any, Callable, Coroutine
+from typing import Annotated, Any, Callable, Coroutine, Dict, List
 from urllib.parse import urlparse
 
 from airunner_services.llm.core.tool_registry import ToolCategory, tool
