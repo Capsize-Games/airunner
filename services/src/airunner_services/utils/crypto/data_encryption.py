@@ -8,7 +8,7 @@ from cryptography.fernet import Fernet, InvalidToken
 
 
 class DataEncryptionError(RuntimeError):
-    pass
+    """Raised when encryption configuration or payload validation fails."""
 
 
 def _parse_keys(raw: str) -> list[bytes]:
@@ -31,13 +31,17 @@ def generate_fernet_key() -> str:
 
 @dataclass(frozen=True)
 class Keyring:
+    """Fernet keyring whose first key encrypts and whose full key list decrypts."""
+
     encrypt_key: bytes
     decrypt_keys: tuple[bytes, ...]
 
     def fernet_for_encrypt(self) -> Fernet:
+        """Return the Fernet instance for the active encrypt key."""
         return Fernet(self.encrypt_key)
 
     def fernet_for_decrypt(self) -> Iterable[Fernet]:
+        """Yield one Fernet instance per retained decrypt key in order."""
         for k in self.decrypt_keys:
             yield Fernet(k)
 
@@ -64,6 +68,11 @@ def get_keyring(required: bool = True) -> Optional[Keyring]:
 
 
 def encrypt_bytes(data: bytes) -> bytes:
+    """Encrypt bytes with the configured keyring.
+
+    Raises ``DataEncryptionError`` for ``None`` input or when no key is
+    configured.
+    """
     if data is None:
         raise DataEncryptionError("encrypt_bytes received None")
     keyring = get_keyring(required=True)
@@ -72,6 +81,11 @@ def encrypt_bytes(data: bytes) -> bytes:
 
 
 def decrypt_bytes(token: bytes) -> bytes:
+    """Decrypt a token with each configured key in order.
+
+    Raises ``DataEncryptionError`` for ``None`` input or when no key
+    succeeds.
+    """
     if token is None:
         raise DataEncryptionError("decrypt_bytes received None")
     keyring = get_keyring(required=True)
