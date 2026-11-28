@@ -184,48 +184,51 @@ class SqlCompanionMemoryRepository:
             # completion that another writer just committed, return
             # that instead -- making concurrent duplicate delivery
             # idempotent rather than an uncaught IntegrityError).
-            for _attempt in range(_MAX_APPEND_TURN_ATTEMPTS):
-                next_index = (
-                    db.query(func.coalesce(func.max(CompanionTurn.turn_index), -1))
-                    .filter(CompanionTurn.session_id == int(turn.session_id))
-                    .scalar()
-                    + 1
-                )
-                turn_row = CompanionTurn(
-                    chatbot_id=int(turn.chatbot_id),
-                    session_id=int(turn.session_id),
-                    role=turn.role,
-                    content=turn.content,
-                    turn_index=next_index,
-                    call_chain_id=str(turn.call_chain_id),
-                    created_at=created_at,
-                )
-                savepoint = db.begin_nested()
-                db.add(turn_row)
-                try:
-                    db.flush()
-                except IntegrityError:
-                    savepoint.rollback()
-                    winner = _find_existing_turn(db, turn)
-                    if winner is not None:
-                        # The concurrent writer committed this exact
-                        # completion event first -- idempotent return.
-                        return _turn_to_record(winner)
-                    # Otherwise it was purely a turn_index collision
-                    # with a *different* turn; retry with a fresh index.
-                    continue
-                else:
-                    # Same transaction as the insert above (session_scope
-                    # commits once, on exit): a completed turn and its
-                    # session's activity timestamp are never observed
-                    # out of sync.
-                    session_row.last_message_at = created_at
-                    db.flush()
-                    return _turn_to_record(turn_row)
+            return self._insert_turn_with_retries(db, turn, session_row, created_at)
 
-            raise RuntimeError(
-                f"Could not persist turn for chatbot {turn.chatbot_id} "
-                f"session {turn.session_id} after "
+    def _insert_turn_with_retries(self, db, turn: TurnRecord, session_row, created_at) -> TurnRecord:
+        """Insert one turn, retrying turn_index collisions idempotently."""
+        for _attempt in range(_MAX_APPEND_TURN_ATTEMPTS):
+            next_index = (
+                db.query(func.coalesce(func.max(CompanionTurn.turn_index), -1))
+                .filter(CompanionTurn.session_id == int(turn.session_id))
+                .scalar()
+                + 1
+            )
+            turn_row = CompanionTurn(
+                chatbot_id=int(turn.chatbot_id),
+                session_id=int(turn.session_id),
+                role=turn.role,
+                content=turn.content,
+                turn_index=next_index,
+                call_chain_id=str(turn.call_chain_id),
+                created_at=created_at,
+            )
+            savepoint = db.begin_nested()
+            db.add(turn_row)
+            try:
+                db.flush()
+            except IntegrityError:
+                savepoint.rollback()
+                winner = _find_existing_turn(db, turn)
+                if winner is not None:
+                    # The concurrent writer committed this exact
+                    # completion event first -- idempotent return.
+                    return _turn_to_record(winner)
+                # Otherwise it was purely a turn_index collision
+                # with a *different* turn; retry with a fresh index.
+                continue
+            else:
+                # Same transaction as the insert above (session_scope
+                # commits once, on exit): a completed turn and its
+                # session's activity timestamp are never observed
+                # out of sync.
+                session_row.last_message_at = created_at
+                db.flush()
+                return _turn_to_record(turn_row)
+        raise RuntimeError(
+            f"Could not persist turn for chatbot {turn.chatbot_id} "
+            f"session {turn.session_id} after "
                 f"{_MAX_APPEND_TURN_ATTEMPTS} attempts (persistent "
                 "concurrent writers)"
             )
