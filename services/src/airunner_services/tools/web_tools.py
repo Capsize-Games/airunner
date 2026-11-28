@@ -356,6 +356,42 @@ def search_news(
 	return_direct=False,
 	requires_api=False,
 )
+def _scrape_extracted_content(safe_url: str, url: str) -> dict:
+	"""Extract, screen, and annotate one scraped page's content."""
+	from airunner_services.tools.web_content_extractor import (
+		WebContentExtractor,
+	)
+
+	result = WebContentExtractor.fetch_and_extract_with_metadata(
+		safe_url,
+		use_cache=True,
+	)
+	if result and result.get("content"):
+		rejection_reason = prompt_content_rejection_reason(
+			str(result), safe_url
+		)
+		if rejection_reason is not None:
+			return {"content": None, "error": rejection_reason}
+		logger.info(
+			"Extracted %d characters from scraped website",
+			len(result["content"]),
+		)
+		logger.info("Title: %s", result.get("title", "N/A"))
+		result["_instructions"] = (
+			"📝 IMPORTANT: Use this content to answer the user's original "
+			"question. Optionally, use record_knowledge() to save key "
+			"facts for future reference."
+		)
+		return result
+	return {
+		"content": None,
+		"error": (
+			f"Could not extract content from {url}. The page may be empty, "
+			"require JavaScript, or be blocking scrapers."
+		),
+	}
+
+
 def scrape_website(
 	url: Annotated[
 		str,
@@ -379,40 +415,7 @@ def scrape_website(
 		return {"content": None, "error": str(exc)}
 
 	try:
-		from airunner_services.tools.web_content_extractor import (
-			WebContentExtractor,
-		)
-
-		result = WebContentExtractor.fetch_and_extract_with_metadata(
-			safe_url,
-			use_cache=True,
-		)
-
-		if result and result.get("content"):
-			rejection_reason = prompt_content_rejection_reason(
-				str(result), safe_url
-			)
-			if rejection_reason is not None:
-				return {"content": None, "error": rejection_reason}
-			logger.info(
-				"Extracted %d characters from scraped website",
-				len(result["content"]),
-			)
-			logger.info("Title: %s", result.get("title", "N/A"))
-			result["_instructions"] = (
-				"📝 IMPORTANT: Use this content to answer the user's original "
-				"question. Optionally, use record_knowledge() to save key "
-				"facts for future reference."
-			)
-			return result
-
-		return {
-			"content": None,
-			"error": (
-				f"Could not extract content from {url}. The page may be empty, "
-				"require JavaScript, or be blocking scrapers."
-			),
-		}
+		return _scrape_extracted_content(safe_url, url)
 	except Exception as exc:
 		logger.error(
 			"Web scraping error (%s): %s",
