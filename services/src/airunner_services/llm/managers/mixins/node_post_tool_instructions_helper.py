@@ -86,6 +86,45 @@ class NodePostToolInstructionsHelper:
         tool_messages: List[BaseMessage],
     ) -> str:
         """Return the post-tool instruction for the current workflow mode."""
+        response_format, force_tool, metrics = self._gather_tool_flow_metrics(
+            trimmed_messages, tool_messages
+        )
+        if force_tool == "search_web":
+            return self._research_helper.research_instruction(
+                metrics["tool_call_count"],
+                metrics["scrape_attempts"],
+                metrics["successful_scrapes"],
+                metrics["failed_scrapes"],
+                metrics["search_urls"],
+            )
+        if response_format == "json":
+            return (
+                "\n\n=== CRITICAL RESPONSE FORMAT REQUIREMENT ===\n"
+                "You have tool results in the conversation above. "
+                "Now answer the user's question using that information.\n"
+                "YOU MUST respond ONLY with valid JSON in the EXACT format specified in the system prompt above.\n"
+                "Do NOT write conversational text. Do NOT explain or narrate. ONLY output the JSON object.\n"
+                "Your entire response must be parseable JSON - nothing else."
+            )
+        if response_format is not None and response_format != "conversational":
+            return (
+                "\n\n=== CRITICAL: USE TOOL RESULTS ===\n"
+                "You have tool results in the conversation above. "
+                "Answer the user's question using that information. "
+                f"Respond in {response_format} format."
+            )
+        return self._default_instruction(trimmed_messages, tool_messages)
+
+    def _gather_tool_flow_metrics(
+        self,
+        trimmed_messages: List[BaseMessage],
+        tool_messages: List[BaseMessage],
+    ):
+        """Gather flow metrics for the post-tool instruction and log them.
+
+        Returns:
+            The response format, forced tool, and a metrics mapping.
+        """
         response_format = getattr(self._owner, "_response_format", None)
         force_tool = getattr(self._owner, "_force_tool", None)
         tool_calling_mode = getattr(self._owner._chat_model, "tool_calling_mode", "react")
@@ -117,31 +156,14 @@ class NodePostToolInstructionsHelper:
             failed_scrapes,
             len(search_urls),
         )
-        if force_tool == "search_web":
-            return self._research_helper.research_instruction(
-                tool_call_count,
-                scrape_attempts,
-                successful_scrapes,
-                failed_scrapes,
-                search_urls,
-            )
-        if response_format == "json":
-            return (
-                "\n\n=== CRITICAL RESPONSE FORMAT REQUIREMENT ===\n"
-                "You have tool results in the conversation above. "
-                "Now answer the user's question using that information.\n"
-                "YOU MUST respond ONLY with valid JSON in the EXACT format specified in the system prompt above.\n"
-                "Do NOT write conversational text. Do NOT explain or narrate. ONLY output the JSON object.\n"
-                "Your entire response must be parseable JSON - nothing else."
-            )
-        if response_format is not None and response_format != "conversational":
-            return (
-                "\n\n=== CRITICAL: USE TOOL RESULTS ===\n"
-                "You have tool results in the conversation above. "
-                "Answer the user's question using that information. "
-                f"Respond in {response_format} format."
-            )
-        return self._default_instruction(trimmed_messages, tool_messages)
+        metrics = {
+            "tool_call_count": tool_call_count,
+            "scrape_attempts": scrape_attempts,
+            "successful_scrapes": successful_scrapes,
+            "failed_scrapes": failed_scrapes,
+            "search_urls": search_urls,
+        }
+        return response_format, force_tool, metrics
 
     def _default_instruction(
         self,
