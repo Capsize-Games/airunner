@@ -42,30 +42,23 @@ class ZImageNativePipelineGenerationHelper:
         callback_steps: int = 1,
     ) -> Union[torch.Tensor, List[Image.Image]]:
         """Generate images from prompts or an input image."""
-        self._validate_generation_inputs(num_inference_steps, image, strength)
-        self._prepare_transformer_for_denoising()
-        is_img2img = image is not None
-        batch_size, prompt_embeds, negative_embeds, attention_mask = (
-            self._prepare_prompt_conditioning(
-                prompt,
-                negative_prompt,
-                num_images_per_prompt,
-            )
-        )
-        timesteps = self._sampling_helper.prepare_scheduler_window(
-            num_inference_steps,
-            is_img2img,
-            strength,
-        )
-        latents = self._sampling_helper.prepare_latents(
+        (
+            latents,
+            timesteps,
+            prompt_embeds,
+            negative_embeds,
+            attention_mask,
+            batch_size,
+        ) = self._prepare_generation_inputs(
+            prompt,
+            negative_prompt,
             image,
+            num_inference_steps,
+            num_images_per_prompt,
             height,
             width,
-            batch_size,
             latents,
             generator,
-            timesteps,
-            is_img2img,
             strength,
         )
         latents = self._sampling_helper.run_denoising_loop(
@@ -81,6 +74,55 @@ class ZImageNativePipelineGenerationHelper:
         )
         self._release_transformer_after_denoising()
         return self._sampling_helper.decode_output(latents, output_type)
+
+    def _prepare_generation_inputs(
+        self,
+        prompt: Union[str, List[str]],
+        negative_prompt: Optional[Union[str, List[str]]],
+        image: Optional[Any],
+        num_inference_steps: int,
+        num_images_per_prompt: int,
+        height: int,
+        width: int,
+        latents: Optional[torch.Tensor],
+        generator: Optional[torch.Generator],
+        strength: float,
+    ) -> tuple:
+        """Validate inputs, prepare conditioning, scheduler window, and initial latents."""
+        self._validate_generation_inputs(num_inference_steps, image, strength)
+        self._prepare_transformer_for_denoising()
+        is_img2img = image is not None
+        batch_size, prompt_embeds, negative_embeds, attention_mask = (
+            self._prepare_prompt_conditioning(
+                prompt,
+                negative_prompt,
+                num_images_per_prompt,
+            )
+        )
+        timesteps = self._sampling_helper.prepare_scheduler_window(
+            num_inference_steps,
+            is_img2img,
+            strength,
+        )
+        prepared_latents = self._sampling_helper.prepare_latents(
+            image,
+            height,
+            width,
+            batch_size,
+            latents,
+            generator,
+            timesteps,
+            is_img2img,
+            strength,
+        )
+        return (
+            prepared_latents,
+            timesteps,
+            prompt_embeds,
+            negative_embeds,
+            attention_mask,
+            batch_size,
+        )
 
     def _prepare_transformer_for_denoising(self) -> None:
         """Move the transformer back to the active device if offloaded."""
