@@ -190,29 +190,20 @@ Once the service is running, test it:
 # Health check
 curl http://localhost:8080/health
 
-# Test LLM endpoint
-curl -X POST http://localhost:8080/llm \
+# Test LLM endpoint (streams NDJSON; POST /llm is kept as an alias)
+curl -N -X POST http://localhost:8080/llm/generate \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "Hello",
     "action": "CHAT",
-    "stream": false,
-    "llm_request": {
-      "max_new_tokens": 50
-    }
+    "stream": true
   }'
 ```
 
-### Integration with BookSite
-
-Once the service is running, you can use the BookSite classification:
-
-```bash
-cd /path/to/airunner/booksite
-./manage.py ai_process_books --books 535
-```
-
-The Django app will automatically connect to `http://localhost:8080` and use the RAG tools.
+> Retired: the BookSite/RAG integration section was removed. It referenced
+> an external `booksite` Django path with no in-repo counterpart, and the
+> `POST /llm` with `{action: CHAT}` non-streaming shape above did not match
+> the legacy surface (`POST /llm/generate`, NDJSON).
 
 ## Uninstallation
 

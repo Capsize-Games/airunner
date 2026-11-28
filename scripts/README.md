@@ -29,7 +29,9 @@ in a repo checkout.
   `linux_bundle_checks.py` content checks and `linux_bundle_gates.py`
   freeze gates
 - local dev orchestration under `scripts/dev/` (`run_services.sh`,
-  `run_gui.sh`, `test_services.sh`, `stop_services.sh`)
+  `test_services.sh`, `stop_services.sh`; `run_gui.sh` is a retired
+  leftover — the `src/` desktop client it launched was removed, and the
+  script now exits with a message saying so)
 
 The architecture audit and package map are tracked in
 [docs/architecture/architecture-complexity-audit.md](../docs/architecture/architecture-complexity-audit.md)

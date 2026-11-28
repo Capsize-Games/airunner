@@ -49,8 +49,8 @@ The report includes:
 
 The default thresholds match the current cleanup target:
 
-- files: 200 SLOC or less
-- classes: 200 lines or less
+- files: 250 SLOC or less
+- classes: 250 lines or less
 - functions and methods: 20 lines or less
 - Radon block rank: `B` or better
 - maintainability index: `65` or higher

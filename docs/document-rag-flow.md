@@ -1,5 +1,10 @@
 # Document RAG Flow
 
+> Stale GUI references: this note still links file paths under
+> `src/airunner/...`, but `src/` was removed (2026-10-25). Treat those
+> paths as historical; the service-owned counterparts live under
+> `services/src/airunner_services/`.
+
 This note explains how document question answering works in AIRunner
 today.
 

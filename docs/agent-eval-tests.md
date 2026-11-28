@@ -1,5 +1,10 @@
 # Agent Eval Tests
 
+> Relocated: `services/tests/eval/` was removed in-tree (2026-09-17) and
+> extracted to the external `airunner-eval` repo (`scripts/README.md`
+> `--eval` already points there). This note is retained for history; run
+> evals from that repo, not from `services/tests/eval/`.
+
 The suites under `services/tests/eval/` are service-owned, daemon-backed
 functional evals for the LLM agent path. They do not launch the GUI.
 Each case starts a temporary `airunner_services.daemon`, sends one

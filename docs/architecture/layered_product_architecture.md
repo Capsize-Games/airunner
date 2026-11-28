@@ -3,20 +3,20 @@
 This note describes the current AIRunner package layout and the intended
 ownership boundaries between the split packages.
 
+> Retired GUI: the `src/` desktop client was removed (2026-10-25). Any
+> `src/`/`GUI` node below is historical; the supported path is
+> `native/` launcher -> `services/` headless daemon.
+
 ## Current Package Map
 
 ```mermaid
 flowchart LR
     User[User] --> Native[native/ launcher and bundle helpers]
-    Native --> GUI[src/ desktop client]
     Native --> Daemon[services/ headless daemon]
-    GUI --> Daemon
     Native --> Sidecars[llama.cpp and whisper.cpp sidecars]
     Daemon --> Sidecars
-    GUI --> Scripts[scripts/ tooling]
-    Daemon --> Scripts
-    GUI --> Data[(AIRUNNER_BASE_PATH)]
-    Daemon --> Data
+    Daemon --> Scripts[scripts/ tooling]
+    Daemon --> Data[(AIRUNNER_BASE_PATH)]
 ```
 
 ## Package Responsibilities
@@ -24,7 +24,7 @@ flowchart LR
 | Package | Owns | Does not own |
 |---------|------|--------------|
 | `services/` | daemon entry points, FastAPI server, WebSocket endpoints, runtime registry, downloads, persistence, migrations, domain state routes, modality orchestration, and the canonical daemon HTTP client | desktop-only widget behavior and client-local preferences |
-| `src/` | desktop app, GUI widgets, GUI workflow surfaces, and the thin `airunner.daemon_client` re-export layer over the service-owned client | headless daemon ownership, local database bootstrap, and bundle assembly |
+| `src/` (removed 2026-10-25) | formerly: desktop app, GUI widgets, GUI workflow surfaces | n/a (historical row) |
 | `native/` | Python launcher entry point, runtime layout helpers, startup environment configuration, and sidecar build integration | modality orchestration and GUI widget logic |
 | `scripts/` | developer tooling: test runner, UI build, install helpers, and quality reports | runtime product behavior |
 
@@ -35,10 +35,10 @@ no longer exist. Shared runtime contracts and enums live in
 
 ## Runtime Paths
 
-### Desktop path
+### Desktop path (retired with `src/` removal, 2026-10-25)
 
 1. `native/` launches the packaged or checkout application.
-2. `src/` renders the GUI and talks to the daemon through the service-owned HTTP or WebSocket API surface.
+2. ~~`src/` renders the GUI~~ (removed; use the headless path below).
 3. `services/` owns the headless daemon, runtime routing, and service-backed state operations such as `/api/v1/state/<domain>/<ModelName>`.
 4. Native sidecars such as `llama.cpp` and `whisper.cpp` are supervised
    from the daemon path.
@@ -52,16 +52,15 @@ no longer exist. Shared runtime contracts and enums live in
 ### Installed product path
 
 1. `native/` provides the launcher entry point and bundle layout helpers.
-2. `src/` and `services/` are installed as Python packages.
+2. `services/` is installed as a Python package (`src/` removed 2026-10-25).
 3. The launcher resolves the runtime layout and bundled sidecars.
 
 ## Transitional Boundaries
 
 The split is real, but not fully complete yet.
 
-- Some runtime helpers still straddle `services/` and `src/`.
-- GUI-to-daemon handoff code remains in `src/` while the canonical
-   daemon client and wire format stay in `services/`.
+- (Historical, pre-`src/`-removal: helpers once straddled `services/`
+  and `src/`, with GUI-to-daemon handoff code in `src/`.)
 - The old generic model bridge and GUI-side database bootstrap have been
    removed in favor of domain-scoped daemon state clients.
 

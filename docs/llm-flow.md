@@ -1,5 +1,12 @@
 # Overall LLM Flow
 
+> Stale GUI references: this note still describes the retired Qt stack
+> (`ChatPromptWidget`, `LLMAPIService`, `WorkerManager`,
+> `ConversationWidget`) with links under `src/airunner/...`, but `src/`
+> was removed (2026-10-25). Treat widget/flow text as historical; the
+> service-owned counterparts live under
+> `services/src/airunner_services/llm/`.
+
 This note explains how AIRunner uses its LLM stack today.
 
 For document-specific behavior, see

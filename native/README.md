@@ -17,17 +17,19 @@ unrelated to this Python code, so it lives in its own repository,
 
 ```mermaid
 flowchart LR
-	Python[airunner_native launcher] --> GUI[src/ desktop app]
-	Python --> Services[services/ daemon entry points]
+	Python[airunner_native launcher] --> Services[services/ daemon entry points]
 	Services --> Sidecars[llama.cpp / whisper.cpp sidecars]
 	Sidecars -.pinned bundle from.-> NativeRepo[Capsize-Games/airunner-native]
 	Python --> RuntimeLayout[runtime layout helpers]
 ```
 
+> Retired: the `src/` desktop app was removed (2026-10-25). The diagram
+> above no longer shows a GUI node, and there is no `gui-client` role.
+
 ## What This Package Owns
 
 - the `airunner-native` launcher entry point provided by `airunner_native`
-  (the GUI package owns the primary `airunner` command; issue #2042)
+  (the retired GUI package previously owned the primary `airunner` command; issue #2042)
 - repo and runtime layout helpers (`repo_paths`, `linux_bundle_layout`)
 - startup environment and early torch/allocator configuration
 
@@ -46,9 +48,8 @@ AIRunner is installed as Python packages:
 # repo-local developer install
 ./scripts/install.sh
 
-# distributed daemon and GUI-client install
+# distributed daemon install (only role; gui-client was removed)
 ./deployment/install_distributed.sh --role daemon
-./deployment/install_distributed.sh --role gui-client
 ```
 
 For isolated native tooling work in a checkout, install the split package
