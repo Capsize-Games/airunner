@@ -147,6 +147,19 @@ class NodeStreamingResponseHelper:
             state.collected_tool_calls.extend(chunk_tool_calls)
         if not text and not chunk_tool_calls and not reasoning_delta:
             return
+        self._dispatch_thinking_chunk(
+            state, request_id, event_sink, reasoning_delta, text
+        )
+
+    def _dispatch_thinking_chunk(
+        self,
+        state: StreamingState,
+        request_id: Optional[str],
+        event_sink,
+        reasoning_delta,
+        text: str,
+    ) -> None:
+        """Route one chunk through thinking handling or visible output."""
         if self._thinking_helper.handle_reasoning_delta(
             state,
             request_id,
