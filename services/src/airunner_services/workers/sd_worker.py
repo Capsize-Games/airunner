@@ -58,6 +58,8 @@ torch.backends.cuda.matmul.allow_tf32 = True
 
 
 class SDWorker(Worker):
+	"""Load art models and run image generation requests."""
+
 	queue_type = QueueType.GET_LAST_ITEM
 
 	def __init__(self, image_export_worker):
@@ -110,6 +112,7 @@ class SDWorker(Worker):
 
 	@property
 	def version(self) -> StableDiffusionVersion:
+		"""Return the active art model version."""
 		version = self._version
 		if version is StableDiffusionVersion.NONE:
 			version = StableDiffusionVersion(
@@ -126,10 +129,12 @@ class SDWorker(Worker):
 
 	@version.setter
 	def version(self, value: StableDiffusionVersion):
+		"""Store the active art model version."""
 		self._version = value
 
 	@property
 	def model_manager(self):
+		"""Return the active model manager for the current version."""
 		with self._model_manager_lock:
 			if self._model_manager is None:
 				version = self.version
@@ -146,11 +151,13 @@ class SDWorker(Worker):
 
 	@model_manager.setter
 	def model_manager(self, value):
+		"""Store the active model manager."""
 		with self._model_manager_lock:
 			self._model_manager = value
 
 	@property
 	def zimage(self):
+		"""Return the lazily created Z-Image model manager."""
 		if self._zimage is None:
 			self._zimage = ZImageModelManager()
 			self._zimage.image_export_worker = self.image_export_worker
@@ -158,16 +165,19 @@ class SDWorker(Worker):
 
 	@property
 	def x4_upscaler(self):
+		"""Return the lazily created x4 upscaler manager."""
 		if self._x4_upscaler is None:
 			self._x4_upscaler = X4UpscaleManager()
 			self._x4_upscaler.image_export_worker = self.image_export_worker
 		return self._x4_upscaler
 
 	def on_input_image_settings_changed_signal(self, data: Dict):
+		"""Forward input image setting changes to the model manager."""
 		if self.model_manager:
 			self.model_manager.settings_changed(data)
 
 	def on_load_art_signal(self, data: Dict = None):
+		"""Queue a request to load the art model."""
 		self._update_art_activity_timestamp()
 		self.add_to_queue(
 			{
@@ -178,6 +188,7 @@ class SDWorker(Worker):
 		)
 
 	def on_art_model_changed(self, data: Dict = None):
+		"""Unload the model manager after the art model setting changes."""
 		self._invalidate_setting_cache(GeneratorSettings)
 		self.unload_model_manager()
 
@@ -311,6 +322,7 @@ class SDWorker(Worker):
 		return data
 
 	def load_model_manager(self, data: Dict = None):
+		"""Load or reload the art model for one request."""
 		data = data or {}
 		data["settings"] = self.generator_settings
 		data = self._process_image_request(data)
@@ -410,6 +422,7 @@ class SDWorker(Worker):
 		self.send_missing_model_alert(err)
 
 	def unload(self, data: Dict):
+		"""Queue a request to unload the art model."""
 		self.add_to_queue(
 			{
 				"action": ModelAction.UNLOAD,
@@ -419,6 +432,7 @@ class SDWorker(Worker):
 		)
 
 	def unload_model_manager(self, data: Dict = None):
+		"""Unload the current model manager and run any unload callback."""
 		with self._model_manager_lock:
 			self._unload_model_manager_locked()
 		if data:
@@ -559,20 +573,25 @@ class SDWorker(Worker):
 					self._last_art_request_time = None
 
 	def on_tokenizer_load_signal(self, data: Dict = None):
+		"""Handle a request to load the tokenizer."""
 		if self.model_manager:
 			self.model_manager.sd_load_tokenizer(data)
 
 	@staticmethod
 	def on_sd_cancel_signal(_data=None):
+		"""Log an SD cancel signal."""
 		logger.info("on_sd_cancel_signal")
 
 	def on_start_auto_image_generation_signal(self, _data=None):
+		"""Handle a request to start automatic image generation."""
 		pass
 
 	def on_stop_auto_image_generation_signal(self, _data=None):
+		"""Handle a request to stop automatic image generation."""
 		pass
 
 	def on_do_generate_signal(self, message: Dict):
+		"""Queue one image generation request."""
 		self._update_art_activity_timestamp()
 		request_id = message.get("request_id")
 		if request_id:
@@ -660,6 +679,7 @@ class SDWorker(Worker):
 		self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL, {})
 
 	def on_interrupt_image_generation_signal(self, _data=None):
+		"""Interrupt the active image generation request."""
 		request_id = (
 			_data.get("request_id")
 			if isinstance(_data, dict)
@@ -688,6 +708,7 @@ class SDWorker(Worker):
 			self.model_manager.interrupt_image_generation()
 
 	def on_change_scheduler_signal(self, data: Dict):
+		"""Change the scheduler now or defer until generation completes."""
 		scheduler_name = data["scheduler"]
 		self.update_generator_settings(scheduler=scheduler_name)
 
@@ -707,6 +728,7 @@ class SDWorker(Worker):
 			self.model_manager._load_scheduler(scheduler_name)
 
 	def on_model_status_changed_signal(self, message: Dict):
+		"""Handle a model status change for the SD model."""
 		if message.get("model") != ModelType.SD:
 			return
 		if self._model_manager is None:
@@ -716,6 +738,7 @@ class SDWorker(Worker):
 		self.__requested_action = ModelAction.NONE
 
 	def start_worker_thread(self):
+		"""Start the worker thread and load the model when enabled."""
 		if self._art_auto_unload_enabled:
 			self._start_art_inactivity_timer()
 		if not self.application_settings.sd_enabled:
@@ -748,6 +771,7 @@ class SDWorker(Worker):
 		super().stop()
 
 	def handle_message(self, message: Optional[Dict] = None):
+		"""Dispatch one queued art action message."""
 		if message is None:
 			return
 
@@ -902,6 +926,7 @@ class SDWorker(Worker):
 		callback_result = None
 
 		def deliver_callback(result):
+			"""Deliver one result to the original request callback."""
 			if callable(original_callback):
 				try:
 					original_callback(result)
@@ -913,6 +938,7 @@ class SDWorker(Worker):
 					)
 
 		def complete_once(result):
+			"""Record one terminal result for the request callback."""
 			nonlocal callback_called, callback_result
 			with callback_lock:
 				if callback_called:
@@ -924,6 +950,7 @@ class SDWorker(Worker):
 				deliver_callback(result)
 
 		def finish_worker_call(fallback_result=None):
+			"""Finish the worker call and deliver the terminal result."""
 			nonlocal callback_called, callback_result, worker_call_finished
 			with callback_lock:
 				if not callback_called:
@@ -1053,6 +1080,7 @@ class SDWorker(Worker):
 		image_bytes: Optional[bytes] = None
 
 		def on_progress(status: Dict) -> None:
+			"""Forward one daemon art progress update."""
 			try:
 				progress = float(status.get("progress") or 0.0)
 			except (TypeError, ValueError):
@@ -1342,9 +1370,11 @@ class SDWorker(Worker):
 					self._apply_scheduler_change(pending)
 
 	def handle_error(self, error_message):
+		"""Log one SD worker error."""
 		self.logger.error(f"SDWorker Error: {error_message}")
 
 	def send_missing_model_alert(self, message):
+		"""Emit signals for a missing required model."""
 		self.emit_signal(
 			SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL,
 			{"do_clear": True},
