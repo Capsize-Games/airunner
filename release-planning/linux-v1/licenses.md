@@ -117,7 +117,7 @@ unscanned tail.
 
 ## 5. Native binaries
 
-- Sidecar pin (.github/native-sidecar-version): v0.1.0
+- Sidecar pin (.github/native-sidecar-version): v0.3.0
 - Source: `Capsize-Games/airunner-native` release bundle
   `runtime-sidecars-linux.tar.gz` (consumed by
   `scripts/install.sh` and the release workflow per P03).
