@@ -43,7 +43,17 @@ def polya_reasoning(
     """
     step = step.lower().strip()
 
-    prompts = {
+    prompts = _polya_prompts(problem, context, step)
+
+    if step not in prompts:
+        return f"Error: Unknown step '{step}'. Use: understand, plan, execute, or verify"
+
+    return prompts[step]
+
+
+def _polya_prompts(problem: str, context: str, step: str) -> dict:
+    """Build the Polya step prompts for one problem."""
+    return {
         "understand": f"""STEP 1 - UNDERSTAND THE PROBLEM:
 
 Problem: {problem}
@@ -98,11 +108,6 @@ Check your solution:
 
 Verify your solution and provide the final answer.""",
     }
-
-    if step not in prompts:
-        return f"Error: Unknown step '{step}'. Use: understand, plan, execute, or verify"
-
-    return prompts[step]
 
 
 @tool(
