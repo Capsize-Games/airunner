@@ -114,20 +114,39 @@ def convert_binary_to_image(
     if binary_data is None:
         return None
 
-    # Normalize to bytes
-    if isinstance(binary_data, memoryview):
-        binary_data = binary_data.tobytes()
+    binary_data = _normalize_binary_input(binary_data)
+    binary_data, raw_img = _attempt_fast_paths(binary_data)
+    if raw_img is not None:
+        return raw_img
 
+    # Validate before PNG decode to avoid libpng spew
+    validated = _validate_or_none(binary_data)
+    if validated is None:
+        return None
+
+    return _decode_image_bytes(validated)
+
+
+def _normalize_binary_input(binary_data) -> bytes:
+    """Coerce memoryview/str/bytes input into plain bytes."""
+    if isinstance(binary_data, memoryview):
+        return binary_data.tobytes()
     if isinstance(binary_data, str):
         maybe = _maybe_base64_decode(binary_data)
-        binary_data = (
-            maybe if maybe is not None else binary_data.encode("utf-8")
-        )
+        return maybe if maybe is not None else binary_data.encode("utf-8")
+    return binary_data
 
+
+def _attempt_fast_paths(binary_data) -> tuple:
+    """Try the raw and legacy-base64 fast paths.
+
+    Returns:
+        The (possibly decoded) bytes and the image, or None.
+    """
     # Try raw fast path
     raw_img = _try_raw_decode(binary_data)
     if raw_img is not None:
-        return raw_img
+        return binary_data, raw_img
 
     # Maybe legacy base64 in bytes
     if not (
@@ -138,13 +157,12 @@ def convert_binary_to_image(
             binary_data = maybe
             raw_img = _try_raw_decode(binary_data)
             if raw_img is not None:
-                return raw_img
+                return binary_data, raw_img
+    return binary_data, None
 
-    # Validate before PNG decode to avoid libpng spew
-    validated = _validate_or_none(binary_data)
-    if validated is None:
-        return None
 
+def _decode_image_bytes(validated: bytes) -> Optional[Image.Image]:
+    """Decode validated bytes, rejecting oversized or corrupt images."""
     try:
         bytes_ = io.BytesIO(validated)
         img = Image.open(bytes_)
