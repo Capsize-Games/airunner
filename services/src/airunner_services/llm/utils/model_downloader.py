@@ -89,15 +89,39 @@ class HuggingFaceDownloader:
 
         def fetch_directory(path: str = "") -> List[Dict[str, any]]:
             """Fetch files from a directory path."""
+            from urllib.parse import urljoin
+
+            from airunner_services.url_safety import (
+                SSRFBlocked,
+                pinned_dns,
+                validate_url_for_fetch,
+            )
+
             if path:
                 api_url = f"https://huggingface.co/api/models/{repo_id}/tree/{revision}/{path}"
             else:
                 api_url = f"https://huggingface.co/api/models/{repo_id}/tree/{revision}"
 
             try:
-                response = requests.get(api_url, headers=headers, timeout=30)
-                response.raise_for_status()
-                return response.json()
+                current_url = api_url
+                for _ in range(4):
+                    target = validate_url_for_fetch(current_url)
+                    with pinned_dns(target):
+                        candidate = requests.get(
+                            current_url,
+                            headers=headers,
+                            timeout=30,
+                            allow_redirects=False,
+                        )
+                    if candidate.status_code not in (301, 302, 303, 307, 308):
+                        candidate.raise_for_status()
+                        return candidate.json()
+                    location = candidate.headers.get("location")
+                    candidate.close()
+                    if not location:
+                        raise SSRFBlocked("redirect without location")
+                    current_url = urljoin(current_url, location)
+                raise SSRFBlocked("too many redirects")
             except Exception as e:
                 raise RuntimeError(
                     f"Failed to list files for {repo_id}/{path}: {e}"
@@ -190,20 +214,22 @@ class HuggingFaceDownloader:
 
             from airunner_services.url_safety import (
                 SSRFBlocked,
+                pinned_dns,
                 validate_url_for_fetch,
             )
 
             current_url = url
             response = None
             for _ in range(4):
-                validate_url_for_fetch(current_url)
-                candidate = requests.get(
-                    current_url,
-                    headers=headers,
-                    stream=True,
-                    timeout=60,
-                    allow_redirects=False,
-                )
+                target = validate_url_for_fetch(current_url)
+                with pinned_dns(target):
+                    candidate = requests.get(
+                        current_url,
+                        headers=headers,
+                        stream=True,
+                        timeout=60,
+                        allow_redirects=False,
+                    )
                 if candidate.status_code not in (301, 302, 303, 307, 308):
                     response = candidate
                     break

@@ -66,13 +66,11 @@ def fetch_model_info(model_id: str, api_key: str = "") -> Dict[str, Any]:
         raise ValueError(f"Invalid CivitAI model id: {model_id!r}")
     _require_civitai_url(f"{_CIVITAI_API_URL}/models/{model_id}")
     url = f"{_CIVITAI_API_URL}/models/{model_id}"
-    response = requests.get(
+    return _fetch_guarded_json(
         url,
         headers=_auth_headers(api_key),
         timeout=30,
     )
-    response.raise_for_status()
-    return response.json()
 
 
 def search_models(
@@ -88,8 +86,9 @@ def search_models(
     if not 1 <= int(limit) <= 50:
         raise ValueError(f"Invalid CivitAI search limit: {limit!r}")
     _require_civitai_url(f"{_CIVITAI_API_URL}/models")
-    response = requests.get(
+    payload = _fetch_guarded_json(
         f"{_CIVITAI_API_URL}/models",
+        headers=_auth_headers(api_key),
         params=_search_params(
             query=query,
             base_models=base_models,
@@ -97,11 +96,8 @@ def search_models(
             limit=limit,
             cursor=cursor,
         ),
-        headers=_auth_headers(api_key),
         timeout=30,
     )
-    response.raise_for_status()
-    payload = response.json()
     payload["items"] = _filter_model_items(
         payload.get("items", []),
         base_models,
@@ -435,28 +431,81 @@ def _open_download(url: str, api_key: str) -> requests.Response:
     return retry_response
 
 
-def _get_streaming_response(url: str, api_key: str) -> requests.Response:
-    """Return one streamed response after validating every URL hop.
+def _fetch_guarded_json(
+    url: str,
+    *,
+    headers: dict,
+    params: Optional[Dict[str, Any]] = None,
+    timeout: int = 30,
+) -> Dict[str, Any]:
+    """GET one JSON document, validating and pinning every redirect hop.
 
-    Redirect responses are not followed by ``requests``; each hop is
-    re-validated against the AIRunner SSRF policy before the next request is
-    issued, mirroring the guardrails in ``airunner_services.url_safety``.
+    Each hop is resolved once and the connection is pinned to the validated
+    IP, so DNS rebinding between validation and connect cannot steer the
+    metadata fetch onto an unvalidated address.
     """
     from urllib.parse import urljoin
 
-    from airunner_services.url_safety import SSRFBlocked, validate_url_for_fetch
+    from airunner_services.url_safety import (
+        SSRFBlocked,
+        pinned_dns,
+        validate_url_for_fetch,
+    )
 
     current = url
     redirects_followed = 0
     while True:
-        validate_url_for_fetch(current)
-        response = requests.get(
-            current,
-            headers=_auth_headers(api_key),
-            stream=True,
-            allow_redirects=False,
-            timeout=30,
-        )
+        target = validate_url_for_fetch(current)
+        with pinned_dns(target):
+            response = requests.get(
+                current,
+                headers=headers,
+                params=params,
+                timeout=timeout,
+                allow_redirects=False,
+            )
+        if response.status_code in {301, 302, 303, 307, 308}:
+            location = response.headers.get("location")
+            response.close()
+            if not location:
+                raise SSRFBlocked("redirect without location")
+            redirects_followed += 1
+            if redirects_followed > _MAX_DOWNLOAD_REDIRECTS:
+                raise SSRFBlocked("too many redirects")
+            current = urljoin(current, location)
+            continue
+        response.raise_for_status()
+        return response.json()
+
+
+def _get_streaming_response(url: str, api_key: str) -> requests.Response:
+    """Return one streamed response after validating every URL hop.
+
+    Redirect responses are not followed by ``requests``; each hop is
+    resolved once, re-validated against the AIRunner SSRF policy, and the
+    connection is pinned to the validated IP before the next request is
+    issued, mirroring the guardrails in ``airunner_services.url_safety``.
+    """
+    from urllib.parse import urljoin
+
+    from airunner_services.url_safety import (
+        SSRFBlocked,
+        pinned_dns,
+        validate_url_for_fetch,
+    )
+
+    current = url
+    redirects_followed = 0
+    while True:
+        target = validate_url_for_fetch(current)
+        with pinned_dns(target):
+            response = requests.get(
+                current,
+                headers=_auth_headers(api_key),
+                stream=True,
+                allow_redirects=False,
+                timeout=30,
+            )
         if response.status_code in {301, 302, 303, 307, 308}:
             location = response.headers.get("location")
             response.close()

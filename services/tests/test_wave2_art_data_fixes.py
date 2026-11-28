@@ -290,6 +290,9 @@ class TestCivitaiValidation:
             seen["fetched"] = url
 
             class _Resp:
+                status_code = 200
+                headers = {}
+
                 def raise_for_status(self) -> None:
                     return None
 

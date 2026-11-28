@@ -6,9 +6,12 @@ arbitrary URLs.
 
 from __future__ import annotations
 
+import contextlib
 import ipaddress
 import os
 import socket
+import threading
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Optional
 from urllib.parse import urljoin
@@ -146,13 +149,28 @@ def _resolve_host_ips(
     return ips
 
 
-def validate_url_for_fetch(url: str) -> None:
-    """Validate one URL against the AIRunner fetch safety policy."""
-    if is_offline_mode():
-        raise OfflineModeBlocked(
-            "external network access is disabled while offline mode is on"
-        )
+@dataclass(frozen=True)
+class ResolvedFetchTarget:
+    """One URL validated for fetching, with its DNS resolution pinned.
 
+    ``ip`` is the single validated address the connection must use. It is
+    chosen from the addresses returned by the one DNS resolution performed
+    during validation, so connecting to it -- instead of resolving the
+    hostname again at connect time -- closes the validate-then-connect
+    DNS-rebinding window (issue #2490): an attacker hostname that resolves
+    to a public address for validation and a private address a moment
+    later still connects to the validated address.
+    """
+
+    url: str
+    scheme: str
+    hostname: str
+    port: int
+    ip: str
+
+
+def _parse_fetch_url(url: str) -> tuple[str, str, int]:
+    """Return one URL's scheme, hostname and effective port after checks."""
     raw = (url or "").strip()
     if not raw:
         raise SSRFBlocked("missing url")
@@ -178,6 +196,22 @@ def validate_url_for_fetch(url: str) -> None:
         raise SSRFBlocked("invalid port") from exc
 
     port = parsed_port or (443 if scheme == "https" else 80)
+    return scheme, hostname, port
+
+
+def resolve_url_for_fetch(url: str) -> ResolvedFetchTarget:
+    """Validate one URL and resolve its host exactly once.
+
+    Returns the validated target with the single IP the connection must
+    use. Every redirect hop must be resolved separately through this
+    function so each hop is validated and pinned before connecting.
+    """
+    if is_offline_mode():
+        raise OfflineModeBlocked(
+            "external network access is disabled while offline mode is on"
+        )
+
+    scheme, hostname, port = _parse_fetch_url(url)
 
     try:
         ip = ipaddress.ip_address(hostname)
@@ -186,10 +220,16 @@ def validate_url_for_fetch(url: str) -> None:
 
     if ip is not None:
         if _host_is_allowed(hostname, {ip}):
-            return
+            return ResolvedFetchTarget(
+                url=url, scheme=scheme, hostname=hostname, port=port,
+                ip=str(ip),
+            )
         if _is_ip_disallowed(ip):
             raise SSRFBlocked("ip address not allowed")
-        return
+        return ResolvedFetchTarget(
+            url=url, scheme=scheme, hostname=hostname, port=port,
+            ip=str(ip),
+        )
 
     try:
         ips = _resolve_host_ips(hostname, port)
@@ -199,11 +239,97 @@ def validate_url_for_fetch(url: str) -> None:
     if not ips:
         raise SSRFBlocked("hostname could not be resolved")
 
-    if _host_is_allowed(hostname, ips):
-        return
+    if not _host_is_allowed(hostname, ips):
+        if any(_is_ip_disallowed(ip_address) for ip_address in ips):
+            raise SSRFBlocked("hostname resolves to disallowed ip")
 
-    if any(_is_ip_disallowed(ip_address) for ip_address in ips):
-        raise SSRFBlocked("hostname resolves to disallowed ip")
+    # Pin one validated address deterministically so repeated fetches of
+    # the same hostname do not flap between its addresses.
+    pinned = min(str(ip_address) for ip_address in ips)
+    return ResolvedFetchTarget(
+        url=url, scheme=scheme, hostname=hostname, port=port, ip=pinned
+    )
+
+
+def validate_url_for_fetch(url: str) -> Optional[ResolvedFetchTarget]:
+    """Validate one URL against the AIRunner fetch safety policy.
+
+    Returns the resolved target carrying the single validated IP the
+    connection must use; see :func:`resolve_url_for_fetch`. Returning the
+    target (instead of nothing) lets callers pin their connection to the
+    exact address that was validated.
+    """
+    return resolve_url_for_fetch(url)
+
+
+_pin_lock = threading.Lock()
+_pin_installs = 0
+_real_getaddrinfo = None
+_thread_dns_pins = threading.local()
+_absent_pin: object = object()
+
+
+def _pinned_host_key(hostname: str) -> str:
+    """Return one normalized DNS-pin lookup key for a hostname."""
+    return hostname.lower().rstrip(".")
+
+
+def _pinned_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    """Honor thread-local validated DNS pins, delegating everything else."""
+    pinned_ip = None
+    if isinstance(host, str):
+        pins = getattr(_thread_dns_pins, "pins", None) or {}
+        pinned_ip = pins.get(_pinned_host_key(host))
+    resolver = _real_getaddrinfo
+    if pinned_ip is None:
+        return resolver(host, port, family, type, proto, flags)
+    # Resolve the pinned IP literal through the real resolver so the
+    # returned sockaddr tuples keep the correct family-specific shape.
+    return resolver(pinned_ip, port, family, type, proto, flags)
+
+
+@contextlib.contextmanager
+def pinned_dns(
+    target: Optional[ResolvedFetchTarget],
+) -> Iterator[Optional[ResolvedFetchTarget]]:
+    """Pin one validated hostname to its validated IP for one connection.
+
+    While active, ``socket.getaddrinfo`` calls from this thread for the
+    target hostname return only the validated IP, so the HTTP stack
+    connects to the address validation approved even if the hostname's
+    DNS record changed (rebound) after validation. Other hostnames, other
+    threads, and non-string hosts are delegated to the real resolver
+    untouched. ``None`` (returned by test doubles that stub out URL
+    validation) disables pinning and yields ``None``.
+    """
+    global _pin_installs, _real_getaddrinfo
+    if target is None:
+        yield None
+        return
+    key = _pinned_host_key(target.hostname)
+    pins = getattr(_thread_dns_pins, "pins", None)
+    if pins is None:
+        pins = {}
+        _thread_dns_pins.pins = pins
+    previous = pins.get(key, _absent_pin)
+    pins[key] = target.ip
+    with _pin_lock:
+        if _pin_installs == 0:
+            _real_getaddrinfo = socket.getaddrinfo
+            socket.getaddrinfo = _pinned_getaddrinfo
+        _pin_installs += 1
+    try:
+        yield target
+    finally:
+        if previous is _absent_pin:
+            pins.pop(key, None)
+        else:
+            pins[key] = previous
+        with _pin_lock:
+            _pin_installs -= 1
+            if _pin_installs == 0:
+                socket.getaddrinfo = _real_getaddrinfo
+                _real_getaddrinfo = None
 
 
 def safe_fetch_url(
@@ -266,27 +392,32 @@ def _fetch_body_and_encoding(
 
     with requests.Session() as session:
         while True:
-            validate_url_for_fetch(current)
-            with session.get(
-                current,
-                headers=headers,
-                timeout=timeout_seconds,
-                allow_redirects=False,
-                stream=True,
-            ) as response:
-                redirect = response.headers.get("location")
-                if (
-                    response.status_code in {301, 302, 303, 307, 308}
-                    and redirect
-                ):
-                    redirects_followed += 1
-                    if redirects_followed > max_redirects:
-                        raise SSRFBlocked("too many redirects")
-                    current = urljoin(current, redirect)
-                    continue
+            # Resolve once per hop and pin the connection to the validated
+            # IP, then re-validate every redirect target before following
+            # it, so neither DNS rebinding nor redirect chains can steer
+            # the connection onto an unvalidated address.
+            target = validate_url_for_fetch(current)
+            with pinned_dns(target):
+                with session.get(
+                    current,
+                    headers=headers,
+                    timeout=timeout_seconds,
+                    allow_redirects=False,
+                    stream=True,
+                ) as response:
+                    redirect = response.headers.get("location")
+                    if (
+                        response.status_code in {301, 302, 303, 307, 308}
+                        and redirect
+                    ):
+                        redirects_followed += 1
+                        if redirects_followed > max_redirects:
+                            raise SSRFBlocked("too many redirects")
+                        current = urljoin(current, redirect)
+                        continue
 
-                body = _read_response_body(response, max_bytes)
-                return body, response.encoding or "utf-8"
+                    body = _read_response_body(response, max_bytes)
+                    return body, response.encoding or "utf-8"
 
 
 def _request_limits(
@@ -332,8 +463,11 @@ def _read_response_body(
 
 __all__ = [
     "OfflineModeBlocked",
+    "ResolvedFetchTarget",
     "SSRFBlocked",
     "is_offline_mode",
+    "pinned_dns",
+    "resolve_url_for_fetch",
     "safe_fetch_bytes",
     "safe_fetch_url",
     "validate_url_for_fetch",

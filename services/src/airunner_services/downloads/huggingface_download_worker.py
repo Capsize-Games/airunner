@@ -52,27 +52,32 @@ def _open_validated_hf_response(
     """
     from urllib.parse import urljoin
 
-    from airunner_services.url_safety import SSRFBlocked, validate_url_for_fetch
+    from airunner_services.url_safety import (
+        SSRFBlocked,
+        pinned_dns,
+        validate_url_for_fetch,
+    )
 
     current = url
     hops = 0
     while True:
-        validate_url_for_fetch(current)
-        if method == "head":
-            response = requests.head(
-                current,
-                headers=headers,
-                allow_redirects=False,
-                timeout=timeout,
-            )
-        else:
-            response = requests.get(
-                current,
-                headers=headers,
-                stream=True,
-                allow_redirects=False,
-                timeout=timeout,
-            )
+        target = validate_url_for_fetch(current)
+        with pinned_dns(target):
+            if method == "head":
+                response = requests.head(
+                    current,
+                    headers=headers,
+                    allow_redirects=False,
+                    timeout=timeout,
+                )
+            else:
+                response = requests.get(
+                    current,
+                    headers=headers,
+                    stream=True,
+                    allow_redirects=False,
+                    timeout=timeout,
+                )
         if response.status_code in _REDIRECT_STATUSES:
             location = response.headers.get("location")
             response.close()
