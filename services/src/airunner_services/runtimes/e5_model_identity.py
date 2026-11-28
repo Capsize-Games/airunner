@@ -236,6 +236,22 @@ def verify_e5_model_directory(
     if not root.is_dir():
         raise E5ModelIdentityError("E5 model path is not a directory")
 
+    actual_files = _inventory_model_files(root, required, optional)
+    _verify_reviewed_metadata(root, actual_files)
+    file_hashes = _hash_runtime_files(root, required, optional, actual_files)
+
+    immutable_files = tuple(file_hashes)
+    return E5ModelIdentity(
+        model_id=E5_LARGE_MODEL_ID,
+        revision=E5_LARGE_REVISION,
+        dimension=E5_LARGE_DIMENSION,
+        manifest_sha256=_manifest_digest(immutable_files),
+        file_sha256=immutable_files,
+    )
+
+
+def _inventory_model_files(root: Path, required, optional) -> set:
+    """Collect actual files, rejecting symlinks, missing, and unexpected entries."""
     allowed = (
         set(required)
         | set(optional)
@@ -262,10 +278,11 @@ def verify_e5_model_directory(
         raise E5ModelIdentityError(
             "unexpected E5 files: " + ", ".join(unexpected)
         )
+    return actual_files
 
-    # Validate narrowly reviewed loader metadata without adding it to the
-    # runtime file identity below. This preserves the same identity for the
-    # canonical nine runtime files whether or not the stub is present.
+
+def _verify_reviewed_metadata(root: Path, actual_files: set) -> None:
+    """Validate narrowly reviewed loader metadata when present."""
     for relative in sorted(set(_REVIEWED_NON_RUNTIME_FILES) & actual_files):
         expected_size, expected_sha256 = _REVIEWED_NON_RUNTIME_FILES[relative]
         digest, actual_size = _hash_regular_file(root / relative)
@@ -277,6 +294,9 @@ def verify_e5_model_directory(
         if digest != expected_sha256:
             raise E5ModelIdentityError(f"E5 file digest mismatch: {relative}")
 
+
+def _hash_runtime_files(root: Path, required, optional, actual_files: set) -> list:
+    """Hash each required and present-optional runtime file."""
     file_hashes: list[tuple[str, str]] = []
     for relative in sorted(set(required) | (set(optional) & actual_files)):
         expected_size, expected_sha256 = (required if relative in required else optional)[relative]
@@ -289,15 +309,7 @@ def verify_e5_model_directory(
         if digest != expected_sha256:
             raise E5ModelIdentityError(f"E5 file digest mismatch: {relative}")
         file_hashes.append((relative, digest))
-
-    immutable_files = tuple(file_hashes)
-    return E5ModelIdentity(
-        model_id=E5_LARGE_MODEL_ID,
-        revision=E5_LARGE_REVISION,
-        dimension=E5_LARGE_DIMENSION,
-        manifest_sha256=_manifest_digest(immutable_files),
-        file_sha256=immutable_files,
-    )
+    return file_hashes
 
 
 def _hash_regular_file(path: Path) -> tuple[str, int]:
