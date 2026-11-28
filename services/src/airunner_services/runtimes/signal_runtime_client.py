@@ -302,16 +302,9 @@ class _SignalRuntimeClient(RuntimeClient):
         from airunner_common.contract_enums import ModelStatus, SignalCode
 
         status_queue: Queue[Any] = Queue()
-
-        def on_status_changed(data: dict[str, Any]) -> None:
-            """Queue one matching terminal model status."""
-            model = data.get("model")
-            if not self._matches_model(model):
-                return
-            status = data.get("status")
-            self._cache_status(status, data)
-            if status in success_statuses or status is ModelStatus.FAILED:
-                status_queue.put(status)
+        on_status_changed = self._make_status_handler(
+            status_queue, success_statuses, ModelStatus
+        )
 
         self._mediator.register(
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
@@ -319,27 +312,20 @@ class _SignalRuntimeClient(RuntimeClient):
         )
         try:
             self._emit_signal(emit_code, emit_data)
-            try:
-                status = status_queue.get(
-                    timeout=(
-                        self._timeout_seconds
-                        if timeout_seconds is None
-                        else timeout_seconds
-                    )
-                )
-            except Empty:
-                return self._failure_response(
-                    request_id,
-                    timeout_code,
-                    f"{action_name} timed out",
-                    retryable=True,
-                )
+            status = self._await_signal_status(status_queue, timeout_seconds)
         finally:
             self._mediator.unregister(
                 SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
                 on_status_changed,
             )
 
+        if status is None:
+            return self._failure_response(
+                request_id,
+                timeout_code,
+                f"{action_name} timed out",
+                retryable=True,
+            )
         if status is ModelStatus.FAILED:
             return self._failure_response(
                 request_id,
@@ -352,6 +338,34 @@ class _SignalRuntimeClient(RuntimeClient):
             payload={"model_status": _model_status_value(status)},
             metadata=self._status_metadata(),
         )
+
+    def _await_signal_status(self, status_queue, timeout_seconds):
+        """Return the next signaled status, or None on timeout."""
+        try:
+            return status_queue.get(
+                timeout=(
+                    self._timeout_seconds
+                    if timeout_seconds is None
+                    else timeout_seconds
+                )
+            )
+        except Empty:
+            return None
+
+    def _make_status_handler(self, status_queue, success_statuses, ModelStatus):
+        """Build the mediator callback that queues terminal model statuses."""
+
+        def on_status_changed(data: dict[str, Any]) -> None:
+            """Queue one matching terminal model status."""
+            model = data.get("model")
+            if not self._matches_model(model):
+                return
+            status = data.get("status")
+            self._cache_status(status, data)
+            if status in success_statuses or status is ModelStatus.FAILED:
+                status_queue.put(status)
+
+        return on_status_changed
 
     @staticmethod
     def _failure_response(
