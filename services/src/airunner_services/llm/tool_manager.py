@@ -109,7 +109,6 @@ class ToolManager(
 
     def _wrap_tool_with_dependencies(self, tool_info):
         """Wrap one tool function with dependency injection for LangChain."""
-        from airunner_services.api.runtime import get_api
         from functools import wraps
 
         sig = None
@@ -147,24 +146,9 @@ class ToolManager(
                     list(kwargs.keys()),
                 )
 
-            if tool_info.requires_api:
-                kwargs.pop("api", None)
-                if tool_info.category == ToolCategory.RAG and self.rag_manager:
-                    api = self.rag_manager
-                elif (
-                    self.rag_manager
-                    and hasattr(self.rag_manager, "api")
-                    and self.rag_manager.api
-                ):
-                    api = self.rag_manager.api
-                else:
-                    api = get_api()
-
-                if api is None:
-                    return (
-                        f"Error: API not available for tool {tool_info.name}"
-                    )
-                kwargs["api"] = api
+            api_error = self._inject_tool_api(tool_info, kwargs)
+            if api_error is not None:
+                return api_error
 
             if self._request_tool_defaults and (accepts_var_kwargs or sig):
                 for key, value in self._request_tool_defaults.items():
@@ -201,6 +185,28 @@ class ToolManager(
             )
 
         return wrapped
+
+    def _inject_tool_api(self, tool_info, kwargs: dict) -> Optional[str]:
+        """Inject the tool API dependency or return an error message."""
+        from airunner_services.api.runtime import get_api
+
+        if not tool_info.requires_api:
+            return None
+        kwargs.pop("api", None)
+        if tool_info.category == ToolCategory.RAG and self.rag_manager:
+            api = self.rag_manager
+        elif (
+            self.rag_manager
+            and hasattr(self.rag_manager, "api")
+            and self.rag_manager.api
+        ):
+            api = self.rag_manager.api
+        else:
+            api = get_api()
+        if api is None:
+            return f"Error: API not available for tool {tool_info.name}"
+        kwargs["api"] = api
+        return None
 
     def get_all_tools(self, include_deferred: bool = True) -> List[Callable]:
         """Return all available tools for the current request."""
