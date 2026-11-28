@@ -69,6 +69,10 @@ class BaseDiffusersModelManager(
         self._loaded_embeddings = []
         super().__init__(*args, **kwargs)
         self._initialize_model_status()
+        self._initialize_state()
+
+    def _initialize_state(self):
+        """Initialize generation state attributes."""
         self._pipeline: Optional[str] = None
         self._scheduler_name: Optional[str] = None
         self.current_scheduler_name: str = ""
