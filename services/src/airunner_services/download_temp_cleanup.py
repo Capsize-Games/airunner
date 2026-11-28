@@ -17,15 +17,18 @@ def _latest_mtime(path: Path) -> float:
 
     for root, dirnames, filenames in os.walk(path):
         root_path = Path(root)
-        latest = max(latest, root_path.stat().st_mtime)
+        try:
+            latest = max(latest, root_path.stat().st_mtime)
+        except FileNotFoundError:
+            if root_path == path:
+                raise
+            continue
 
-        for dirname in dirnames:
-            dir_path = root_path / dirname
-            latest = max(latest, dir_path.stat().st_mtime)
-
-        for filename in filenames:
-            file_path = root_path / filename
-            latest = max(latest, file_path.stat().st_mtime)
+        for name in (*dirnames, *filenames):
+            try:
+                latest = max(latest, (root_path / name).stat().st_mtime)
+            except FileNotFoundError:
+                continue
 
     return latest
 
@@ -41,7 +44,10 @@ def cleanup_stale_download_dir(
     if not path.exists() or not path.is_dir():
         return False
 
-    age_seconds = time.time() - _latest_mtime(path)
+    try:
+        age_seconds = time.time() - _latest_mtime(path)
+    except FileNotFoundError:
+        return False
     if age_seconds < max_age_seconds:
         return False
 
