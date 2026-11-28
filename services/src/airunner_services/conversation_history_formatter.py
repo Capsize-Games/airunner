@@ -209,17 +209,23 @@ def load_formatted_conversation_history(
                 formatted_msg["tool_usage"] = pending_tool_usage.copy()
                 pending_tool_usage.clear()
             if is_bot and pending_citations:
+                formatted_msg["citations"] = pending_citations.copy()
                 pending_citations.clear()
             for key in ("bot_mood", "bot_mood_emoji", "user_mood"):
                 if key in msg_obj:
                     formatted_msg[key] = msg_obj[key]
             formatted_messages.append(formatted_msg)
 
-        if pending_tool_usage or pending_pre_tool_thinking:
+        if (
+            pending_tool_usage
+            or pending_pre_tool_thinking
+            or pending_citations
+        ):
             logger.info(
                 "Creating synthetic assistant message for pending tool "
-                "data: %s tools, thinking=%s",
+                "data: %s tools, %s citations, thinking=%s",
                 len(pending_tool_usage),
+                len(pending_citations),
                 pending_pre_tool_thinking is not None,
             )
             synthetic_msg = {
@@ -233,6 +239,9 @@ def load_formatted_conversation_history(
                 synthetic_msg["pre_tool_thinking"] = pending_pre_tool_thinking
             if pending_tool_usage:
                 synthetic_msg["tool_usage"] = pending_tool_usage.copy()
+            if pending_citations:
+                synthetic_msg["citations"] = pending_citations.copy()
+                pending_citations.clear()
             formatted_messages.append(synthetic_msg)
 
         logger.info(
