@@ -206,46 +206,55 @@ class LegacyCompletionObserver:
             failure_reason=failure_reason if failed else None,
             replace_text=replace_text,
         )
-        cancel_after = False
         with self._lock:
             if self._terminal or self._closed:
                 return False
-            size = event.size_bytes
-            if (
-                not terminal
-                and (
-                    self._queued_events >= self._max_events
-                    or self._buffered_bytes + size > self._max_buffered_bytes
-                    or self._total_bytes + size > self._max_total_bytes
-                )
-            ):
-                cancel_after = self._finish_locked("overflow", failed=True)
-                accepted = False
-            else:
-                if terminal and self._total_bytes + size > self._max_total_bytes:
-                    cancel_after = self._finish_locked("overflow", failed=True)
-                    accepted = False
-                else:
-                    try:
-                        self._queue.put_nowait(event)
-                    except queue.Full:
-                        cancel_after = self._finish_locked("overflow", failed=True)
-                        accepted = False
-                    else:
-                        self._total_bytes += size
-                        self._buffered_bytes += size
-                        if terminal:
-                            self._terminal = True
-                            if failed:
-                                self._terminal_failure_reason = failure_reason
-                            self.done.set()
-                        else:
-                            self._queued_events += 1
-                        self.last_callback_at = time.monotonic()
-                        accepted = True
+            accepted, cancel_after = self._admit_event_locked(
+                event, terminal, failed, failure_reason
+            )
         if cancel_after:
             self._cancel_owned()
         return accepted
+
+    def _admit_event_locked(
+        self,
+        event: ObservedEvent,
+        terminal: bool,
+        failed: bool,
+        failure_reason: str | None,
+    ) -> tuple[bool, bool]:
+        """Admit one event or overflow under the observer lock.
+
+        Returns:
+            The accepted flag and whether the owner must cancel.
+        """
+        size = event.size_bytes
+        if (
+            not terminal
+            and (
+                self._queued_events >= self._max_events
+                or self._buffered_bytes + size > self._max_buffered_bytes
+                or self._total_bytes + size > self._max_total_bytes
+            )
+        ):
+            return False, self._finish_locked("overflow", failed=True)
+        if terminal and self._total_bytes + size > self._max_total_bytes:
+            return False, self._finish_locked("overflow", failed=True)
+        try:
+            self._queue.put_nowait(event)
+        except queue.Full:
+            return False, self._finish_locked("overflow", failed=True)
+        self._total_bytes += size
+        self._buffered_bytes += size
+        if terminal:
+            self._terminal = True
+            if failed:
+                self._terminal_failure_reason = failure_reason
+            self.done.set()
+        else:
+            self._queued_events += 1
+        self.last_callback_at = time.monotonic()
+        return True, False
 
     def fail(self, reason: str) -> bool:
         """Queue one bounded terminal error frame and reject later callbacks."""
