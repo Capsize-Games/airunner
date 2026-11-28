@@ -26,6 +26,7 @@ class AudioProcessorWorker(Worker):
 		super().__init__()
 
 	def start_worker_thread(self):
+		"""Start the worker thread and load STT when enabled."""
 		self._initialize_stt_handler()
 		if self.application_settings.stt_enabled:
 			self._stt_load()
@@ -65,6 +66,7 @@ class AudioProcessorWorker(Worker):
 		)
 
 	def on_stt_load_signal(self, data: dict = None):
+		"""Handle a request to load the STT model."""
 		if self._executor is None:
 			self._initialize_stt_handler()
 
@@ -72,13 +74,16 @@ class AudioProcessorWorker(Worker):
 			self._stt_load()
 
 	def on_stt_unload_signal(self, data: dict = None):
+		"""Handle a request to unload the STT model."""
 		if self._executor:
 			self._stt_unload()
 
 	def unload(self):
+		"""Unload local STT resources."""
 		self._stt_unload()
 
 	def load(self):
+		"""Initialize and load local STT resources."""
 		self._initialize_stt_handler()
 		self._stt_load()
 
@@ -96,6 +101,7 @@ class AudioProcessorWorker(Worker):
 			self._executor.unload()
 
 	def on_stt_process_audio_signal(self, message):
+		"""Queue one incoming audio payload for transcription."""
 		self.logger.debug(
 			"on_stt_process_audio_signal called, message keys: %s",
 			message.keys() if message else "None",
@@ -103,6 +109,7 @@ class AudioProcessorWorker(Worker):
 		self.add_to_queue(message)
 
 	def handle_message(self, audio_data):
+		"""Process one queued audio or STT control message."""
 		message_type = audio_data.get("_message_type") if audio_data else None
 		if message_type == "stt_load":
 			self.on_stt_load_signal(audio_data.get("data"))
@@ -158,4 +165,5 @@ class AudioProcessorWorker(Worker):
 		return str(response.get("text", "") or "")
 
 	def update_properties(self):
+		"""Refresh cached STT settings, including the sample rate."""
 		self.fs = self.stt_settings.fs
