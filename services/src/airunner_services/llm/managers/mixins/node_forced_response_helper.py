@@ -38,22 +38,9 @@ class NodeForcedResponseHelper:
         user_question = self.get_user_question(state["messages"])
         generation_kwargs = state.get("generation_kwargs", {})
         if tool_name in self._owner.WORKFLOW_TOOLS:
-            self._owner.logger.info(
-                "Force response node: Duplicate workflow tool '%s' - adding continuation instructions and routing back to model",
-                tool_name,
+            return self._workflow_continuation_result(
+                tool_name, all_tool_content, user_question
             )
-            continuation_msg = self.create_workflow_continuation_message(
-                all_tool_content,
-                tool_name,
-                user_question,
-            )
-            self._owner.logger.info(
-                "✓ Force response node: Added continuation message, routing to model"
-            )
-            return {
-                "messages": [continuation_msg],
-                "workflow_continuation": True,
-            }
         if self.should_return_tool_direct(tool_name):
             self._owner.logger.info(
                 "Force response node: returning direct tool result for '%s'",
@@ -65,6 +52,44 @@ class NodeForcedResponseHelper:
                 ],
                 "workflow_continuation": False,
             }
+        return self._generated_forced_result(
+            all_tool_content,
+            tool_messages,
+            tool_name,
+            user_question,
+            generation_kwargs,
+        )
+
+    def _workflow_continuation_result(
+        self, tool_name: str, all_tool_content: str, user_question: str
+    ) -> Dict[str, Any]:
+        """Build the workflow continuation routing result."""
+        self._owner.logger.info(
+            "Force response node: Duplicate workflow tool '%s' - adding continuation instructions and routing back to model",
+            tool_name,
+        )
+        continuation_msg = self.create_workflow_continuation_message(
+            all_tool_content,
+            tool_name,
+            user_question,
+        )
+        self._owner.logger.info(
+            "✓ Force response node: Added continuation message, routing to model"
+        )
+        return {
+            "messages": [continuation_msg],
+            "workflow_continuation": True,
+        }
+
+    def _generated_forced_result(
+        self,
+        all_tool_content: str,
+        tool_messages: List[Any],
+        tool_name: str,
+        user_question: str,
+        generation_kwargs: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Generate the forced response message and wrap it as the result."""
         self._owner.logger.info(
             "Force response node: Generating answer from %s chars across %s tool result(s)",
             len(all_tool_content),
