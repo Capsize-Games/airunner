@@ -978,6 +978,16 @@ class SidecarLLMClient(RuntimeClient):
 			raise RuntimeError(
 				"The configured sidecar model does not match the selected GGUF"
 			)
+		_validate_selected_model_match(settings, selection, runtime_profile)
+
+
+	@staticmethod
+	def _validate_selected_model_match(
+		settings: LlamaCppRuntimeSettings,
+		selection: dict[str, Any],
+		runtime_profile: Optional[str] = None,
+	) -> None:
+		"""Raise when launcher settings conflict with the selected GGUF."""
 		selected_model_id = selection.get("model_id")
 		if (
 			settings.model_id
