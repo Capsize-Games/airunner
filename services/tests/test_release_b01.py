@@ -258,7 +258,13 @@ def test_worked_example_one_turn_tool_call_persistence_background_job() -> None:
         )
     )
     assert tool_result.succeeded
-    messages.append(ChatMessage(role=MessageRole.TOOL, content=tool_result.content))
+    messages.append(
+        ChatMessage(
+            role=MessageRole.TOOL,
+            content=tool_result.content,
+            tool_call_id="get_weather-1",
+        )
+    )
 
     # 5. Inference (streamed).
     inference_request = CompanionInferenceRequest(
