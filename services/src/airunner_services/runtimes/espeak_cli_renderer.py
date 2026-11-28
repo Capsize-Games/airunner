@@ -175,6 +175,7 @@ class EspeakCliRenderer:
         read_error: list[BaseException] = []
 
         def collect_stdout() -> None:
+            """Read bounded stdout while recording overflow or errors."""
             nonlocal total_bytes
             try:
                 remaining = output_limit + 1
