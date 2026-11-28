@@ -421,6 +421,52 @@ def _openai_chat_non_stream(
         ),
         cancel=lambda: cancel_owned_llm_request(app, request_id),
     )
+    callback = _make_openai_chat_callback(observer)
+
+    observer.start_dispatch(
+        lambda cb: _dispatch_request(app, prompt, llm_request, request_id, cb),
+        callback,
+    )
+    try:
+        events = observer.collect()
+    finally:
+        observer.close()
+    if events[-1].failed:
+        if events[-1].failure_reason == "timeout":
+            raise HTTPException(status_code=504, detail="Request timeout")
+        raise HTTPException(status_code=500, detail="LLM generation failed")
+
+    return _assemble_openai_completion(
+        model, request_id, events, prompt, tools
+    )
+
+
+def _assemble_openai_completion(model, request_id, events, prompt, tools):
+    """Assemble collected events into the OpenAI completion body."""
+    complete_message: List[str] = []
+    for event in events:
+        if event.replace_text:
+            complete_message.clear()
+        if event.text:
+            complete_message.append(event.text)
+    full_response = "".join(complete_message)
+    content, tool_calls = _parse_tool_calls_from_response(full_response, tools)
+    return {
+        "id": _chunk_id(request_id),
+        "object": "chat.completion",
+        "created": int(time.time()),
+        "model": model,
+        "choices": [{
+            "index": 0,
+            "message": _completion_message(full_response, content, tool_calls),
+            "finish_reason": "tool_calls" if tool_calls else "stop",
+        }],
+        "usage": _build_usage(prompt, full_response),
+    }
+
+
+def _make_openai_chat_callback(observer):
+    """Build the callback that publishes one non-streaming OpenAI update."""
 
     def callback(data: dict[str, Any]) -> None:
         """Publish one non-streaming OpenAI chat update."""
@@ -450,39 +496,7 @@ def _openai_chat_non_stream(
             replace_text=bool(final_visible),
         )
 
-    observer.start_dispatch(
-        lambda cb: _dispatch_request(app, prompt, llm_request, request_id, cb),
-        callback,
-    )
-    try:
-        events = observer.collect()
-    finally:
-        observer.close()
-    if events[-1].failed:
-        if events[-1].failure_reason == "timeout":
-            raise HTTPException(status_code=504, detail="Request timeout")
-        raise HTTPException(status_code=500, detail="LLM generation failed")
-
-    complete_message: List[str] = []
-    for event in events:
-        if event.replace_text:
-            complete_message.clear()
-        if event.text:
-            complete_message.append(event.text)
-    full_response = "".join(complete_message)
-    content, tool_calls = _parse_tool_calls_from_response(full_response, tools)
-    return {
-        "id": _chunk_id(request_id),
-        "object": "chat.completion",
-        "created": int(time.time()),
-        "model": model,
-        "choices": [{
-            "index": 0,
-            "message": _completion_message(full_response, content, tool_calls),
-            "finish_reason": "tool_calls" if tool_calls else "stop",
-        }],
-        "usage": _build_usage(prompt, full_response),
-    }
+    return callback
 
 
 # ---------------------------------------------------------------------------
