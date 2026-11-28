@@ -164,6 +164,12 @@ module = "airunner_services.bin.generate_cert"
 function = "main"
 primary = false
 
+[[console_script]]
+name = "airunner-mcp"
+module = "airunner_services.mcp.server"
+function = "main"
+primary = false
+
 # Runtime-string imports PyInstaller's static analysis cannot see (the
 # P04 probe_data finding). Each entry cites the loader; the regression
 # test re-derives the literal module names from those loaders by AST.
