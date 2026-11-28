@@ -1,4 +1,5 @@
 import re
+from typing import Any
 from urllib.parse import urlparse
 from airunner_services.utils.application.mediator_mixin import MediatorMixin
 from huggingface_hub import hf_hub_download
@@ -27,7 +28,7 @@ class DownloadHuggingface(MediatorMixin):
         self.worker = None
         self.file_name = None
 
-    def download_model(self, url: str, _callback=None):
+    def download_model(self, url: str, _callback: Any = None) -> None:
         """
         Download a model configuration file from the given Hugging Face URL.
 

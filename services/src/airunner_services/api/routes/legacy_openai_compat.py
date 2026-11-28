@@ -478,8 +478,8 @@ def _openai_chat_non_stream(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/v1/chat/completions")
-def openai_chat_completions(body: dict, req: Request):
+@router.post("/v1/chat/completions", response_model=None)
+def openai_chat_completions(body: dict, req: Request) -> dict[str, Any] | StreamingResponse:
     """Handle OpenAI /v1/chat/completions requests."""
     app = ensure_llm_model_loaded(req)
     messages = body.get("messages", [])

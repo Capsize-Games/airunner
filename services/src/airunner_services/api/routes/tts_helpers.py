@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 from uuid import uuid4
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 
 from airunner_services.ipc.messages import (
     EnvelopeStatus,
@@ -75,12 +75,12 @@ def tts_response_audio(response: ResponseEnvelope) -> bytes:
     return base64.b64decode(audio_b64)
 
 
-def get_runtime_registry(request) -> RuntimeRegistry | None:
+def get_runtime_registry(request: Request) -> RuntimeRegistry | None:
     """Return the runtime registry attached to the FastAPI app."""
     return getattr(request.app.state, "runtime_registry", None)
 
 
-def require_runtime_registry(request) -> RuntimeRegistry:
+def require_runtime_registry(request: Request) -> RuntimeRegistry:
     """Return the runtime registry or raise when it is unavailable."""
     runtime_registry = get_runtime_registry(request)
     if runtime_registry is None:

@@ -139,7 +139,7 @@ def _resolve_download_jobs(
 async def setup_install(
     payload: SetupInstallRequest,
     request: Request,
-):
+) -> StreamingResponse:
     """Install data and queue model downloads with explicit outcomes."""
     require_admin_key(request)
     resolved_base = _resolve_base_path(payload.base_path)

@@ -92,7 +92,7 @@ class ZImageSingleFileTransformerHelper:
         model_dtype: torch.dtype,
         max_memory: Optional[dict],
         quant_bits: Optional[int],
-        pretrained_helper,
+        pretrained_helper: Any,
     ) -> Any:
         """Load one transformer for the manual single-file fallback path."""
         if transformer_cfg is not None:

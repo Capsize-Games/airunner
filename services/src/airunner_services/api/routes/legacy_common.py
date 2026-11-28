@@ -3,11 +3,12 @@
 import os
 import signal
 import threading
+from typing import Any
 
 from fastapi import HTTPException, Request
 
 
-def get_airunner_app(req: Request):
+def get_airunner_app(req: Request) -> Any:
     """Return the AIRunner app or raise when it is unavailable."""
     app = getattr(req.app.state, "airunner_app", None)
     if app is None:

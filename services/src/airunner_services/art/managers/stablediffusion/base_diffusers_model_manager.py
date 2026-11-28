@@ -260,7 +260,7 @@ class BaseDiffusersModelManager(
         self.unload()
         self.load()
 
-    def load(self):
+    def load(self) -> None:
         """
         Load the Stable Diffusion model and all components.
 
@@ -366,7 +366,7 @@ class BaseDiffusersModelManager(
         self._finalize_load_stable_diffusion()
         resource_manager.model_loaded(self.model_path, "text_to_image")
 
-    def unload(self, force: bool = False):
+    def unload(self, force: bool = False) -> None:
         """
         Unload the Stable Diffusion model and all components.
 

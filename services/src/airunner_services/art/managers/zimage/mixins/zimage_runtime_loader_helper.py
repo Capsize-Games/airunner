@@ -29,7 +29,7 @@ class ZImageRuntimeLoaderHelper:
         """Store the owning loading mixin instance."""
         self._owner = owner
 
-    def load_zimage_scheduler(self, scheduler_path) -> Any:
+    def load_zimage_scheduler(self, scheduler_path: str) -> Any:
         """Load a flow-match scheduler based on current user selection."""
         scheduler_name = None
         if hasattr(self._owner, "image_request") and self._owner.image_request:

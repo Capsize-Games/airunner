@@ -242,7 +242,7 @@ async def create_generation_job(
 
 
 @router.post("/generate", response_model=GenerationResponse)
-async def generate_image(request: GenerationRequest, req: Request):
+async def generate_image(request: GenerationRequest, req: Request) -> GenerationResponse:
     """Start image generation and return the tracked job id."""
     # The route stays intentionally thin; the helper above owns the tracker,
     # runtime client, and task bootstrap so the API surface remains stable.

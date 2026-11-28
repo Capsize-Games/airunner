@@ -44,7 +44,7 @@ router = APIRouter()
 
 
 @router.post("/synthesize")
-async def synthesize_speech(request: TTSHTTPRequest, req: Request):
+async def synthesize_speech(request: TTSHTTPRequest, req: Request) -> Response:
     """
     Convert text to speech.
 
@@ -94,7 +94,7 @@ async def synthesize_speech(request: TTSHTTPRequest, req: Request):
 
 
 @router.get("/models", response_model=List[ModelInfo])
-async def list_models(req: Request):
+async def list_models(req: Request) -> List[ModelInfo]:
     """List models with a supported HTTP audio synthesis path."""
     runtime_registry = getattr(req.app.state, "runtime_registry", None)
     if runtime_registry is None:
