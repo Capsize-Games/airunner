@@ -7,6 +7,9 @@ callers mistake for success. CPU-only; every dependency is stubbed.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
+import logging
 import sys
 import types
 from importlib.metadata import PackageNotFoundError
@@ -16,6 +19,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from airunner_services.api.routes import art_model_base
+from airunner_services.api.routes import art_generation_job_routes as job_routes
 from airunner_services.daemon_client import resource_store
 from airunner_services.database.db import column as column_module
 from airunner_services.model_management import model_registry
@@ -321,3 +326,72 @@ def test_write_local_values_attempts_every_key(
             "ApplicationSettings", {"first": True, "second": False}
         )
     assert "Failed to persist QSettings value" in caplog.text
+
+
+# --- 6. Art model settings: DB errors propagate, fallback path logs --------
+
+
+def test_query_first_db_error_propagates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A broken settings query must not look like 'no settings row'."""
+
+    @contextlib.contextmanager
+    def _failing_scope() -> Any:
+        raise RuntimeError("db is gone")
+
+    monkeypatch.setattr(art_model_base, "session_scope", _failing_scope)
+    with pytest.raises(RuntimeError, match="db is gone"):
+        art_model_base.query_first(object)
+
+
+def test_service_base_path_logs_and_uses_default(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    tmp_path: Any,
+) -> None:
+    """Unreadable path settings still fall back, with a warning log line."""
+    monkeypatch.setattr(
+        art_model_base,
+        "query_first",
+        lambda _model: (_ for _ in ()).throw(RuntimeError("db is gone")),
+    )
+    monkeypatch.setattr(art_model_base, "_DEFAULT_BASE_PATH", tmp_path)
+    with caplog.at_level(logging.WARNING, logger=art_model_base.logger.name):
+        assert art_model_base.service_base_path() == tmp_path
+    assert "Unreadable path settings" in caplog.text
+
+
+# --- 7. Art cancel: runtime failure logs, tracker state still wins ---------
+
+
+
+def test_cancel_job_runtime_failure_still_reports_cancelled(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Best-effort runtime cancel failures are logged, not silent."""
+    job = SimpleNamespace(metadata={"provider": "local"})
+
+    class _FakeTracker:
+        async def get_status(self, _job_id: str) -> Any:
+            return job
+
+        async def cancel_job(self, _job_id: str) -> bool:
+            return True
+
+    class _FailingClient:
+        def cancel(self, _job_id: str) -> None:
+            raise RuntimeError("runtime unreachable")
+
+    monkeypatch.setattr(job_routes, "JobTracker", _FakeTracker)
+    monkeypatch.setattr(
+        job_routes, "require_runtime_registry", lambda _req: object()
+    )
+    monkeypatch.setattr(
+        job_routes, "resolve_art_client", lambda *_a, **_k: _FailingClient()
+    )
+    with caplog.at_level(logging.WARNING, logger=job_routes.logger.name):
+        result = asyncio.run(job_routes.cancel_job("job-1", SimpleNamespace()))
+    assert result == {"status": "cancelled", "job_id": "job-1"}
+    assert "Runtime cancel for job job-1 failed" in caplog.text

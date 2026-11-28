@@ -265,6 +265,230 @@ async def lifespan(app: FastAPI):
     )
 
 
+def _configure_cors(
+    app: FastAPI,
+    allowed_origins: Optional[list],
+    enable_cors: bool,
+    *,
+    api_key: str,
+    require_api_key: bool,
+    insecure_no_auth: bool,
+    allowed_tenants: set[str],
+) -> list:
+    """Configure CORS and stash the shared auth/tenant snapshot on state."""
+
+    if allowed_origins is None:
+        allowed_origins = [
+            "http://localhost",
+            "http://localhost:*",
+            "http://127.0.0.1",
+            "http://127.0.0.1:*",
+        ]
+
+    if "*" in allowed_origins:
+        raise ValueError(
+            "Refusing wildcard CORS origin with credentials enabled: "
+            "a '*' origin together with allow_credentials=True would "
+            "expose authenticated responses to any site."
+        )
+
+    # Stashed on app.state so the LLM WebSocket route (a separate ASGI
+    # scope that FastAPI/Starlette HTTP middleware never runs for) can
+    # apply the identical auth/origin policy before accepting a socket.
+    app.state.api_key = api_key
+    app.state.require_api_key = require_api_key
+    app.state.insecure_no_auth = insecure_no_auth
+    app.state.allowed_origins = allowed_origins
+    # Snapshot of the tenant allowlist shared with the WebSocket tenant
+    # scoping in ws_auth, so HTTP and sockets cannot drift apart when
+    # the environment changes after startup.
+    app.state.allowed_tenants = allowed_tenants
+
+    if enable_cors:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=allowed_origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+        logger.info(f"CORS enabled with origins: {allowed_origins}")
+    return allowed_origins
+
+
+def _register_routers(app: FastAPI) -> None:
+    """Include every API router on the app in registration order."""
+
+    app.include_router(health.router, prefix="/api/v1", tags=["health"])
+    app.include_router(daemon.router, prefix="/api/v1/daemon", tags=["daemon"])
+    app.include_router(llm.router, prefix="/api/v1/llm", tags=["llm"])
+    app.include_router(
+        conversations.router,
+        prefix="/api/v1/llm",
+        tags=["llm", "conversations"],
+    )
+    app.include_router(
+        persistence.router,
+        prefix="/api/v1/state",
+        tags=["state"],
+    )
+    app.include_router(
+        persistence.router,
+        prefix="/api/v1/persistence",
+        tags=["persistence"],
+    )
+    app.include_router(
+        domain_resources.settings_router,
+        prefix="/api/v1/settings",
+        tags=["settings"],
+    )
+    # Bootstrap owns GET /bootstrap; the domain catalog router
+    # owns /resources/* under the same prefix. No path overlap.
+    app.include_router(
+        catalog_bootstrap.router,
+        prefix="/api/v1/catalog",
+        tags=["catalog"],
+    )
+    app.include_router(
+        domain_resources.catalog_router,
+        prefix="/api/v1/catalog",
+        tags=["catalog"],
+    )
+    app.include_router(
+        domain_resources.library_router,
+        prefix="/api/v1/library",
+        tags=["library"],
+    )
+    app.include_router(
+        domain_resources.workspace_router,
+        prefix="/api/v1/workspace",
+        tags=["workspace"],
+    )
+    app.include_router(art.router, prefix="/api/v1/art", tags=["art"])
+    app.include_router(
+        video.router, prefix="/api/v1/video", tags=["video"]
+    )
+    app.include_router(
+        downloads.router,
+        prefix="/api/v1/downloads",
+        tags=["downloads"],
+    )
+    app.include_router(
+        setup.router,
+        prefix="/api/v1",
+        tags=["setup"],
+    )
+    app.include_router(tts.router, prefix="/api/v1/tts", tags=["tts"])
+    app.include_router(tts_ws.router, prefix="/api/v1/tts", tags=["tts"])
+    app.include_router(stt.router, prefix="/api/v1/stt", tags=["stt"])
+    app.include_router(
+        events.router, prefix="/api/v1", tags=["events"]
+    )
+
+    # Legacy compatibility endpoints for existing clients.
+    app.include_router(legacy_routes.router, tags=["legacy"])
+
+
+def _tenant_middleware_factory(
+    *,
+    require_api_key: bool,
+    allowed_tenants: set[str],
+):
+    """Return the tenant-scoping HTTP middleware for one app instance."""
+
+    async def tenant_middleware(request: Request, call_next):
+        """Scope DB operations to the request's tenant/namespace.
+
+        Airunner supports Postgres schema tenancy. We select the schema via a
+        per-request ContextVar set here.
+
+        Accepted headers (first one wins):
+        - X-Tenant-Key
+        - X-Namespace
+        """
+
+        header_value = (
+            (request.headers.get("x-tenant-key") or "").strip()
+            or (request.headers.get("x-namespace") or "").strip()
+        )
+
+        # Only allow tenant selection from headers:
+        # - Without API key auth: loopback requests only.
+        # - With API key auth: allowlist-only.
+        tenant_key: Optional[str] = None
+        if header_value:
+            if require_api_key:
+                if allowed_tenants and header_value in allowed_tenants:
+                    tenant_key = header_value
+            else:
+                if is_loopback_request(request):
+                    tenant_key = header_value
+
+        token = set_tenant_key(tenant_key)
+        try:
+            return await call_next(request)
+        finally:
+            reset_tenant_key(token)
+
+    return tenant_middleware
+
+
+def _api_key_auth_middleware_factory(
+    *,
+    api_key: str,
+    require_api_key: bool,
+    insecure_no_auth: bool,
+):
+    """Return the API-key/loopback HTTP middleware for one app instance."""
+
+    async def api_key_auth_middleware(request: Request, call_next):
+        path = request.url.path
+
+        # Always allow health checks without auth.
+        if path in {"/health", "/api/v1/health"}:
+            return await call_next(request)
+
+        # When API key auth is disabled, non-loopback requests to /admin/
+        # get a distinct 403 (vs. the generic 401 below); everything else
+        # follows the shared policy.
+        if not require_api_key and not insecure_no_auth:
+            if not is_loopback_request(request) and path.startswith(
+                "/admin/"
+            ):
+                return JSONResponse(
+                    status_code=403, content={"error": "Forbidden"}
+                )
+
+        allowed, status_code = authenticate_connection(
+            request,
+            api_key=api_key,
+            require_api_key=require_api_key,
+            insecure_no_auth=insecure_no_auth,
+            allow_query_token=not _is_api_claimed_path(request),
+        )
+        if not allowed:
+            return JSONResponse(
+                status_code=status_code, content={"error": "Unauthorized"}
+            )
+        return await call_next(request)
+
+    return api_key_auth_middleware
+
+
+async def docs_visibility_middleware(request: Request, call_next):
+    """Hide API docs outside debug mode and loopback clients.
+
+    ``/docs``, ``/redoc``, and ``/openapi.json`` expand the attack
+    surface in production, so they answer 404 unless debug mode is
+    on or the caller arrived over loopback.
+    """
+    if request.url.path in {"/docs", "/redoc", "/openapi.json"}:
+        debug = os.environ.get("AIRUNNER_DEBUG", "0") == "1"
+        if not debug and not is_loopback_request(request):
+            return JSONResponse(status_code=404, content={"detail": "Not Found"})
+    return await call_next(request)
+
+
 def create_app(
     allowed_origins: Optional[list] = None,
     enable_cors: bool = True,
@@ -338,181 +562,30 @@ def create_app(
 
     # Registered before auth so rejected credentials never consume capacity.
     app.add_middleware(AdmissionMiddleware)
-
-    @app.middleware("http")
-    async def tenant_middleware(request: Request, call_next):
-        """Scope DB operations to the request's tenant/namespace.
-
-        Airunner supports Postgres schema tenancy. We select the schema via a
-        per-request ContextVar set here.
-
-        Accepted headers (first one wins):
-        - X-Tenant-Key
-        - X-Namespace
-        """
-
-        header_value = (
-            (request.headers.get("x-tenant-key") or "").strip()
-            or (request.headers.get("x-namespace") or "").strip()
+    app.middleware("http")(
+        _tenant_middleware_factory(
+            require_api_key=require_api_key,
+            allowed_tenants=allowed_tenants,
         )
-
-        # Only allow tenant selection from headers:
-        # - Without API key auth: loopback requests only.
-        # - With API key auth: allowlist-only.
-        tenant_key: Optional[str] = None
-        if header_value:
-            if require_api_key:
-                if allowed_tenants and header_value in allowed_tenants:
-                    tenant_key = header_value
-            else:
-                if is_loopback_request(request):
-                    tenant_key = header_value
-
-        token = set_tenant_key(tenant_key)
-        try:
-            return await call_next(request)
-        finally:
-            reset_tenant_key(token)
-
-    @app.middleware("http")
-    async def api_key_auth_middleware(request: Request, call_next):
-        path = request.url.path
-
-        # Always allow health checks without auth.
-        if path in {"/health", "/api/v1/health"}:
-            return await call_next(request)
-
-        # When API key auth is disabled, non-loopback requests to /admin/
-        # get a distinct 403 (vs. the generic 401 below); everything else
-        # follows the shared policy.
-        if not require_api_key and not insecure_no_auth:
-            if not is_loopback_request(request) and path.startswith(
-                "/admin/"
-            ):
-                return JSONResponse(
-                    status_code=403, content={"error": "Forbidden"}
-                )
-
-        allowed, status_code = authenticate_connection(
-            request,
+    )
+    app.middleware("http")(
+        _api_key_auth_middleware_factory(
             api_key=api_key,
             require_api_key=require_api_key,
             insecure_no_auth=insecure_no_auth,
-            allow_query_token=not _is_api_claimed_path(request),
         )
-        if not allowed:
-            return JSONResponse(
-                status_code=status_code, content={"error": "Unauthorized"}
-            )
-        return await call_next(request)
-
-    # Configure CORS
-    if allowed_origins is None:
-        allowed_origins = [
-            "http://localhost",
-            "http://localhost:*",
-            "http://127.0.0.1",
-            "http://127.0.0.1:*",
-        ]
-
-    if "*" in allowed_origins:
-        raise ValueError(
-            "Refusing wildcard CORS origin with credentials enabled: "
-            "a '*' origin together with allow_credentials=True would "
-            "expose authenticated responses to any site."
-        )
-
-    # Stashed on app.state so the LLM WebSocket route (a separate ASGI
-    # scope that FastAPI/Starlette HTTP middleware never runs for) can
-    # apply the identical auth/origin policy before accepting a socket.
-    app.state.api_key = api_key
-    app.state.require_api_key = require_api_key
-    app.state.insecure_no_auth = insecure_no_auth
-    app.state.allowed_origins = allowed_origins
-    # Snapshot of the tenant allowlist shared with the WebSocket tenant
-    # scoping in ws_auth, so HTTP and sockets cannot drift apart when
-    # the environment changes after startup.
-    app.state.allowed_tenants = allowed_tenants
-
-    if enable_cors:
-        app.add_middleware(
-            CORSMiddleware,
-            allow_origins=allowed_origins,
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
-        logger.info(f"CORS enabled with origins: {allowed_origins}")
-
-    # Register routers
-    app.include_router(health.router, prefix="/api/v1", tags=["health"])
-    app.include_router(daemon.router, prefix="/api/v1/daemon", tags=["daemon"])
-    app.include_router(llm.router, prefix="/api/v1/llm", tags=["llm"])
-    app.include_router(
-        conversations.router,
-        prefix="/api/v1/llm",
-        tags=["llm", "conversations"],
-    )
-    app.include_router(
-        persistence.router,
-        prefix="/api/v1/state",
-        tags=["state"],
-    )
-    app.include_router(
-        persistence.router,
-        prefix="/api/v1/persistence",
-        tags=["persistence"],
-    )
-    app.include_router(
-        domain_resources.settings_router,
-        prefix="/api/v1/settings",
-        tags=["settings"],
-    )
-    # Bootstrap owns GET /bootstrap; the domain catalog router
-    # owns /resources/* under the same prefix. No path overlap.
-    app.include_router(
-        catalog_bootstrap.router,
-        prefix="/api/v1/catalog",
-        tags=["catalog"],
-    )
-    app.include_router(
-        domain_resources.catalog_router,
-        prefix="/api/v1/catalog",
-        tags=["catalog"],
-    )
-    app.include_router(
-        domain_resources.library_router,
-        prefix="/api/v1/library",
-        tags=["library"],
-    )
-    app.include_router(
-        domain_resources.workspace_router,
-        prefix="/api/v1/workspace",
-        tags=["workspace"],
-    )
-    app.include_router(art.router, prefix="/api/v1/art", tags=["art"])
-    app.include_router(
-        video.router, prefix="/api/v1/video", tags=["video"]
-    )
-    app.include_router(
-        downloads.router,
-        prefix="/api/v1/downloads",
-        tags=["downloads"],
-    )
-    app.include_router(
-        setup.router,
-        prefix="/api/v1",
-        tags=["setup"],
-    )
-    app.include_router(tts.router, prefix="/api/v1/tts", tags=["tts"])
-    app.include_router(tts_ws.router, prefix="/api/v1/tts", tags=["tts"])
-    app.include_router(stt.router, prefix="/api/v1/stt", tags=["stt"])
-    app.include_router(
-        events.router, prefix="/api/v1", tags=["events"]
     )
 
-    # Legacy compatibility endpoints for existing clients.
-    app.include_router(legacy_routes.router, tags=["legacy"])
+    _configure_cors(
+        app,
+        allowed_origins,
+        enable_cors,
+        api_key=api_key,
+        require_api_key=require_api_key,
+        insecure_no_auth=insecure_no_auth,
+        allowed_tenants=allowed_tenants,
+    )
+    _register_routers(app)
 
     @app.get("/")
     async def root():
@@ -524,21 +597,7 @@ def create_app(
     if mount_client_bundle(app):
         logger.info("Serving the desktop chat client bundle from the daemon")
 
-    @app.middleware("http")
-    async def docs_visibility_middleware(request: Request, call_next):
-        """Hide API docs outside debug mode and loopback clients.
-
-        ``/docs``, ``/redoc``, and ``/openapi.json`` expand the attack
-        surface in production, so they answer 404 unless debug mode is
-        on or the caller arrived over loopback.
-        """
-        if request.url.path in {"/docs", "/redoc", "/openapi.json"}:
-            debug = os.environ.get("AIRUNNER_DEBUG", "0") == "1"
-            if not debug and not is_loopback_request(request):
-                return JSONResponse(
-                    status_code=404, content={"detail": "Not Found"}
-                )
-        return await call_next(request)
+    app.middleware("http")(docs_visibility_middleware)
 
     # Global exception handler
     @app.exception_handler(Exception)

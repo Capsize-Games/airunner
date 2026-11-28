@@ -195,5 +195,9 @@ async def cancel_job(job_id: str, req: Request):
             client = resolve_art_client(registry, provider=provider)
         await asyncio.to_thread(client.cancel, job_id)
     except Exception:
-        pass
+        logger.warning(
+            "Runtime cancel for job %s failed; tracker state remains authoritative",
+            job_id,
+            exc_info=True,
+        )
     return {"status": "cancelled", "job_id": job_id}

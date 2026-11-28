@@ -62,15 +62,34 @@ Narrow-est-exception wins everywhere: `except PackageNotFoundError`,
 
 Regression tests: `services/tests/test_error_handling_2485.py`.
 
+## Fixed in the next slice (3 sites)
+
+6. `api/routes/art_model_base.py::query_first` — database failures now
+   propagate instead of returning `None` ("no settings"). Callers that
+   must tolerate a broken settings store (`service_base_path`) catch and
+   warning-log the failure, then use the documented default base path.
+   `generator_settings_record()` callers now surface DB errors (a 500)
+   instead of silently falling back to default version settings.
+7. `api/routes/art_model_base.py::service_base_path` — the existing
+   fallback for unreadable settings now emits a warning log with
+   traceback instead of a bare `pass`.
+8. `api/routes/art_generation_job_routes.py::cancel_job` — a failed
+   best-effort runtime cancel now warning-logs with traceback; the
+   tracker state remains authoritative and the response is unchanged.
+
+Regression tests: the same `test_error_handling_2485.py` (slice-2
+section). The global counts above are from the 2026-11-28 measurement;
+this slice removes three trivial swallows from the burn-down list.
+
 ## Enumerated follow-ups (not fixed here)
 
-Remainder of the 288 trivial swallows, grouped for later slices. All
+Remainder of the 285 trivial swallows, grouped for later slices. All
 verified by reading only — each needs the same verify-before-change
 (read implementation + tests + callers) before fixing:
 
-- `api/routes/*` (~25 trivial sites: `art_model_base`, `art_schedulers`,
+- `api/routes/*` (~22 trivial sites: `art_schedulers`,
   `legacy_llm_compat`, `legacy_llm_helpers`, `legacy_llm_stream_helpers`,
-  `legacy_status_routes`, `stt_helpers`, `vram`, `art_generation_job_routes:197`).
+  `legacy_status_routes`, `stt_helpers`, `vram`).
   Highest value: these lie to API clients. Convert to HTTP error responses.
 - `art/*`, `llm/*`, `workers/*`, `runtimes/*` (majority of the 379).
   Excluded from this slice per the no-GPU/no-network/no-daemon rule;
