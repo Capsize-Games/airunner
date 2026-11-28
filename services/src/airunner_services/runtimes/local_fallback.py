@@ -1364,6 +1364,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         generator_section = _resolve_art_generator_section(metadata)
 
         def on_complete(result: Any) -> None:
+            """Queue one completed art result for this invocation."""
             image_queue.put(result)
 
         if progress_callback is not None:
@@ -1494,6 +1495,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         """Return a progress handler that normalizes SD progress events."""
 
         def on_progress(data: dict[str, Any]) -> None:
+            """Forward one normalized SD progress event."""
             step = int(data.get("step") or 0)
             total = int(data.get("total") or 0)
             progress = 0.0
