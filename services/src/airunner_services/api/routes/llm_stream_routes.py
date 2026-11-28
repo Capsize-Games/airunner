@@ -156,7 +156,7 @@ async def _check_rate_limits(
 
 
 @router.websocket("/stream")
-async def websocket_chat(websocket: WebSocket):
+async def websocket_chat(websocket: WebSocket) -> None:
     """Stream chat responses from the runtime-backed local LLM."""
     if _websocket_auth_error(websocket):
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)

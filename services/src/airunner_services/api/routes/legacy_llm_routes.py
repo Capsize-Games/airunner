@@ -3,8 +3,10 @@
 import logging
 import os
 import uuid
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
 
 from airunner_services.api.models.runtime_route_request import (
     RuntimeRouteRequest,
@@ -24,8 +26,8 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.post("/llm/generate")
-def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
+@router.post("/llm/generate", response_model=None)
+def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request) -> dict[str, Any] | StreamingResponse:
     """Serve the legacy NDJSON LLM streaming endpoint."""
     app = get_airunner_app(req)
     os.environ.setdefault("AIRUNNER_HEADLESS", "1")

@@ -35,7 +35,7 @@ class VRAMEstimateResponse(BaseModel):
 @router.get("/vram-estimate", response_model=VRAMEstimateResponse)
 async def vram_estimate(
     model_path: str = Query(...),
-):
+) -> VRAMEstimateResponse:
     """Estimate VRAM usage for a model at the given path."""
     resolved = _validate_model_path(model_path)
     if resolved is None:

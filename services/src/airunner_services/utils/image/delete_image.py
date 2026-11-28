@@ -24,7 +24,7 @@ def _is_within_base(target: str, base: str) -> bool:
         return False
 
 
-def delete_image(path, base_dir=None) -> bool:
+def delete_image(path: str, base_dir: str | None = None) -> bool:
     """Delete one image file confined to the configured image directory.
 
     Args:

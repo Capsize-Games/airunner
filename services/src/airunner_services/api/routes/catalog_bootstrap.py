@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter
 
 from airunner_services.bootstrap.model_bootstrap_data import (
@@ -47,7 +49,7 @@ router = APIRouter()
 
 
 @router.get("/bootstrap")
-async def catalog_bootstrap():
+async def catalog_bootstrap() -> dict[str, Any]:
     """Return all bootstrap data for GUI clients."""
     return {
         "models": model_bootstrap_data,

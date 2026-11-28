@@ -9,7 +9,7 @@ from airunner_services.utils.application.get_logger import get_logger
 logger = get_logger(__name__)
 
 
-def get_torch_device(card_index: int = 0):
+def get_torch_device(card_index: int = 0) -> torch.device:
     """Return the preferred torch device for one card index."""
     use_cuda = torch.cuda.is_available()
     if not use_cuda:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Iterable, List, Optional
+from typing import Any, AsyncGenerator, Iterable, List, Optional
 
 from fastapi import HTTPException, Request, WebSocket
 
@@ -197,7 +197,7 @@ async def next_stream_delta(iterator: Iterable[StreamDelta]) -> StreamDelta:
     return await asyncio.to_thread(next, iterator)
 
 
-async def stream_runtime(client: RuntimeClient, envelope: RequestEnvelope):
+async def stream_runtime(client: RuntimeClient, envelope: RequestEnvelope) -> AsyncGenerator[StreamDelta, None]:
     """Yield runtime stream deltas from a blocking client iterator."""
     iterator = iter(client.stream(envelope))
     while True:

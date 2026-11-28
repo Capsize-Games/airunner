@@ -172,7 +172,7 @@ def _encode_images_as_base64(images: list[Any]) -> list[str]:
 
 
 @router.post("/art")
-def legacy_art_generate(body: LegacyArtRequest, req: Request):
+def legacy_art_generate(body: LegacyArtRequest, req: Request) -> dict[str, Any]:
     """Serve the legacy synchronous art endpoint."""
     # Content-safety input gate: reject policy-matching prompt text before
     # any signal is emitted, so this legacy entry point cannot bypass the

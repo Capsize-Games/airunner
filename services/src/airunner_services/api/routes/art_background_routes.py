@@ -44,7 +44,7 @@ def background_request_payload(image_b64: str) -> dict:
 async def remove_background(
     request: BackgroundRemovalRequest,
     req: Request,
-):
+) -> Response:
     """Remove the background from one input image through the runtime."""
     response = await invoke_art_control(
         req,

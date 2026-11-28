@@ -29,7 +29,7 @@ router = APIRouter()
     response_model=ChatCompletionResponse,
     response_model_exclude_none=True,
 )
-async def chat_completion(request: ChatCompletionRequest, req: Request):
+async def chat_completion(request: ChatCompletionRequest, req: Request) -> ChatCompletionResponse:
     """Run chat completion against the runtime-backed local LLM."""
     if request.stream:
         raise HTTPException(
@@ -67,7 +67,7 @@ async def chat_completion(request: ChatCompletionRequest, req: Request):
 
 
 @router.post("/completion", response_model=CompletionResponse)
-async def text_completion(request: CompletionRequest, req: Request):
+async def text_completion(request: CompletionRequest, req: Request) -> CompletionResponse:
     """Run text completion against the runtime-backed local LLM."""
     client = resolve_llm_client(require_runtime_registry(req))
     text, finish_reason, _tool_calls, _usage = await invoke_llm_runtime(

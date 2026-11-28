@@ -7,7 +7,7 @@ import torch
 from airunner_services.utils.memory.clear_memory import clear_memory as _clear
 
 
-def clear_memory(device=0) -> None:
+def clear_memory(device: int | str = 0) -> None:
     """Clear cached device memory using the shared service helper."""
     _clear(device=device)
 

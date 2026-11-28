@@ -66,7 +66,7 @@ MODEL_BY_NAME = {
 }
 
 
-def model_class(domain: str, model_name: str):
+def model_class(domain: str, model_name: str) -> type:
     """Return one registered service model class for a state domain."""
     if model_name not in DOMAIN_MODELS.get(domain, set()):
         raise HTTPException(status_code=404, detail="Model not found")

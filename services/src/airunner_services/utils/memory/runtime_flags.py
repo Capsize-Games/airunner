@@ -1,12 +1,14 @@
 """Service-owned torch runtime flag helpers."""
 
+from typing import Any
+
 try:
     import torch
 except ImportError:
     torch = None
 
 
-def apply_cudnn_benchmark(memory_settings) -> None:
+def apply_cudnn_benchmark(memory_settings: Any) -> None:
     """Apply the persisted cuDNN benchmark preference when possible."""
     if torch is None or not hasattr(torch, "backends"):
         return

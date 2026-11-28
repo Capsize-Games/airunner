@@ -37,7 +37,7 @@ def _resolve_cuda_device(device: Any) -> int | None:
     return 0
 
 
-def clear_memory(device=0) -> None:
+def clear_memory(device: Any = 0) -> None:
     """Clear one CUDA cache when applicable and collect garbage."""
     cuda_device = _resolve_cuda_device(device)
     if (

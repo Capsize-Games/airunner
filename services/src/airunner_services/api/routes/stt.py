@@ -43,7 +43,7 @@ router = APIRouter()
 @router.post("/transcribe", response_model=TranscriptionResponse)
 async def transcribe_audio(
     audio: UploadFile = File(...), req: Request = None
-):
+) -> TranscriptionResponse:
     """
     Transcribe audio file.
 
@@ -112,7 +112,7 @@ async def transcribe_audio(
 
 
 @router.get("/models", response_model=List[ModelInfo])
-async def list_models(req: Request):
+async def list_models(req: Request) -> list[ModelInfo]:
     """
     List available STT models.
 
