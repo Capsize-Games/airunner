@@ -7,6 +7,7 @@ from airunner_common.settings import AIRUNNER_DISABLE_FLASH_ATTENTION
 
 
 def is_ampere_or_newer(device: int) -> bool:
+    """Return whether one CUDA device is Ampere or newer."""
     if AIRUNNER_DISABLE_FLASH_ATTENTION:
         return False
     if torch is None:  # pragma: no cover - optional dependency
