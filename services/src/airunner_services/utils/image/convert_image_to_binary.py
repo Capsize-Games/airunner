@@ -27,6 +27,10 @@ def _release_buffer(buf: io.BytesIO):
 
 
 def convert_image_to_binary(image: Image.Image) -> Optional[bytes]:
+    """Convert one PIL image to PNG bytes.
+
+    Return ``None`` on conversion failure; raise ``ValueError`` for None.
+    """
     if image is None:
         raise ValueError("Image is None")
     if not isinstance(image, Image.Image):
