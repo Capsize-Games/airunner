@@ -42,13 +42,14 @@ ALLOWLIST: dict[str, str] = {
     "airunner_services.daemon_client.conversation_client": (
         "#2480: audited dead code, remove the module or reference it."
     ),
-    # Really imported, but only dynamically:
-    # services/tests/test_no_airunner_import_cycle.py loads it in an
-    # isolated subprocess (importlib.import_module, #2186 regression).
-    # No production importers remain.
-    "airunner_services.daemon_client.resource_store": (
-        "#2480: test-loaded (#2186 isolation test) with no production "
-        "importers; remove the module or reference it."
+    # Confined math worker, spawned as ``sys.executable <this file>`` by
+    # file path, never imported: math_executor._worker_path joins
+    # ``math_worker.py`` next to the executor so the child stays
+    # stdlib-only and never imports the service package. Exercised by
+    # services/tests/test_math_executor_confinement.py.
+    "airunner_services.llm.core.math_worker": (
+        "#2480/#2491: live via subprocess file-path spawn, not via import; "
+        "entry stays while the executor spawns it by path."
     ),
     # Spawned as ``sys.executable <this file>`` by file path, never
     # imported: services/src/airunner_services/llm/core/tool_worker_runner.py:109
