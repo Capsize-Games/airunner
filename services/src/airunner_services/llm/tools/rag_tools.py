@@ -106,30 +106,38 @@ def rag_search(
             logger.info(msg)
             return msg
 
-        context_parts = []
-        for i, doc in enumerate(results, 1):
-            source = doc.metadata.get("source", "unknown")
-            content = (
-                doc.page_content[:500]
-                if len(doc.page_content) > 500
-                else doc.page_content
-            )
-            context_parts.append(f"[Source {i}: {source}]\n{content}")
-            logger.debug(
-                f"Result {i} from source: {source}, "
-                f"length: {len(doc.page_content)}"
-            )
-
-        result_text = "\n\n".join(context_parts)
-        logger.info(
-            f"Returning {len(context_parts)} document excerpts, "
-            f"total length: {len(result_text)}"
-        )
-        return result_text
+        return _format_rag_context(results)
     except Exception as e:
         error_msg = f"Error searching documents: {str(e)}"
         logger.error(error_msg, exc_info=True)
         return error_msg
+
+
+_EXCERPT_LIMIT = 500
+
+
+def _format_rag_context(results) -> str:
+    """Format search results into sourced excerpts for the model."""
+    context_parts = []
+    for i, doc in enumerate(results, 1):
+        source = doc.metadata.get("source", "unknown")
+        content = (
+            doc.page_content[:_EXCERPT_LIMIT]
+            if len(doc.page_content) > _EXCERPT_LIMIT
+            else doc.page_content
+        )
+        context_parts.append(f"[Source {i}: {source}]\n{content}")
+        logger.debug(
+            f"Result {i} from source: {source}, "
+            f"length: {len(doc.page_content)}"
+        )
+
+    result_text = "\n\n".join(context_parts)
+    logger.info(
+        f"Returning {len(context_parts)} document excerpts, "
+        f"total length: {len(result_text)}"
+    )
+    return result_text
 
 
 @tool(
