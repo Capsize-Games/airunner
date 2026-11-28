@@ -48,6 +48,24 @@ def parse_thinking_response(
 			(BRACKET_THINK_PATTERN, "brackets"),
 		]
 
+	closed = _closed_pattern_match(response, patterns)
+	if closed is not None:
+		return closed
+
+	incomplete = _incomplete_close_pattern(response, tag_format)
+	if incomplete is not None:
+		return incomplete
+
+	return ThinkingResponse(
+		thinking_content=None,
+		content=response.strip(),
+		raw_response=response,
+		tag_format=None,
+	)
+
+
+def _closed_pattern_match(response: str, patterns) -> ThinkingResponse | None:
+	"""Return the response with an early match on a closed think block."""
 	for pattern, fmt in patterns:
 		match = re.search(pattern, response, re.DOTALL | re.IGNORECASE)
 		if match:
@@ -59,7 +77,13 @@ def parse_thinking_response(
 				raw_response=response,
 				tag_format=fmt,
 			)
+	return None
 
+
+def _incomplete_close_pattern(
+	response: str, tag_format: str
+) -> ThinkingResponse | None:
+	"""Return an unclosed-think response, or None when no open tag trails."""
 	incomplete_patterns = [
 		("<think>", "</think>", "angle"),
 		("[THINK]", "[/THINK]", "brackets"),
@@ -90,13 +114,7 @@ def parse_thinking_response(
 				raw_response=response,
 				tag_format=fmt,
 			)
-
-	return ThinkingResponse(
-		thinking_content=None,
-		content=response.strip(),
-		raw_response=response,
-		tag_format=None,
-	)
+	return None
 
 
 def parse_thinking_from_tokens(output_ids: list, tokenizer: Any) -> Tuple[str, str]:
