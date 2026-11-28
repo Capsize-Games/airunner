@@ -155,31 +155,9 @@ class SystemTools(BaseTool):
                 Confirmation or error message
             """
             try:
-                # Parse data JSON
-                try:
-                    data_dict = json.loads(data)
-                except json.JSONDecodeError:
-                    return f"Error: data must be valid JSON. Got: {data}"
-
-                if signal_name == "QUIT_APPLICATION" and (
-                    not isinstance(data_dict, dict)
-                    or data_dict.get("confirm") is not True
-                ):
-                    return (
-                        "Refused: QUIT_APPLICATION requires explicit "
-                        'confirmation (data={"confirm": true}).'
-                    )
-
-                if not signal_name:
-                    available = [
-                        "SD_GENERATE_IMAGE_SIGNAL",
-                        "CANVAS_CLEAR",
-                        "TOGGLE_TTS_SIGNAL",
-                        "TOGGLE_FULLSCREEN_SIGNAL",
-                        "LLM_CLEAR_HISTORY_SIGNAL",
-                        "QUIT_APPLICATION",
-                    ]
-                    return f"Unknown signal '{signal_name}'. Available signals: {', '.join(available)}"
+                error, data_dict = self._validate_emit_signal(signal_name, data)
+                if error is not None:
+                    return error
 
                 if not self.dispatch_tool_action(
                     "emit_signal",
@@ -193,3 +171,29 @@ class SystemTools(BaseTool):
                 return f"Error emitting signal: {str(e)}"
 
         return emit_signal
+
+    def _validate_emit_signal(self, signal_name: str, data: str) -> tuple:
+        """Parse and validate emit-signal arguments before dispatch."""
+        try:
+            data_dict = json.loads(data)
+        except json.JSONDecodeError:
+            return f"Error: data must be valid JSON. Got: {data}", None
+        if signal_name == "QUIT_APPLICATION" and (
+            not isinstance(data_dict, dict)
+            or data_dict.get("confirm") is not True
+        ):
+            return (
+                "Refused: QUIT_APPLICATION requires explicit "
+                'confirmation (data={"confirm": true}).'
+            ), None
+        if not signal_name:
+            available = [
+                "SD_GENERATE_IMAGE_SIGNAL",
+                "CANVAS_CLEAR",
+                "TOGGLE_TTS_SIGNAL",
+                "TOGGLE_FULLSCREEN_SIGNAL",
+                "LLM_CLEAR_HISTORY_SIGNAL",
+                "QUIT_APPLICATION",
+            ]
+            return f"Unknown signal '{signal_name}'. Available signals: {', '.join(available)}", None
+        return None, data_dict
