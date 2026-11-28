@@ -99,6 +99,32 @@ def test_tags_lists_configured_local_artifact_without_loading(
     assert processes == []
 
 
+def test_tags_empty_for_stale_configured_artifact_reference(
+    monkeypatch, tmp_path
+) -> None:
+    """A configured path whose artifact is gone lists no guessed metadata."""
+    from airunner_services.database.models.llm_generator_settings import (
+        LLMGeneratorSettings,
+    )
+
+    missing = tmp_path / "Qwen3.5-9B-Q8_0.gguf"
+    missing.write_bytes(b"stale reference fixture")
+    missing.unlink()
+    monkeypatch.setattr(
+        LLMGeneratorSettings,
+        "_objects",
+        SimpleNamespace(
+            first=lambda: SimpleNamespace(
+                model_path=str(missing), model_id="qwen3.5-9b"
+            )
+        ),
+    )
+    client = _client()
+
+    assert client.get("/api/tags").json() == {"models": []}
+    assert client.get("/api/ps").json() == {"models": []}
+
+
 def test_ollama_metadata_uses_loaded_manager_artifact_facts(
     monkeypatch, tmp_path
 ) -> None:
