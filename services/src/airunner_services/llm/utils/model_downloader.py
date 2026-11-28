@@ -321,33 +321,9 @@ class HuggingFaceDownloader:
             model_type, self.REQUIRED_FILES["llm"]
         )
 
-        files_to_download = []
-        for file_info in files:
-            filename = file_info.get("path", "")
-
-            # Skip directories
-            if file_info.get("type") == "directory":
-                continue
-
-            # Always download required files
-            if filename in required_files:
-                files_to_download.append(filename)
-                continue
-
-            # Apply include/exclude patterns
-            if include_patterns:
-                if not any(
-                    self._match_pattern(filename, p) for p in include_patterns
-                ):
-                    continue
-
-            if exclude_patterns:
-                if any(
-                    self._match_pattern(filename, p) for p in exclude_patterns
-                ):
-                    continue
-
-            files_to_download.append(filename)
+        files_to_download = self._select_model_files(
+            files, required_files, include_patterns, exclude_patterns
+        )
 
         # Download files
         logger.info(
@@ -371,6 +347,29 @@ class HuggingFaceDownloader:
 
         logger.info("Model downloaded to: %s", local_dir)
         return local_dir
+
+    def _select_model_files(self, files, required_files, include_patterns, exclude_patterns) -> List[str]:
+        """Filter one file listing to the files to download."""
+        files_to_download = []
+        for file_info in files:
+            filename = file_info.get("path", "")
+            if file_info.get("type") == "directory":
+                continue
+            if filename in required_files:
+                files_to_download.append(filename)
+                continue
+            if include_patterns:
+                if not any(
+                    self._match_pattern(filename, p) for p in include_patterns
+                ):
+                    continue
+            if exclude_patterns:
+                if any(
+                    self._match_pattern(filename, p) for p in exclude_patterns
+                ):
+                    continue
+            files_to_download.append(filename)
+        return files_to_download
 
     def download_gguf_model(
         self,
