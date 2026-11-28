@@ -91,6 +91,7 @@ class PathSettings(BaseModel):
 
 	@rag_index_path.setter
 	def rag_index_path(self, value: str) -> None:
+		"""Store one value under the legacy llama index path name."""
 		self.llama_index_path = value
 
 	def __getattribute__(self, name: str):
