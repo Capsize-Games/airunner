@@ -51,6 +51,7 @@ class DocumentVectorIndex:
         embedding_model: Any,
         text_splitter: Any,
     ) -> "DocumentVectorIndex":
+        """Build one index by splitting, embedding, and storing documents."""
         chunks = _chunk_documents(documents, text_splitter)
         embeddings = _embed_documents(chunks, embedding_model)
         identity = _identity_record(embedding_model)
@@ -58,6 +59,7 @@ class DocumentVectorIndex:
 
     @classmethod
     def load(cls, persist_dir: str) -> "DocumentVectorIndex":
+        """Load one persisted index and validate any identity record."""
         payload = _load_payload(persist_dir)
         documents = [_payload_to_document(item) for item in payload]
         embeddings = np.load(_embeddings_path(persist_dir), allow_pickle=False)
@@ -82,6 +84,7 @@ class DocumentVectorIndex:
         embedding_model: Any,
         text_splitter: Any,
     ) -> None:
+        """Append split documents to this index under one identity."""
         chunks = _chunk_documents(documents, text_splitter)
         if not chunks:
             return
@@ -107,6 +110,7 @@ class DocumentVectorIndex:
         doc_ids: Optional[Sequence[str]] = None,
         expected_identity: Optional[dict[str, Any]] = None,
     ) -> list[ScoredDocument]:
+        """Embed one query and return the top matching documents."""
         actual_identity = _identity_record(embedding_model)
         if expected_identity is not None and expected_identity != actual_identity:
             raise EmbeddingIdentityMismatchError(
@@ -126,6 +130,7 @@ class DocumentVectorIndex:
         doc_ids: Optional[Sequence[str]] = None,
         expected_identity: Optional[dict[str, Any]] = None,
     ) -> list[ScoredDocument]:
+        """Rank matching documents for one precomputed query vector."""
         _require_compatible_identity(self.embedding_identity, expected_identity)
         if not self.documents or self.embeddings.size == 0:
             return []
