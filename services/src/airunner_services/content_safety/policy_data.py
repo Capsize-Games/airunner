@@ -381,7 +381,7 @@ def load_policy_hashes(
         _warned_empty = True
         logger.warning(
             "Content safety policy data unavailable or empty; 0 hashes "
-            "loaded; checks pass until a policy set is generated"
+            "loaded; the matcher denies in enforce mode until a policy set is generated"
         )
     return _cache
 
