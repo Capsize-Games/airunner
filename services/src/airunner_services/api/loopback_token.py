@@ -85,6 +85,41 @@ def load_loopback_token() -> str | None:
     return token
 
 
+def _write_loopback_token(path) -> str:
+    """Write one new loopback token file and return the token."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    token = secrets.token_urlsafe(32)
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(
+        path,
+        os.O_WRONLY | os.O_CREAT | os.O_TRUNC | nofollow,
+        _LOOPBACK_TOKEN_MODE,
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(token + "\n")
+    except Exception:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        raise
+    try:
+        os.chmod(path, _LOOPBACK_TOKEN_MODE)
+    except OSError:
+        logger.warning(
+            "Unable to chmod loopback token file %s to 0600; "
+            "discarding it and using a process-local token.",
+            path,
+        )
+        try:
+            path.unlink()
+        except OSError:
+            pass
+        raise
+    return token
+
+
 def get_or_create_loopback_token() -> str:
     """Return the per-user loopback token, creating it on first run."""
     global _cached_token, _cache_loaded  # noqa: PLW0603
@@ -103,36 +138,7 @@ def get_or_create_loopback_token() -> str:
             path.unlink()
         token = load_loopback_token()
         if not token:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            token = secrets.token_urlsafe(32)
-            nofollow = getattr(os, "O_NOFOLLOW", 0)
-            fd = os.open(
-                path,
-                os.O_WRONLY | os.O_CREAT | os.O_TRUNC | nofollow,
-                _LOOPBACK_TOKEN_MODE,
-            )
-            try:
-                with os.fdopen(fd, "w", encoding="utf-8") as handle:
-                    handle.write(token + "\n")
-            except Exception:
-                try:
-                    os.close(fd)
-                except OSError:
-                    pass
-                raise
-            try:
-                os.chmod(path, _LOOPBACK_TOKEN_MODE)
-            except OSError:
-                logger.warning(
-                    "Unable to chmod loopback token file %s to 0600; "
-                    "discarding it and using a process-local token.",
-                    path,
-                )
-                try:
-                    path.unlink()
-                except OSError:
-                    pass
-                raise
+            token = _write_loopback_token(path)
         _cached_token = token
         _cache_loaded = True
         return token
