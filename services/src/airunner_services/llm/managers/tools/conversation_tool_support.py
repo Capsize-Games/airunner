@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Optional
 
+from sqlalchemy.orm import Session
+
 from airunner_services.database.models.conversation import Conversation
 from airunner_services.tools.base_tool import BaseTool
 
@@ -23,10 +25,10 @@ def conversation_message_count(conversation: Conversation) -> int:
 
 
 def get_recent_conversations(
-    session,
+    session: Session,
     limit: int,
     days_back: Optional[int],
-):
+) -> list[Conversation]:
     """Return recent conversations ordered newest-first."""
     query = session.query(Conversation).order_by(Conversation.id.desc())
     if days_back:
@@ -35,18 +37,18 @@ def get_recent_conversations(
     return query.limit(limit).all()
 
 
-def get_conversation(session, conversation_id: int) -> Optional[Conversation]:
+def get_conversation(session: Session, conversation_id: int) -> Optional[Conversation]:
     """Return one conversation by database id."""
     return session.query(Conversation).filter_by(id=conversation_id).first()
 
 
-def get_current_conversation(session) -> Optional[Conversation]:
+def get_current_conversation(session: Session) -> Optional[Conversation]:
     """Return the current active conversation when present."""
     return session.query(Conversation).filter_by(current=True).first()
 
 
 def get_target_conversation(
-    session,
+    session: Session,
     conversation_id: Optional[int],
 ) -> Optional[Conversation]:
     """Return the requested conversation or the current one."""
@@ -66,7 +68,7 @@ def conversation_list_line(conversation: Conversation) -> str:
     )
 
 
-def conversation_list_text(conversations) -> str:
+def conversation_list_text(conversations: list[Conversation]) -> str:
     """Format a recent-conversation query response."""
     if not conversations:
         return "No conversations found."
@@ -146,11 +148,11 @@ def conversation_search_score(
 
 
 def conversation_search_matches(
-    conversations,
+    conversations: list[Conversation],
     query: str,
     limit: int,
     search_messages: bool,
-):
+) -> list[tuple[int, Conversation]]:
     """Return sorted search matches for one conversation query."""
     query_lower = query.lower()
     matches = []
@@ -177,7 +179,9 @@ def conversation_search_line(score: int, conversation: Conversation) -> str:
     )
 
 
-def conversation_search_text(matches, query: str) -> str:
+def conversation_search_text(
+    matches: list[tuple[int, Conversation]], query: str
+) -> str:
     """Format the final search response for conversation matches."""
     if not matches:
         return f"No conversations found matching '{query}'"
