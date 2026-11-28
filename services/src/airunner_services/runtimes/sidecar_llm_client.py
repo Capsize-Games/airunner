@@ -161,6 +161,11 @@ class SidecarLLMClient(RuntimeClient):
 		self._uses_default_http_opener = http_opener is None
 		self._http_opener = urlopen if http_opener is None else http_opener
 		self._timeout_seconds = timeout_seconds
+		self._init_request_tracking()
+		self._init_runtime_descriptor(provider, resolved_settings)
+
+	def _init_request_tracking(self) -> None:
+		"""Initialize request-tracking state."""
 		self._active_requests: dict[str, _ActiveRequest] = {}
 		self._active_requests_lock = threading.RLock()
 		self._active_requests_condition = threading.Condition(
@@ -172,6 +177,9 @@ class SidecarLLMClient(RuntimeClient):
 		self._bound_backend_identity: Optional[tuple[Any, ...]] = None
 		self._bound_model_file_identity: Optional[tuple[Any, ...]] = None
 		self._bound_model_token: Optional[str] = None
+
+	def _init_runtime_descriptor(self, provider, resolved_settings) -> None:
+		"""Build this client's runtime descriptor."""
 		self.descriptor = RuntimeDescriptor(
 			runtime=RuntimeKind.LLM,
 			provider=provider,
