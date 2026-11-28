@@ -574,20 +574,19 @@
       ]
     },
     {
-      "filename": "dateparser-1.1.8-py2.py3-none-any.whl",
+      "filename": "dateparser-1.4.3-py3-none-any.whl",
       "name": "dateparser",
-      "sha256": "070b29b5bbf4b1ec2cd51c96ea040dc68a614de703910a91ad1abba18f9f379f",
-      "size_bytes": 293797,
+      "sha256": "cbce86c64e0cea5c54c84c015d34c903d46c51bfad50632bf2f05a6141d10c05",
+      "size_bytes": 322384,
       "source": {
-        "filename": "dateparser-1.1.8-py2.py3-none-any.whl",
+        "filename": "dateparser-1.4.3-py3-none-any.whl",
         "kind": "https",
-        "sha256": "070b29b5bbf4b1ec2cd51c96ea040dc68a614de703910a91ad1abba18f9f379f",
-        "size_bytes": 293797,
-        "url": "https://files.pythonhosted.org/packages/7a/bf/457ed5be028fb235f8f5ad40b5ddbf67023e0017090ea324d0fe6239a73c/dateparser-1.1.8-py2.py3-none-any.whl"
+        "sha256": "cbce86c64e0cea5c54c84c015d34c903d46c51bfad50632bf2f05a6141d10c05",
+        "size_bytes": 322384,
+        "url": "https://files.pythonhosted.org/packages/30/5f/63f927b5ffd1cc2c030fc2bd362bf920890e8806cf42f701198de5b3f9c7/dateparser-1.4.3-py3-none-any.whl"
       },
-      "version": "1.1.8",
+      "version": "1.4.3",
       "wheel_tags": [
-        "py2-none-any",
         "py3-none-any"
       ]
     },
@@ -730,18 +729,18 @@
       ]
     },
     {
-      "filename": "ebooklib-0.19-py3-none-any.whl",
+      "filename": "ebooklib-0.20-py3-none-any.whl",
       "name": "ebooklib",
-      "sha256": "a790e280e1d5ef105e350e34cc88b83c9c987fa6bab8a63a7543410c313cfa31",
-      "size_bytes": 39214,
+      "sha256": "fff5322517a37e31c972d27be7d982cc3928c16b3dcc5fd7e8f7c0f5d7bcf42b",
+      "size_bytes": 40995,
       "source": {
-        "filename": "ebooklib-0.19-py3-none-any.whl",
+        "filename": "ebooklib-0.20-py3-none-any.whl",
         "kind": "https",
-        "sha256": "a790e280e1d5ef105e350e34cc88b83c9c987fa6bab8a63a7543410c313cfa31",
-        "size_bytes": 39214,
-        "url": "https://files.pythonhosted.org/packages/66/59/e63fd0b3410d2ab7a8971b070f40390f1fbeb3c7a85849718c8480313cbf/ebooklib-0.19-py3-none-any.whl"
+        "sha256": "fff5322517a37e31c972d27be7d982cc3928c16b3dcc5fd7e8f7c0f5d7bcf42b",
+        "size_bytes": 40995,
+        "url": "https://files.pythonhosted.org/packages/bf/ee/aa015c5de8b0dc42a8e507eae8c2de5d1c0e068c896858fec6d502402ed6/ebooklib-0.20-py3-none-any.whl"
       },
-      "version": "0.19",
+      "version": "0.20",
       "wheel_tags": [
         "py3-none-any"
       ]
@@ -1980,18 +1979,18 @@
       ]
     },
     {
-      "filename": "narwhals-2.26.0-py3-none-any.whl",
+      "filename": "narwhals-2.28.0-py3-none-any.whl",
       "name": "narwhals",
-      "sha256": "29326d74f107c347fd1009bd58e38d9f7c7c5b51e6de97bc93dbc325d9038b54",
-      "size_bytes": 474034,
+      "sha256": "1f69d6385ec30e2fa6e1fdeb37c562ecabd0f713f6f3e3b58a668c5c9df9567f",
+      "size_bytes": 490591,
       "source": {
-        "filename": "narwhals-2.26.0-py3-none-any.whl",
+        "filename": "narwhals-2.28.0-py3-none-any.whl",
         "kind": "https",
-        "sha256": "29326d74f107c347fd1009bd58e38d9f7c7c5b51e6de97bc93dbc325d9038b54",
-        "size_bytes": 474034,
-        "url": "https://files.pythonhosted.org/packages/40/b5/1b84b2c784db76d69442334bc8b8748c840f13ca53be086f4f250ad4a0bc/narwhals-2.26.0-py3-none-any.whl"
+        "sha256": "1f69d6385ec30e2fa6e1fdeb37c562ecabd0f713f6f3e3b58a668c5c9df9567f",
+        "size_bytes": 490591,
+        "url": "https://files.pythonhosted.org/packages/cf/82/8ef9c7e0f50493307a49c09cfa7f00c5a778b6d1921f7b2dabe1d3a5809e/narwhals-2.28.0-py3-none-any.whl"
       },
-      "version": "2.26.0",
+      "version": "2.28.0",
       "wheel_tags": [
         "py3-none-any"
       ]
@@ -4287,7 +4286,7 @@
   ],
   "schema_version": 1,
   "selected_count": 244,
-  "selected_lock_sha256": "5768e81e067fcba9e74671fb613a39548ffa847a2c5be49f19e0dd55bfaafa5c",
+  "selected_lock_sha256": "472ac13953d9114b777bbff6a3ea24f4b10ecd2fbf32c54412cf11d732383da1",
   "status": "candidate-only; not activated",
   "target": {
     "architecture": "x86_64",
