@@ -226,10 +226,23 @@ class WhisperCppRuntimeSettings:
         return path
 
 
-def resolve_whisper_cpp_runtime_settings(
-    path_settings: Any = None,
-) -> WhisperCppRuntimeSettings:
-    """Resolve whisper.cpp settings from environment and optional state."""
+def _clamped_env_int(name, env_key, env_default, minimum, maximum) -> int:
+    """Read one integer env var and clamp it to the allowed range."""
+    return _clamp_int(
+        name,
+        _env_int(env_key, env_default),
+        minimum=minimum,
+        maximum=maximum,
+        default=env_default,
+    )
+
+
+def _resolve_whisper_model(path_settings) -> tuple:
+    """Resolve model path, model id, and default thread count.
+
+    Returns:
+        The model path, model id, and default thread count.
+    """
     resolved_path_settings = (
         path_settings if path_settings is not None else _load_path_settings()
     )
@@ -242,6 +255,16 @@ def resolve_whisper_cpp_runtime_settings(
     model_id = Path(model_path).name if model_path else None
     cpu_count = os.cpu_count() or 4
     default_threads = max(1, min(cpu_count, 8))
+    return model_path, model_id, default_threads
+
+
+def resolve_whisper_cpp_runtime_settings(
+    path_settings: Any = None,
+) -> WhisperCppRuntimeSettings:
+    """Resolve whisper.cpp settings from environment and optional state."""
+    model_path, model_id, default_threads = _resolve_whisper_model(
+        path_settings
+    )
 
     return WhisperCppRuntimeSettings(
         executable=resolve_runtime_executable(
@@ -252,28 +275,20 @@ def resolve_whisper_cpp_runtime_settings(
             "AIRUNNER_WHISPER_HOST",
             "AIRUNNER_RUNTIME_BIND_HOST",
         ),
-        port=_clamp_int(
-            "port",
-            _env_int("AIRUNNER_WHISPER_PORT", DEFAULT_PORT),
-            minimum=MIN_PORT,
-            maximum=MAX_PORT,
-            default=DEFAULT_PORT,
+        port=_clamped_env_int(
+            "port", "AIRUNNER_WHISPER_PORT", DEFAULT_PORT, MIN_PORT, MAX_PORT
         ),
         model_path=model_path,
         model_id=model_id,
-        n_threads=_clamp_int(
+        n_threads=_clamped_env_int(
             "n_threads",
-            _env_int("AIRUNNER_WHISPER_THREADS", default_threads),
-            minimum=MIN_THREADS,
-            maximum=None,
-            default=default_threads,
+            "AIRUNNER_WHISPER_THREADS",
+            default_threads,
+            MIN_THREADS,
+            None,
         ),
-        n_processors=_clamp_int(
-            "n_processors",
-            _env_int("AIRUNNER_WHISPER_PROCESSORS", 1),
-            minimum=MIN_PROCESSORS,
-            maximum=None,
-            default=1,
+        n_processors=_clamped_env_int(
+            "n_processors", "AIRUNNER_WHISPER_PROCESSORS", 1, MIN_PROCESSORS, None
         ),
         language=_normalize_language(
             os.environ.get("AIRUNNER_WHISPER_LANGUAGE", DEFAULT_LANGUAGE)
