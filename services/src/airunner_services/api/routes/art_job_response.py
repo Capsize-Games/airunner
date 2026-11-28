@@ -4,7 +4,7 @@ import asyncio
 import base64
 import io
 import logging
-from typing import List
+from typing import Any, Callable, List
 
 from PIL import Image
 
@@ -32,8 +32,8 @@ OUTPUT_WITHHELD_MESSAGE = "Art generation failed"
 async def invoke_art_request(
     client: RuntimeClient,
     envelope: RequestEnvelope,
-    on_progress,
-):
+    on_progress: Callable[[dict], None],
+) -> Any:
     """Invoke one art request, using progress callbacks when available."""
     invoke_with_progress = getattr(client, "invoke_with_progress", None)
     if callable(invoke_with_progress):

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import HTTPException
+from sqlalchemy.orm import Query
 
 from airunner_services.database.session import session_scope
 
@@ -18,7 +19,7 @@ _DEFAULT_QUERY_LIMIT = 100
 _MAX_QUERY_LIMIT = 1000
 
 
-def query_options(query, model_cls: type[Any], body: QueryRequest):
+def query_options(query: Query, model_cls: type[Any], body: QueryRequest) -> Query:
     """Apply shared query options for one domain resource request."""
     query = apply_eager_load(query, model_cls, body.eager_load)
     if body.filters:

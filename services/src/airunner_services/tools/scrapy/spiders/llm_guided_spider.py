@@ -9,6 +9,7 @@ on which links are worth following.
 
 import scrapy
 from typing import Callable, Optional, Set, Dict, List
+from twisted.python.failure import Failure
 
 from airunner_services.tools.web_content_extractor import WebContentExtractor
 from airunner_services.llm.tools.research_validation_tools_helpers import (
@@ -85,7 +86,7 @@ class LLMGuidedSpider(scrapy.Spider):
             f"max_pages={max_pages}, max_depth={max_depth}"
         )
 
-    def parse(self, response):
+    def parse(self, response: scrapy.http.Response) -> None:
         """
         Parse a web page: extract content, get LLM decision, follow links.
 
@@ -226,11 +227,11 @@ class LLMGuidedSpider(scrapy.Spider):
             )
             return None
 
-    def errback_httpbin(self, failure):
+    def errback_httpbin(self, failure: Failure) -> None:
         """Handle request failures."""
         logger.error(f"Request failed: {repr(failure)}")
 
-    def closed(self, reason):
+    def closed(self, reason: str) -> None:
         """Called when spider closes."""
         logger.info(
             f"Spider closed: {reason}. "
