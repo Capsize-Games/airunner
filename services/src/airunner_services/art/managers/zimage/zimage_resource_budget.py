@@ -253,35 +253,16 @@ def estimate_quantized_component(
             raise ValueError(f"Invalid or missing safetensors shard: {shard_name}")
         shard_size = shard.stat().st_size
         largest_shard = max(largest_shard, shard_size)
-        tensors = _read_validated_safetensors_header(shard)
-        expected_names = {
-            name
-            for name, mapped_shard in weight_map.items()
-            if mapped_shard == shard_name
-        }
-        if {name for name, _, _, _ in tensors} != expected_names:
-            raise ValueError(f"Safetensors index/header mismatch: {shard}")
-        for name, dtype, shape, tensor_bytes in tensors:
-            source_bytes += tensor_bytes
-            tensor_count += 1
-            lower_name = name.lower()
-            quantizable = (
-                name.endswith(".weight")
-                and len(shape) == 2
-                and not any(
-                    token in lower_name
-                    for token in ("embed", "lm_head", "norm", "shared")
-                )
-            )
-            if quantizable and quantization_factor is not None:
-                estimated_bytes += math.ceil(
-                    math.prod(shape) * quantization_factor
-                )
-            else:
-                target_bytes = _DTYPE_BYTES[dtype]
-                if dtype.startswith(("F", "BF")) and target_dtype_bytes:
-                    target_bytes = target_dtype_bytes
-                estimated_bytes += math.prod(shape) * target_bytes
+        shard_source, shard_estimated, shard_count = _estimate_shard_tensors(
+            shard,
+            shard_name,
+            weight_map,
+            quantization_factor,
+            target_dtype_bytes,
+        )
+        source_bytes += shard_source
+        estimated_bytes += shard_estimated
+        tensor_count += shard_count
 
     return ComponentMemoryEstimate(
         estimated_resident_bytes=estimated_bytes,
@@ -289,6 +270,53 @@ def estimate_quantized_component(
         largest_shard_bytes=largest_shard,
         tensor_count=tensor_count,
     )
+
+
+def _estimate_shard_tensors(
+    shard: Path,
+    shard_name: str,
+    weight_map: dict,
+    quantization_factor,
+    target_dtype_bytes,
+) -> tuple[int, int, int]:
+    """Estimate source and resident bytes for one shard's tensors.
+
+    Returns:
+        The source bytes, estimated resident bytes, and tensor count.
+    """
+    tensors = _read_validated_safetensors_header(shard)
+    expected_names = {
+        name
+        for name, mapped_shard in weight_map.items()
+        if mapped_shard == shard_name
+    }
+    if {name for name, _, _, _ in tensors} != expected_names:
+        raise ValueError(f"Safetensors index/header mismatch: {shard}")
+    source_bytes = 0
+    estimated_bytes = 0
+    tensor_count = 0
+    for name, dtype, shape, tensor_bytes in tensors:
+        source_bytes += tensor_bytes
+        tensor_count += 1
+        lower_name = name.lower()
+        quantizable = (
+            name.endswith(".weight")
+            and len(shape) == 2
+            and not any(
+                token in lower_name
+                for token in ("embed", "lm_head", "norm", "shared")
+            )
+        )
+        if quantizable and quantization_factor is not None:
+            estimated_bytes += math.ceil(
+                math.prod(shape) * quantization_factor
+            )
+        else:
+            target_bytes = _DTYPE_BYTES[dtype]
+            if dtype.startswith(("F", "BF")) and target_dtype_bytes:
+                target_bytes = target_dtype_bytes
+            estimated_bytes += math.prod(shape) * target_bytes
+    return source_bytes, estimated_bytes, tensor_count
 
 
 def estimate_unquantized_component(
