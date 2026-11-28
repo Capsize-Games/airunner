@@ -29,9 +29,13 @@ class MuseArtError(Exception):
 class MuseSession(Protocol):
     """HTTP session contract used by the Muse client."""
 
-    def post(self, url: str, **kwargs: Any) -> Any: ...
+    def post(self, url: str, **kwargs: Any) -> Any:
+        """Send an HTTP POST and return the response."""
+        ...
 
-    def get(self, url: str, **kwargs: Any) -> Any: ...
+    def get(self, url: str, **kwargs: Any) -> Any:
+        """Send an HTTP GET and return the response."""
+        ...
 
 def validate_muse_invocation(invocation: ArtInvocationRequest) -> None:
     """Reject inputs the Muse image endpoint cannot honour."""
@@ -47,6 +51,7 @@ def validate_muse_invocation(invocation: ArtInvocationRequest) -> None:
 
 def build_muse_payload(invocation: ArtInvocationRequest,
         model: str) -> dict[str, Any]:
+    """Build the JSON payload for one Muse image generation request."""
     payload: dict[str, Any] = {
         "model": model,
         "prompt": invocation.prompt,
@@ -58,6 +63,7 @@ def build_muse_payload(invocation: ArtInvocationRequest,
     return payload
 
 def status_error(status_code: int) -> MuseArtError:
+    """Map an HTTP status code to a typed Muse error."""
     if status_code in (401, 403):
         return MuseArtError("muse_auth_error", "Muse auth failed", False)
     if status_code == 429:
@@ -69,12 +75,14 @@ def status_error(status_code: int) -> MuseArtError:
     return MuseArtError("muse_upstream_error", "Muse failed", True)
 
 def transport_error(exc: Exception) -> MuseArtError:
+    """Map a transport exception to a typed Muse error."""
     timed_out = "timeout" in type(exc).__name__.lower()
     if timed_out or isinstance(exc, TimeoutError):
         return MuseArtError("muse_timeout", "Muse timed out", True)
     return MuseArtError("muse_upstream_error", "Muse request failed", True)
 
 def checked_b64_image(value: str, max_bytes: int) -> str:
+    """Validate one base64 image and return it unchanged."""
     try:
         raw = base64.b64decode(value, validate=True)
     except (binascii.Error, ValueError) as exc:
@@ -197,6 +205,7 @@ def post_images(
     invocation: ArtInvocationRequest,
     model: str,
 ) -> list[str]:
+    """POST one image generation request and return its images."""
     url = f"{settings.base_url}/images/generations"
     headers = {"Authorization": f"Bearer {settings.api_key}",
         "Content-Type": "application/json"}
