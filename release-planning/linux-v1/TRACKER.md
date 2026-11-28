@@ -1,5 +1,10 @@
 # Linux desktop release specification
 
+> Historical plan (2026-09-13): Qt/PySide6 desktop scope ("Retain
+> PySide6/Qt", desktop-owned install) superseded by the 2026-11-01
+> service-only direction (see `release-planning/services/ARCHITECTURE.md`).
+> Kept as checklist history; Qt-packaging and Qt-chat items are retired.
+
 Owner: Capsize LLC, Colorado. Sales intent: worldwide. Status: implementation handoff, not a release-readiness declaration. Date: 2026-09-13.
 
 ## Product requirements

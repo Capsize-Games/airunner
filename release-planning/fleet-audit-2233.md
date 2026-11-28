@@ -1,5 +1,10 @@
 # Fleet audit: airunner product boundary and shared-platform plan
 
+> Historical audit (2026-10-08): assumes the Qt desktop plan ("KEEP local",
+> #2199 target state) superseded by the 2026-11-01 service-only direction
+> (see `release-planning/services/ARCHITECTURE.md`). Boundary/extraction
+> record kept as history; do not treat Qt-scope items as current defects.
+
 Issue: Capsize-Games/airunner#2233 (fleet parent Capsize-Games/hq#24,
 index hq#36). Base: `742a686c2`, branch `batch8/audit`, plus the
 uncommitted wave/batch stack (`debian/`, companion `llm/`,
