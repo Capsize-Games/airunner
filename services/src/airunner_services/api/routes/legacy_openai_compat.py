@@ -291,31 +291,20 @@ def _sse_line(payload: dict[str, Any]) -> bytes:
     return f"data: {json.dumps(payload)}\n\n".encode("utf-8")
 
 
-def _openai_chat_stream(
-    app,
-    prompt: str,
-    model: str,
-    llm_request: LLMRequest,
-    request_id: str,
-    tools: list[dict[str, Any]] | None,
-):
-    """Yield one streaming OpenAI chat completion."""
-    accumulated_response: List[str] = []
-
-    def error_frame(reason: str) -> bytes:
-        """Return one SSE error payload for a stream failure."""
-        message = "Request timeout" if reason == "timeout" else (
-            "Response exceeded the configured output limit"
-            if reason == "overflow"
-            else "LLM generation failed"
-        )
-        return _sse_line({"error": {"message": message}})
-
-    observer = LegacyCompletionObserver(
-        request_id,
-        error_frame,
-        cancel=lambda: cancel_owned_llm_request(app, request_id),
+def _openai_error_frame(reason: str) -> bytes:
+    """Return one SSE error payload for a stream failure."""
+    message = "Request timeout" if reason == "timeout" else (
+        "Response exceeded the configured output limit"
+        if reason == "overflow"
+        else "LLM generation failed"
     )
+    return _sse_line({"error": {"message": message}})
+
+
+def _make_openai_stream_callback(
+    observer, model, request_id, tools, accumulated_response
+):
+    """Build the callback that publishes one streaming chat update."""
 
     def callback(data: dict[str, Any]) -> None:
         """Publish one streaming OpenAI chat update."""
@@ -324,7 +313,7 @@ def _openai_chat_stream(
             return
         if failed_runtime_response(response):
             observer.publish(
-                payload=error_frame("backend_error"),
+                payload=_openai_error_frame("backend_error"),
                 terminal=True,
                 failed=True,
                 failure_reason="backend_error",
@@ -356,6 +345,29 @@ def _openai_chat_stream(
             payload=_sse_line(_content_chunk(model, request_id, response.message)),
             text=response.message or "",
         )
+
+    return callback
+
+
+def _openai_chat_stream(
+    app,
+    prompt: str,
+    model: str,
+    llm_request: LLMRequest,
+    request_id: str,
+    tools: list[dict[str, Any]] | None,
+):
+    """Yield one streaming OpenAI chat completion."""
+    accumulated_response: List[str] = []
+
+    observer = LegacyCompletionObserver(
+        request_id,
+        _openai_error_frame,
+        cancel=lambda: cancel_owned_llm_request(app, request_id),
+    )
+    callback = _make_openai_stream_callback(
+        observer, model, request_id, tools, accumulated_response
+    )
 
     observer.start_dispatch(
         lambda cb: _dispatch_request(app, prompt, llm_request, request_id, cb),
