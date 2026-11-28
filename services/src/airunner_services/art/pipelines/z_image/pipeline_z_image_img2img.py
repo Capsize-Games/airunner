@@ -16,7 +16,7 @@
 # Based on SanaSprintImg2ImgPipeline and ZImagePipeline.
 
 import inspect
-from typing import Callable, Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import torch
 import torch.nn.functional as F
@@ -54,13 +54,13 @@ def calculate_shift(
 
 
 def retrieve_timesteps(
-    scheduler,
+    scheduler: FlowMatchEulerDiscreteScheduler,
     num_inference_steps: Optional[int] = None,
     device: Optional[Union[str, torch.device]] = None,
     timesteps: Optional[List[int]] = None,
     sigmas: Optional[List[float]] = None,
     **kwargs,
-):
+) -> Tuple[torch.Tensor, int]:
     """
     Calls the scheduler's `set_timesteps` method and retrieves timesteps from the scheduler after the call.
     """
@@ -155,7 +155,7 @@ class ZImageImg2ImgPipeline(DiffusionPipeline, FromSingleFileMixin):
         device: Optional[torch.device] = None,
         prompt_embeds: Optional[torch.Tensor] = None,
         max_sequence_length: int = 512,
-    ):
+    ) -> List[torch.Tensor]:
         """Encodes the prompt into text encoder hidden states."""
         if device is None:
             device = self._execution_device
@@ -219,15 +219,15 @@ class ZImageImg2ImgPipeline(DiffusionPipeline, FromSingleFileMixin):
 
     def check_inputs(
         self,
-        prompt,
-        image,
-        strength,
-        height,
-        width,
-        callback_on_step_end_tensor_inputs=None,
-        prompt_embeds=None,
-        max_sequence_length=None,
-    ):
+        prompt: Union[str, List[str], None],
+        image: PipelineImageInput,
+        strength: float,
+        height: int,
+        width: int,
+        callback_on_step_end_tensor_inputs: Optional[List[str]] = None,
+        prompt_embeds: Optional[torch.Tensor] = None,
+        max_sequence_length: Optional[int] = None,
+    ) -> None:
         """Validate img2img dimensions, strength, prompts, and input image."""
         if height % (self.vae_scale_factor * 2):
             raise ValueError(
@@ -270,7 +270,7 @@ class ZImageImg2ImgPipeline(DiffusionPipeline, FromSingleFileMixin):
         height: int,
         device: torch.device,
         dtype: torch.dtype,
-    ):
+    ) -> torch.Tensor:
         """Preprocess and prepare the input image."""
         if isinstance(image, torch.Tensor):
             if image.ndim == 3:
@@ -285,7 +285,7 @@ class ZImageImg2ImgPipeline(DiffusionPipeline, FromSingleFileMixin):
         image = image.to(device=device, dtype=dtype)
         return image
 
-    def get_timesteps(self, num_inference_steps: int, strength: float, device: torch.device):
+    def get_timesteps(self, num_inference_steps: int, strength: float, device: torch.device) -> Tuple[torch.Tensor, int]:
         """Get the timesteps for img2img based on strength."""
         # Calculate the initial timestep based on strength
         init_timestep = min(int(num_inference_steps * strength), num_inference_steps)
@@ -305,7 +305,7 @@ class ZImageImg2ImgPipeline(DiffusionPipeline, FromSingleFileMixin):
         device: torch.device,
         generator: Optional[torch.Generator] = None,
         latents: Optional[torch.Tensor] = None,
-    ):
+    ) -> torch.Tensor:
         """Prepare latents for img2img generation."""
         if latents is not None:
             return latents.to(device=device, dtype=dtype)
@@ -346,17 +346,17 @@ class ZImageImg2ImgPipeline(DiffusionPipeline, FromSingleFileMixin):
         return latents.to(dtype=torch.float32)
 
     @property
-    def guidance_scale(self):
+    def guidance_scale(self) -> float:
         """Return the configured guidance scale."""
         return self._guidance_scale
 
     @property
-    def num_timesteps(self):
+    def num_timesteps(self) -> int:
         """Return the configured inference timestep count."""
         return self._num_timesteps
 
     @property
-    def interrupt(self):
+    def interrupt(self) -> bool:
         """Return whether generation has been interrupted."""
         return self._interrupt
 

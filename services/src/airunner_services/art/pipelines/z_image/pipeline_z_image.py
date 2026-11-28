@@ -17,7 +17,7 @@
 # local copy should be removed and the diffusers version used instead.
 
 import inspect
-from typing import Callable, Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import torch
 from transformers import Qwen2Tokenizer, Qwen2VLForConditionalGeneration
@@ -39,12 +39,12 @@ logger = logging.get_logger(__name__)
 
 
 def calculate_shift(
-    image_seq_len,
+    image_seq_len: int,
     base_seq_len: int = 256,
     max_seq_len: int = 4096,
     base_shift: float = 0.5,
     max_shift: float = 1.16,
-):
+) -> float:
     """Calculate the flow-match shift for an image sequence length."""
     m = (max_shift - base_shift) / (max_seq_len - base_seq_len)
     b = base_shift - m * base_seq_len
@@ -54,13 +54,13 @@ def calculate_shift(
 
 # Adapted from the diffusers flow-match timestep retrieval helper.
 def retrieve_timesteps(
-    scheduler,
+    scheduler: FlowMatchEulerDiscreteScheduler,
     num_inference_steps: Optional[int] = None,
     device: Optional[Union[str, torch.device]] = None,
     timesteps: Optional[List[int]] = None,
     sigmas: Optional[List[float]] = None,
     **kwargs,
-):
+) -> Tuple[torch.Tensor, int]:
     r"""
     Calls the scheduler's `set_timesteps` method and retrieves timesteps from the scheduler after the call. Handles
     custom timesteps. Any kwargs will be supplied to `scheduler.set_timesteps`.
@@ -174,7 +174,7 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
         device: Optional[torch.device] = None,
         prompt_embeds: Optional[torch.Tensor] = None,
         max_sequence_length: int = 512,
-    ):
+    ) -> List[torch.Tensor]:
         r"""
         Encodes the prompt into text encoder hidden states.
 
@@ -254,13 +254,13 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
 
     def check_inputs(
         self,
-        prompt,
-        height,
-        width,
-        callback_on_step_end_tensor_inputs=None,
-        prompt_embeds=None,
-        max_sequence_length=None,
-    ):
+        prompt: Union[str, List[str], None],
+        height: int,
+        width: int,
+        callback_on_step_end_tensor_inputs: Optional[List[str]] = None,
+        prompt_embeds: Optional[torch.Tensor] = None,
+        max_sequence_length: Optional[int] = None,
+    ) -> None:
         """Validate pipeline prompt and size inputs before generation."""
         if height % (self.vae_scale_factor * 2):
             raise ValueError(
@@ -296,15 +296,15 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
 
     def prepare_latents(
         self,
-        batch_size,
-        num_channels_latents,
-        height,
-        width,
-        dtype,
-        device,
-        generator,
-        latents=None,
-    ):
+        batch_size: int,
+        num_channels_latents: int,
+        height: int,
+        width: int,
+        dtype: torch.dtype,
+        device: torch.device,
+        generator: Optional[torch.Generator],
+        latents: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
         """Create or validate initial latents for the requested image size."""
         # VAE applies 8x compression on images, and we need to account for packing
         height = 2 * (int(height) // (self.vae_scale_factor * 2))
@@ -322,17 +322,17 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
         return latents
 
     @property
-    def guidance_scale(self):
+    def guidance_scale(self) -> float:
         """Return the current guidance scale."""
         return self._guidance_scale
 
     @property
-    def num_timesteps(self):
+    def num_timesteps(self) -> int:
         """Return the number of inference timesteps for this run."""
         return self._num_timesteps
 
     @property
-    def interrupt(self):
+    def interrupt(self) -> bool:
         """Return whether generation should be interrupted."""
         return self._interrupt
 
