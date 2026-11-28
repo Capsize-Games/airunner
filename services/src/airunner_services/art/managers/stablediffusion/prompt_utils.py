@@ -38,6 +38,7 @@ def format_prompt(
 
 
 def format_negative_prompt(prompt: str) -> str:
+    """Convert negative-prompt weight syntax to Compel syntax."""
     prompt = PromptWeightBridge.convert(prompt)
     return prompt
 
