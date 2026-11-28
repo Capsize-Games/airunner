@@ -660,6 +660,54 @@ class DownloadJobService:
         failed instead of writing any file.
         """
         self._update_job(job_id, 0.0, JobStatus.RUNNING)
+        target = self._validate_url_job_target(
+            job_id, url, output_dir, filename
+        )
+        if target is None:
+            return
+        output_root, output_path, filename = target
+        self._record_log_message(job_id, f"Starting download: {filename}")
+        progress = self._make_url_progress_reporter(job_id, filename)
+
+        try:
+            completed = download_civitai_file(
+                url,
+                output_path,
+                0,
+                progress_callback=progress,
+                cancel_callback=cancel_event.is_set,
+            )
+            if not completed or cancel_event.is_set():
+                self._cancel_job(job_id)
+                return
+            paths = self._finalize_download_output(
+                job_id,
+                output_root,
+                output_path,
+                output_dir,
+                filename,
+                extract_zip,
+            )
+            self._complete_job(
+                job_id,
+                {
+                    "provider": "url",
+                    "url": url,
+                    "paths": paths,
+                },
+            )
+        except Exception as exc:
+            self._fail_job(job_id, str(exc))
+        finally:
+            self._forget_job(job_id)
+
+    def _validate_url_job_target(self, job_id, url, output_dir, filename):
+        """Re-validate URL, directory, and filename for one URL job.
+
+        Returns:
+            The (output_root, output_path, filename) triple, or None
+            (after failing the job) when validation rejects the job.
+        """
         try:
             validate_url_for_fetch(url)
             output_root = _resolve_safe_output_dir(output_dir)
@@ -667,7 +715,7 @@ class DownloadJobService:
         except (ValueError, PathPolicyError) as exc:
             self._fail_job(job_id, str(exc))
             self._forget_job(job_id)
-            return
+            return None
         output_root.mkdir(parents=True, exist_ok=True)
         output_path = output_root / safe_filename
         try:
@@ -675,9 +723,11 @@ class DownloadJobService:
         except PathPolicyError as exc:
             self._fail_job(job_id, str(exc))
             self._forget_job(job_id)
-            return
-        filename = safe_filename
-        self._record_log_message(job_id, f"Starting download: {filename}")
+            return None
+        return output_root, output_path, safe_filename
+
+    def _make_url_progress_reporter(self, job_id, filename):
+        """Build the throttled progress callback for one URL download job."""
         last_progress = -1.0
 
         def progress(downloaded: int, total: int) -> None:
@@ -695,37 +745,19 @@ class DownloadJobService:
                 total,
             )
 
-        try:
-            completed = download_civitai_file(
-                url,
-                output_path,
-                0,
-                progress_callback=progress,
-                cancel_callback=cancel_event.is_set,
-            )
-            if not completed or cancel_event.is_set():
-                self._cancel_job(job_id)
-                return
-            if extract_zip:
-                self._record_log_message(job_id, f"Extracting {filename}...")
-                with zipfile.ZipFile(output_path, "r") as archive:
-                    safe_extract_zip(archive, output_root)
-                output_path.unlink(missing_ok=True)
-                paths = [output_dir]
-            else:
-                paths = [str(output_path)]
-            self._complete_job(
-                job_id,
-                {
-                    "provider": "url",
-                    "url": url,
-                    "paths": paths,
-                },
-            )
-        except Exception as exc:
-            self._fail_job(job_id, str(exc))
-        finally:
-            self._forget_job(job_id)
+        return progress
+
+    def _finalize_download_output(
+        self, job_id, output_root, output_path, output_dir, filename, extract_zip
+    ):
+        """Extract the archive when requested and return result paths."""
+        if extract_zip:
+            self._record_log_message(job_id, f"Extracting {filename}...")
+            with zipfile.ZipFile(output_path, "r") as archive:
+                safe_extract_zip(archive, output_root)
+            output_path.unlink(missing_ok=True)
+            return [output_dir]
+        return [str(output_path)]
 
     def _record_log_message(self, job_id: str, message: str) -> None:
         """Persist one user-facing log message into job metadata."""
