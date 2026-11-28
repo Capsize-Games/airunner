@@ -167,6 +167,7 @@ async def stream_owned_request(
         return False
 
     async def send_stream() -> bool:
+        """Send one stream until its terminal frame is sent."""
         terminal = False
         async for delta in stream_runtime(client, envelope):
             frame = frame_builder(delta)
