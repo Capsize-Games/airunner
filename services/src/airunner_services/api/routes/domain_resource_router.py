@@ -28,6 +28,7 @@ def build_domain_router(domain: str) -> APIRouter:
         resource: str,
         create_if_missing: bool = True,
     ) -> Dict[str, Any]:
+        """Return one singleton resource for this domain."""
         return get_singleton(
             domain,
             resource,
@@ -39,6 +40,7 @@ def build_domain_router(domain: str) -> APIRouter:
         resource: str,
         body: MutationRequest,
     ) -> Dict[str, Any]:
+        """Create or update one singleton resource for this domain."""
         record = get_singleton(domain, resource, create_if_missing=True).get("record")
         if record is None:
             return create_record(domain, resource, body)
@@ -50,6 +52,7 @@ def build_domain_router(domain: str) -> APIRouter:
         layer_id: int,
         create_if_missing: bool = True,
     ) -> Dict[str, Any]:
+        """Return one resource layer for this domain."""
         return get_layer_record(
             domain,
             resource,
@@ -63,6 +66,7 @@ def build_domain_router(domain: str) -> APIRouter:
         layer_id: int,
         body: MutationRequest,
     ) -> Dict[str, Any]:
+        """Create or update one resource layer for this domain."""
         record = get_layer_record(
             domain,
             resource,
@@ -84,6 +88,7 @@ def build_domain_router(domain: str) -> APIRouter:
         resource: str,
         body: QueryRequest,
     ) -> Dict[str, Any]:
+        """Run one filtered collection query for this domain."""
         return query_records(domain, resource, body, first=False)
 
     @router.post("/resources/{resource}/first")
@@ -91,10 +96,12 @@ def build_domain_router(domain: str) -> APIRouter:
         resource: str,
         body: QueryRequest,
     ) -> Dict[str, Any]:
+        """Return the first record matching one collection query."""
         return query_records(domain, resource, body, first=True)
 
     @router.get("/resources/{resource}/{record_id}")
     async def get_record(resource: str, record_id: int) -> Dict[str, Any]:
+        """Return one record by id for this domain."""
         return query_records(
             domain,
             resource,
@@ -107,6 +114,7 @@ def build_domain_router(domain: str) -> APIRouter:
         resource: str,
         body: MutationRequest,
     ) -> Dict[str, Any]:
+        """Create one record for this domain."""
         return create_record(domain, resource, body)
 
     @router.put("/resources/{resource}/{record_id}")
@@ -115,6 +123,7 @@ def build_domain_router(domain: str) -> APIRouter:
         record_id: int,
         body: MutationRequest,
     ) -> Dict[str, Any]:
+        """Update one record for this domain."""
         return update_record(domain, resource, record_id, body)
 
     @router.delete("/resources/{resource}/{record_id}")
@@ -122,6 +131,7 @@ def build_domain_router(domain: str) -> APIRouter:
         resource: str,
         record_id: int,
     ) -> Dict[str, Any]:
+        """Delete one record for this domain."""
         if domain == "library" and resource == "Document":
             from .llm_rag_routes import delete_documents_via_worker
 
@@ -133,6 +143,7 @@ def build_domain_router(domain: str) -> APIRouter:
         resource: str,
         body: DeleteRequest,
     ) -> Dict[str, Any]:
+        """Delete records matching one filter for this domain."""
         if domain == "library" and resource == "Document":
             from .llm_rag_routes import delete_documents_via_worker
 
