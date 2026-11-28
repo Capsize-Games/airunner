@@ -168,44 +168,9 @@ class DurableCompanionScheduler:
                     accepted=False,
                     reason="queue_full",
                 )
-            row = CompanionJob(
-                chatbot_id=int(request.chatbot_id),
-                session_id=(
-                    None
-                    if request.session_id is None
-                    else int(request.session_id)
-                ),
-                job_type=request.job_type.value,
-                idempotency_key=request.idempotency_key,
-                payload=dict(request.payload),
-                status=JOB_QUEUED,
-                attempts=0,
-                max_attempts=self._max_attempts,
-                run_after=now,
-                created_at=now,
-                updated_at=now,
-            )
-            # A concurrent duplicate enqueue can pass the lookup above
-            # before either transaction commits; the unique
-            # (chatbot_id, job_type, idempotency_key) constraint is
-            # the backstop, mirroring repository.py's savepoint
-            # retry. Ownership was validated above, so the only
-            # remaining integrity failure is that key.
-            savepoint = db.begin_nested()
-            db.add(row)
-            try:
-                db.flush()
-            except IntegrityError:
-                savepoint.rollback()
-                winner = _find_by_key(db, request)
-                if winner is None:  # pragma: no cover - defensive
-                    raise
-                return CompanionJobHandle(
-                    job_id=str(winner.id),
-                    job_type=request.job_type,
-                    accepted=False,
-                    reason="duplicate",
-                )
+            row, duplicate = self._insert_job_row(db, request, now)
+            if duplicate is not None:
+                return duplicate
             # A concurrent enqueue can also pass the pre-check above
             # in the same window; re-check after our own insert so the
             # committed state never exceeds the bound, withdrawing our
@@ -225,6 +190,48 @@ class DurableCompanionScheduler:
                 job_type=request.job_type,
                 accepted=True,
             )
+
+    def _insert_job_row(self, db, request, now):
+        """Insert one job row, returning (row, None) or (None, duplicate).
+
+        The unique (chatbot_id, job_type, idempotency_key) constraint
+        is the backstop for a concurrent duplicate enqueue; ownership
+        was validated by the caller, so the only remaining integrity
+        failure is that key.
+        """
+        row = CompanionJob(
+            chatbot_id=int(request.chatbot_id),
+            session_id=(
+                None
+                if request.session_id is None
+                else int(request.session_id)
+            ),
+            job_type=request.job_type.value,
+            idempotency_key=request.idempotency_key,
+            payload=dict(request.payload),
+            status=JOB_QUEUED,
+            attempts=0,
+            max_attempts=self._max_attempts,
+            run_after=now,
+            created_at=now,
+            updated_at=now,
+        )
+        savepoint = db.begin_nested()
+        db.add(row)
+        try:
+            db.flush()
+        except IntegrityError:
+            savepoint.rollback()
+            winner = _find_by_key(db, request)
+            if winner is None:  # pragma: no cover - defensive
+                raise
+            return None, CompanionJobHandle(
+                job_id=str(winner.id),
+                job_type=request.job_type,
+                accepted=False,
+                reason="duplicate",
+            )
+        return row, None
 
     def cancel(self, job_id: str) -> bool:
         """Cancel one queued job; True only when it was queued.
