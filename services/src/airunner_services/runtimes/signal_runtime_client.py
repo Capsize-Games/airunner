@@ -304,6 +304,7 @@ class _SignalRuntimeClient(RuntimeClient):
         status_queue: Queue[Any] = Queue()
 
         def on_status_changed(data: dict[str, Any]) -> None:
+            """Queue one matching terminal model status."""
             model = data.get("model")
             if not self._matches_model(model):
                 return
