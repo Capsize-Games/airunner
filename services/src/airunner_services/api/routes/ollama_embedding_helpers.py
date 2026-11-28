@@ -12,7 +12,7 @@ import asyncio
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import HTTPException, Request
 from starlette.concurrency import run_in_threadpool
@@ -204,8 +204,16 @@ async def handle_ollama_embedding_async(
     if requested_model is not None and requested_model != E5_LARGE_MODEL_ID:
         raise HTTPException(status_code=404, detail="model_not_found")
 
+    request_id, future = _submit_embedding_documents(worker, inputs)
+    return await _await_embedding_result(
+        worker, request_id, future, inputs, requested_model, legacy
+    )
+
+
+def _submit_embedding_documents(worker: Any, inputs: list[str]) -> tuple:
+    """Submit one embedding batch and return its request identifier."""
     try:
-        request_id, future = worker.submit_embedding_documents(inputs)
+        return worker.submit_embedding_documents(inputs)
     except EmbeddingWorkerCapacityError as exc:
         raise HTTPException(
             status_code=429, detail="capacity_exceeded"
@@ -216,6 +224,16 @@ async def handle_ollama_embedding_async(
         logger.warning("Local embedding worker is unavailable: %s", exc)
         raise _unavailable() from exc
 
+
+async def _await_embedding_result(
+    worker: Any,
+    request_id: str,
+    future: Any,
+    inputs: list[str],
+    requested_model: Optional[str],
+    legacy: bool,
+) -> dict[str, Any]:
+    """Await one embedding result and validate its identity and shape."""
     try:
         identity, vectors = await asyncio.wait_for(
             asyncio.wrap_future(future), timeout=120
@@ -231,7 +249,6 @@ async def handle_ollama_embedding_async(
     except Exception as exc:
         logger.warning("Local embedding worker failed: %s", type(exc).__name__)
         raise _unavailable() from exc
-
     if requested_model is not None and requested_model != identity.model_id:
         raise HTTPException(status_code=404, detail="model_not_found")
     if len(vectors) != len(inputs):
