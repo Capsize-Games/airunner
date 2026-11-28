@@ -69,67 +69,179 @@ class X4UpscalingTilingMixin:
             if not batch:
                 break
 
-            try:
-                upscaled_tiles = self._process_tile_batch(
-                    batch=batch,
-                    prompt=prompt,
-                    negative_prompt=negative_prompt,
-                    steps=steps,
-                    guidance_scale=guidance_scale,
-                    noise_level=noise_level,
-                    processed_tiles=processed_tiles,
-                    total_tiles=total_tiles,
-                )
-
-                processed_tiles = self._paste_tiles_into_output(
-                    output, batch, upscaled_tiles, processed_tiles, total_tiles
-                )
-
-            except Exception as exc:
-                # Allow interrupted exceptions to bubble
-                from airunner_services.application_exceptions import (
-                    InterruptedException,
-                )
-
-                if isinstance(exc, InterruptedException):
-                    self.logger.debug(
-                        "Tile batch interrupted at index %d", processed_tiles
-                    )
-                    raise
-
-                # Handle OOM by delegating to OOM helpers (may return new state)
-                if self._is_out_of_memory(exc):
-                    result = self._handle_oom(
-                        current_batch_size=current_batch_size,
-                        current_tile_size=current_tile_size,
-                        reductions_remaining=reductions_remaining,
-                        image=image,
-                        overlap=overlap,
-                    )
-
-                    if result:
-                        (
-                            current_batch_size,
-                            current_tile_size,
-                            reductions_remaining,
-                            tiles,
-                            total_tiles,
-                            processed_tiles,
-                            output,
-                        ) = result
-                        continue
-
-                self.logger.exception(
-                    "Tile batch failed at index %d: %s", processed_tiles, exc
-                )
-                raise
-            finally:
-                import gc
-
-                gc.collect()
-                self._empty_cache()
+            (
+                output,
+                current_batch_size,
+                current_tile_size,
+                reductions_remaining,
+                tiles,
+                total_tiles,
+                processed_tiles,
+            ) = self._process_one_tile_batch(
+                output,
+                batch,
+                current_batch_size,
+                current_tile_size,
+                reductions_remaining,
+                image,
+                overlap,
+                prompt,
+                negative_prompt,
+                steps,
+                guidance_scale,
+                noise_level,
+                processed_tiles,
+                total_tiles,
+            )
 
         return output
+
+    def _process_one_tile_batch(
+        self,
+        output,
+        batch,
+        current_batch_size,
+        current_tile_size,
+        reductions_remaining,
+        image,
+        overlap,
+        prompt,
+        negative_prompt,
+        steps,
+        guidance_scale,
+        noise_level,
+        processed_tiles,
+        total_tiles,
+        tiles=None,
+    ):
+        """Run one batch cycle; return the full post-batch state tuple.
+
+        Errors resolve through _handle_tile_batch_error, which either
+        returns reduced state or re-raises. Memory cleanup runs after
+        every iteration, including error paths.
+        """
+        try:
+            processed_tiles = self._process_and_paste_batch(
+                output,
+                batch,
+                prompt,
+                negative_prompt,
+                steps,
+                guidance_scale,
+                noise_level,
+                processed_tiles,
+                total_tiles,
+            )
+            return (
+                output,
+                current_batch_size,
+                current_tile_size,
+                reductions_remaining,
+                tiles,
+                total_tiles,
+                processed_tiles,
+            )
+        except Exception as exc:
+            return self._handle_tile_batch_error(
+                exc,
+                processed_tiles,
+                current_batch_size,
+                current_tile_size,
+                reductions_remaining,
+                image,
+                overlap,
+            )
+        finally:
+            self._cleanup_after_tile_batch()
+
+    def _process_and_paste_batch(
+        self,
+        output,
+        batch,
+        prompt,
+        negative_prompt,
+        steps,
+        guidance_scale,
+        noise_level,
+        processed_tiles,
+        total_tiles,
+    ):
+        """Upscale one tile batch and paste it into the output canvas."""
+        upscaled_tiles = self._process_tile_batch(
+            batch=batch,
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            steps=steps,
+            guidance_scale=guidance_scale,
+            noise_level=noise_level,
+            processed_tiles=processed_tiles,
+            total_tiles=total_tiles,
+        )
+        return self._paste_tiles_into_output(
+            output, batch, upscaled_tiles, processed_tiles, total_tiles
+        )
+
+    def _handle_tile_batch_error(
+        self,
+        exc,
+        processed_tiles,
+        current_batch_size,
+        current_tile_size,
+        reductions_remaining,
+        image,
+        overlap,
+    ):
+        """Resolve one tile batch error to reduced state, or re-raise.
+
+        Interrupted errors re-raise so callers can bubble them;
+        OOM errors delegate to the OOM helpers for reduced state;
+        every other error is logged and re-raised.
+        """
+        # Allow interrupted exceptions to bubble
+        from airunner_services.application_exceptions import (
+            InterruptedException,
+        )
+
+        if isinstance(exc, InterruptedException):
+            self.logger.debug(
+                "Tile batch interrupted at index %d", processed_tiles
+            )
+            raise exc
+
+        # Handle OOM by delegating to OOM helpers (may return new state)
+        if self._is_out_of_memory(exc):
+            result = self._handle_oom(
+                current_batch_size=current_batch_size,
+                current_tile_size=current_tile_size,
+                reductions_remaining=reductions_remaining,
+                image=image,
+                overlap=overlap,
+            )
+            if result:
+                # _handle_oom returns (batch, tile, reductions, tiles,
+                # total, processed, output); the batch cycle expects
+                # output first, so re-order before returning.
+                return (
+                    result[6],
+                    result[0],
+                    result[1],
+                    result[2],
+                    result[3],
+                    result[4],
+                    result[5],
+                )
+
+        self.logger.exception(
+            "Tile batch failed at index %d: %s", processed_tiles, exc
+        )
+        raise exc
+
+    def _cleanup_after_tile_batch(self) -> None:
+        """Free memory after one tile batch iteration."""
+        import gc
+
+        gc.collect()
+        self._empty_cache()
 
     def _paste_tiles_into_output(
         self, output, batch, upscaled_tiles, processed_tiles, total_tiles
