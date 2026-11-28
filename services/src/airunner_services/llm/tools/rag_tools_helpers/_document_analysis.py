@@ -229,21 +229,35 @@ def analyze_loaded_document_impl(
         return "No documents are currently loaded into memory."
 
     estimated_tokens = estimate_document_tokens(text)
+    return _analyze_document_text(
+        rag_manager, entries[0], resolved_path, query, text, estimated_tokens, logger
+    )
+
+
+def _analyze_document_text(
+    rag_manager: Any,
+    entry: Any,
+    resolved_path: str,
+    query: str,
+    text: str,
+    estimated_tokens: int,
+    logger: Any,
+) -> str:
+    """Run full or chunked analysis and return the formatted context."""
     if should_use_full_document_analysis(
         rag_manager,
         resolved_path,
         estimated_tokens,
     ):
         return build_full_document_analysis(
-            entries[0],
+            entry,
             query=query,
             text=text,
             estimated_tokens=estimated_tokens,
         )
-
     chunked = build_chunked_document_analysis(
         rag_manager,
-        entries[0],
+        entry,
         query=query,
         text=text,
         estimated_tokens=estimated_tokens,
@@ -253,9 +267,7 @@ def analyze_loaded_document_impl(
         ),
         logger=logger,
     )
-    if chunked:
-        return chunked
-    return "The loaded document could not be prepared for whole-document analysis."
+    return chunked or "The loaded document could not be prepared for whole-document analysis."
 
 
 __all__ = ["analyze_loaded_document_impl"]
