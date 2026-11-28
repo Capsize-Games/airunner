@@ -27,6 +27,7 @@ class WhisperCppModelSpec:
 
 
 def get_registered_whisper_cpp_model_spec() -> WhisperCppModelSpec:
+    """Return the pinned spec for the registered whisper.cpp model."""
     models = ModelRegistry().list_models(model_type=ModelType.SPEECH_TO_TEXT)
     model = next(
         (
