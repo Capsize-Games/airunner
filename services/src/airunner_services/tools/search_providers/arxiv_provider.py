@@ -55,38 +55,7 @@ class ArxivProvider(BaseSearchProvider):
                 response.raise_for_status()
                 content = await response.text()
                 root = ET.fromstring(content)
-                atom_ns = {"atom": "http://www.w3.org/2005/Atom"}
-
-                for entry in root.findall("atom:entry", atom_ns):
-                    title_e = entry.find("atom:title", atom_ns)
-                    link_e = entry.find(
-                        "atom:link[@rel='alternate']", atom_ns
-                    ) or entry.find(
-                        "atom:link[@type='application/pdf']", atom_ns
-                    )
-                    summary_e = entry.find("atom:summary", atom_ns)
-
-                    title = (
-                        title_e.text.strip()
-                        if title_e is not None and title_e.text
-                        else "N/A"
-                    )
-                    link = (
-                        link_e.get("href", "#") if link_e is not None else "#"
-                    )
-                    snippet = (
-                        summary_e.text.strip().replace("\n", " ")
-                        if summary_e is not None and summary_e.text
-                        else ""
-                    )
-
-                    results.append(
-                        self._format_result(
-                            title=title, link=link, snippet=snippet
-                        )
-                    )
-                    if len(results) >= num_results:
-                        break
+                results = self._parse_arxiv_entries(root, num_results)
 
                 self.logger.info(
                     f"arXiv search completed. Found {len(results)} results."
@@ -103,4 +72,43 @@ class ArxivProvider(BaseSearchProvider):
             if not client and async_client is not None:
                 await async_client.close()
 
+        return results
+
+    def _parse_arxiv_entries(
+        self, root, num_results: int
+    ) -> List[Dict[str, str]]:
+        """Parse Atom entries into formatted results, capped at num_results."""
+        results = []
+        atom_ns = {"atom": "http://www.w3.org/2005/Atom"}
+
+        for entry in root.findall("atom:entry", atom_ns):
+            title_e = entry.find("atom:title", atom_ns)
+            link_e = entry.find(
+                "atom:link[@rel='alternate']", atom_ns
+            ) or entry.find(
+                "atom:link[@type='application/pdf']", atom_ns
+            )
+            summary_e = entry.find("atom:summary", atom_ns)
+
+            title = (
+                title_e.text.strip()
+                if title_e is not None and title_e.text
+                else "N/A"
+            )
+            link = (
+                link_e.get("href", "#") if link_e is not None else "#"
+            )
+            snippet = (
+                summary_e.text.strip().replace("\n", " ")
+                if summary_e is not None and summary_e.text
+                else ""
+            )
+
+            results.append(
+                self._format_result(
+                    title=title, link=link, snippet=snippet
+                )
+            )
+            if len(results) >= num_results:
+                break
         return results
