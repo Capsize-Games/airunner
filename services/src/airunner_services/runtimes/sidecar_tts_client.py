@@ -78,11 +78,20 @@ class TTSLauncherLike(Protocol):
 	endpoint: str
 	api_base_url: str
 
-	def start(self) -> None: ...
-	def stop(self) -> None: ...
-	def is_running(self) -> bool: ...
-	def is_ready(self) -> bool: ...
-	def health_status(self) -> tuple[RuntimeHealthStatus, str]: ...
+	def start(self) -> None:
+		"""Start the launcher."""
+
+	def stop(self) -> None:
+		"""Stop the launcher."""
+
+	def is_running(self) -> bool:
+		"""Return whether the launcher process is running."""
+
+	def is_ready(self) -> bool:
+		"""Return whether the launcher accepts synthesis requests."""
+
+	def health_status(self) -> tuple[RuntimeHealthStatus, str]:
+		"""Return launcher health status and a detail message."""
 
 
 TTSLauncherFactory = Callable[[TTSDaemonRuntimeSettings], TTSLauncherLike]
