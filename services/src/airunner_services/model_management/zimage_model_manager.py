@@ -327,6 +327,40 @@ class ZImageModelManager(
                 "quantization"
             )
 
+        plan, source_bytes = self._preflight_plan(
+            model_dir, quantization_bits
+        )
+        model_id = str(self.model_path)
+        repo_id = ModelFileChecker.get_repo_id_for_version(
+            "Z-Image Turbo",
+            "txt2img",
+        )
+        if not repo_id:
+            raise RuntimeError(
+                "Cannot resolve the bootstrap model identity for Z-Image Turbo"
+            )
+        preferred_quantization = self._register_pretrained_model(
+            resource_manager,
+            plan,
+            repo_id,
+            quantization_bits,
+            source_bytes,
+            model_id,
+        )
+        return {
+            "preferred_quantization": preferred_quantization,
+            "require_registered": True,
+            "auto_swap": False,
+            "estimated_vram_gb": plan.estimated_vram_gib,
+            "estimated_ram_gb": plan.estimated_ram_gib,
+        }
+
+    def _preflight_plan(self, model_dir, quantization_bits):
+        """Build the memory plan and total its source tensor bytes.
+
+        Returns:
+            The plan and the summed source bytes.
+        """
         plan = self._get_pretrained_loader_helper().build_memory_plan(
             model_dir,
             use_quantization=self.use_quantization,
@@ -338,15 +372,18 @@ class ZImageModelManager(
             + plan.text_encoder.source_tensor_bytes
             + plan.vae.source_tensor_bytes
         )
-        model_id = str(self.model_path)
-        repo_id = ModelFileChecker.get_repo_id_for_version(
-            "Z-Image Turbo",
-            "txt2img",
-        )
-        if not repo_id:
-            raise RuntimeError(
-                "Cannot resolve the bootstrap model identity for Z-Image Turbo"
-            )
+        return plan, source_bytes
+
+    def _register_pretrained_model(
+        self,
+        resource_manager,
+        plan,
+        repo_id,
+        quantization_bits,
+        source_bytes,
+        model_id,
+    ):
+        """Register one pretrained Z-Image model and return its quantization."""
         preferred_quantization = {
             4: QuantizationLevel.INT4,
             8: QuantizationLevel.INT8,
@@ -370,13 +407,7 @@ class ZImageModelManager(
                 preferred_download_repo_id=repo_id,
             )
         )
-        return {
-            "preferred_quantization": preferred_quantization,
-            "require_registered": True,
-            "auto_swap": False,
-            "estimated_vram_gb": plan.estimated_vram_gib,
-            "estimated_ram_gb": plan.estimated_ram_gib,
-        }
+        return preferred_quantization
 
     @property
     def generator(self) -> torch.Generator:
