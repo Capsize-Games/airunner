@@ -29,6 +29,11 @@ class CreativeExpertAgent(ExpertAgent):
 
     def _register_capabilities(self) -> None:
         """Register agent capabilities."""
+        self._register_writing_capabilities()
+        self._register_style_capabilities()
+
+    def _register_writing_capabilities(self) -> None:
+        """Register creative writing and brainstorming capabilities."""
         self.register_capability(
             name="creative_writing",
             description="Generate creative written content",
@@ -63,6 +68,8 @@ class CreativeExpertAgent(ExpertAgent):
             priority=8,
         )
 
+    def _register_style_capabilities(self) -> None:
+        """Register rewriting and style adaptation capabilities."""
         self.register_capability(
             name="rewriting",
             description="Rephrase and rewrite content",
