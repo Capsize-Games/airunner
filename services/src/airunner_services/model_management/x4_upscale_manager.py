@@ -32,6 +32,8 @@ from airunner_services.utils.application.enum_resolver import (
 
 
 class SignalCode:
+    """Signal codes for the 4x upscale manager."""
+
     SD_UPSCALE_SIGNAL = signal_code_member(
         "SD_UPSCALE_SIGNAL",
         signal_code_member("UPSCALE_REQUEST", "upscale_request_signal"),
