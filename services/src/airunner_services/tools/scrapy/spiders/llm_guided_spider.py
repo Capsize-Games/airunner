@@ -105,24 +105,7 @@ class LLMGuidedSpider(scrapy.Spider):
         # Extract content and links
         page_data = self._extract_page_data(response)
 
-        if not page_data:
-            logger.warning(
-                "Failed to extract data from %s",
-                fingerprint_value(url, label="url"),
-            )
-            return
-
-        # Reject injection-like content before it reaches the decision LLM
-        # or is yielded back into the caller's research prompt.
-        rejection_reason = prompt_content_rejection_reason(
-            str(page_data), url
-        )
-        if rejection_reason is not None:
-            logger.warning(
-                "Rejected scraped page before LLM context (%s): %s",
-                fingerprint_value(url, label="url"),
-                rejection_reason,
-            )
+        if not self._gate_page_data(url, page_data):
             return
 
         # Store the collected content
@@ -137,51 +120,80 @@ class LLMGuidedSpider(scrapy.Spider):
                     pages_scraped=self.pages_scraped,
                     max_pages=self.max_pages,
                 )
-
-                # Extract URLs to follow from decision
-                urls_to_follow = decision.get("follow_urls", [])
-
-                logger.info(
-                    f"LLM decision: follow {len(urls_to_follow)} links, "
-                    f"sufficient_info={decision.get('sufficient_info', False)}"
-                )
-
-                # Stop crawling if LLM says we have enough info
-                if decision.get("sufficient_info", False):
-                    logger.info(
-                        "LLM indicated sufficient information gathered - stopping crawl"
-                    )
-                    return
-
-                # Follow approved URLs
-                for link_url in urls_to_follow[:3]:  # Limit to top 3
-                    if link_url not in self.visited:
-                        try:
-                            validate_url_for_fetch(link_url)
-                        except (SSRFBlocked, OfflineModeBlocked) as e:
-                            logger.warning(
-                                "Skipping blocked crawl URL (%s): %s",
-                                fingerprint_value(link_url, label="url"),
-                                e,
-                            )
-                            continue
-
-                        logger.info(
-                            "Following LLM-selected link (%s)",
-                            fingerprint_value(link_url, label="url"),
-                        )
-                        yield scrapy.Request(
-                            link_url,
-                            callback=self.parse,
-                            errback=self.errback_httpbin,
-                            dont_filter=False,  # Still respect Scrapy's duplicate filter
-                        )
-
             except Exception as e:
                 logger.error(f"Error in decision callback: {e}", exc_info=True)
+                decision = None
+
+            if decision is not None:
+                if (yield from self._follow_decision_links(decision)):
+                    return
 
         # Yield the scraped page data
         yield page_data
+
+    def _follow_decision_links(self, decision):
+        """Yield follow requests, returning True when crawling should stop."""
+        # Extract URLs to follow from decision
+        urls_to_follow = decision.get("follow_urls", [])
+
+        logger.info(
+            f"LLM decision: follow {len(urls_to_follow)} links, "
+            f"sufficient_info={decision.get('sufficient_info', False)}"
+        )
+
+        # Stop crawling if LLM says we have enough info
+        if decision.get("sufficient_info", False):
+            logger.info(
+                "LLM indicated sufficient information gathered - stopping crawl"
+            )
+            return True
+
+        # Follow approved URLs
+        for link_url in urls_to_follow[:3]:  # Limit to top 3
+            if link_url not in self.visited:
+                try:
+                    validate_url_for_fetch(link_url)
+                except (SSRFBlocked, OfflineModeBlocked) as e:
+                    logger.warning(
+                        "Skipping blocked crawl URL (%s): %s",
+                        fingerprint_value(link_url, label="url"),
+                        e,
+                    )
+                    continue
+
+                logger.info(
+                    "Following LLM-selected link (%s)",
+                    fingerprint_value(link_url, label="url"),
+                )
+                yield scrapy.Request(
+                    link_url,
+                    callback=self.parse,
+                    errback=self.errback_httpbin,
+                    dont_filter=False,  # Still respect Scrapy's duplicate filter
+                )
+
+    def _gate_page_data(self, url, page_data) -> bool:
+        """Reject unusable or injection-like page data before LLM use."""
+        if not page_data:
+            logger.warning(
+                "Failed to extract data from %s",
+                fingerprint_value(url, label="url"),
+            )
+            return False
+
+        # Reject injection-like content before it reaches the decision LLM
+        # or is yielded back into the caller's research prompt.
+        rejection_reason = prompt_content_rejection_reason(
+            str(page_data), url
+        )
+        if rejection_reason is not None:
+            logger.warning(
+                "Rejected scraped page before LLM context (%s): %s",
+                fingerprint_value(url, label="url"),
+                rejection_reason,
+            )
+            return False
+        return True
 
     def _extract_page_data(self, response) -> Optional[Dict]:
         """
