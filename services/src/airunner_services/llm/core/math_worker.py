@@ -183,6 +183,7 @@ def _top_level_names(code: str) -> list[str]:
     names: list[str] = []
 
     def add_target(target: ast.AST) -> None:
+        """Collect one assignment target's bound names."""
         if isinstance(target, ast.Name):
             names.append(target.id)
         elif isinstance(target, (ast.Tuple, ast.List)):
