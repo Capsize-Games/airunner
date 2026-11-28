@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from airunner_common.contract_enums import ModelType, SignalCode, ModelStatus
 from airunner_services.utils.application.mediator_mixin import MediatorMixin
@@ -34,6 +34,8 @@ _RUNTIME_NAMES = {
 
 
 class ModelLoadBalancer(MediatorMixin):
+    """Coordinate model loading between daemon and local worker runtimes."""
+
     def __init__(self, worker_manager, logger=None, api=None):
         self.worker_manager = worker_manager
         self.logger = logger
@@ -79,7 +81,7 @@ class ModelLoadBalancer(MediatorMixin):
             )
         )
 
-    def switch_to_art_mode(self):
+    def switch_to_art_mode(self) -> None:
         """
         Unload all non-art models (LLM, TTS, STT), load SD model.
         Tracks which models were previously loaded for restoration.
@@ -125,7 +127,7 @@ class ModelLoadBalancer(MediatorMixin):
 
     def switch_to_non_art_mode(
         self, additional_types: Optional[List[ModelType]] = None
-    ):
+    ) -> None:
         """
         Reload previously unloaded non-art models (LLM, TTS, STT).
         Optionally load additional model types (e.g., [ModelType.LLM]) even if they
@@ -170,6 +172,7 @@ class ModelLoadBalancer(MediatorMixin):
         self._last_non_art_models = []
 
     def get_loaded_models(self) -> List[ModelType]:
+        """Return every currently loaded model type."""
         if self._daemon_client() is not None:
             loaded_models = self._daemon_loaded_models() or []
             return self._merge_local_llm_loaded_model(loaded_models)
@@ -202,7 +205,8 @@ class ModelLoadBalancer(MediatorMixin):
             return loaded_models
         return [*loaded_models, ModelType.LLM]
 
-    def vram_stats(self, device):
+    def vram_stats(self, device: Any) -> Dict[str, float | str]:
+        """Return GPU memory statistics for one device."""
         return gpu_memory_stats(device)
 
     def _daemon_client(self):
